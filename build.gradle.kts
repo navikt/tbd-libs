@@ -1,6 +1,3 @@
-import org.gradle.model.internal.core.ModelNodes.withType
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 val gradleversjon = "8.5"
 val junitJupiterVersion = "5.10.1"
 
@@ -37,7 +34,7 @@ subprojects {
             create<MavenPublication>("maven") {
                 from(components["java"])
                 groupId = "com.github.navikt.tbd_libs"
-                artifactId = project.name
+                artifactId = project.name.replace("-", "_")
                 version = "${this@subprojects.version}"
             }
         }

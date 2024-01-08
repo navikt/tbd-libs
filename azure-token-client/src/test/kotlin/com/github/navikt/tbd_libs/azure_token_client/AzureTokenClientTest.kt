@@ -1,4 +1,4 @@
-package com.github.navikt.tbd_libs.azure
+package com.github.navikt.tbd_libs.azure_token_client
 
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

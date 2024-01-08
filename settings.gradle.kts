@@ -1,2 +1,2 @@
 rootProject.name = "tbd-libs"
-include("azure")
+include("azure-token-client")
