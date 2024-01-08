@@ -3,6 +3,19 @@ tbd libs
 
 en samling pakker som kan brukes i prosjekter
 
+## ta i bruk
+
+1. legg til repository i `build.gradle.kts`:
+```kotlin
+repositories {
+    maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
+}
+```
+2. legg inn avhengighet, f.eks.
+```kotlin
+api("com.github.navikt.tbd-libs:azure-token-client:<version>")
+```
+
 ## publisering av pakker
 
 De [publiseres til GitHub](https://github.com/orgs/navikt/packages?repo_name=tbd-libs) automatisk etter et vellykket bygg.
