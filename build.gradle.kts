@@ -33,7 +33,7 @@ subprojects {
         publications {
             create<MavenPublication>("maven") {
                 from(components["java"])
-                groupId = "com.github.navikt.tbd_libs"
+                groupId = "com.github.navikt.tbd-libs"
                 artifactId = project.name
                 version = "${this@subprojects.version}"
             }
