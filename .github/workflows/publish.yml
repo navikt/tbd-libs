@@ -1,7 +1,7 @@
 name: publish artifacts
 on:
   workflow_run:
-    workflows: ["build and test"]
+    workflows: ["build"]
     branches: [main]
     types:
       - completed
