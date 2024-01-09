@@ -45,9 +45,21 @@ class MockHttpClient {
             }
         }
 
-        fun verifiserJwtRequestBody(httpClient: HttpClient, clientId: String, scope: String, certificate: String) {
+        fun verifiserJwtRequestBody(httpClient: HttpClient, clientId: String, scope: String, jwt: String) {
             verifiserRequestBody(httpClient) { requestBody ->
-                requestBody == "client_id=$clientId&scope=$scope&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$certificate"
+                requestBody == "client_id=$clientId&scope=$scope&grant_type=client_credentials&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$jwt"
+            }
+        }
+
+        fun verifiserOBOClientSecretRequestBody(httpClient: HttpClient, clientId: String, scope: String, otherToken: String, clientSecret: String) {
+            verifiserRequestBody(httpClient) { requestBody ->
+                requestBody == "client_id=$clientId&scope=$scope&grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&requested_token_use=on_behalf_of&assertion=$otherToken&client_secret=$clientSecret"
+            }
+        }
+
+        fun verifiserOBOJwtRequestBody(httpClient: HttpClient, clientId: String, scope: String, otherToken: String, jwt: String) {
+            verifiserRequestBody(httpClient) { requestBody ->
+                requestBody == "client_id=$clientId&scope=$scope&grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&requested_token_use=on_behalf_of&assertion=$otherToken&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=$jwt"
             }
         }
 
