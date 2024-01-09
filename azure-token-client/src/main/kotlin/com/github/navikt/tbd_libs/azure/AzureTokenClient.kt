@@ -1,11 +1,7 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.databind.InjectableValues
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.navikt.tbd_libs.azure.AzureErrorResponse.Companion.azureErrorResponseOrNull
+import com.github.navikt.tbd_libs.azure.AzureTokenResponse.Companion.azureTokenResponseOrNull
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -18,9 +14,7 @@ class AzureTokenClient(
     private val clientId: String,
     private val authMethod: AzureAuthMethod,
     private val client: HttpClient = HttpClient.newHttpClient(),
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .registerModule(JavaTimeModule())
+    private val jsonSerde: JsonSerde
 ) : AzureTokenProvider {
 
     override fun onBehalfOfToken(scope: String, token: String) =
@@ -29,33 +23,14 @@ class AzureTokenClient(
         håndterTokenRespons(requestBearerToken(scope))
 
     private fun håndterTokenRespons(body: String): AzureToken {
-        val tokenResponse = deserializeToken(body) ?: kastExceptionVedFeil(body)
+        val tokenResponse = jsonSerde.azureTokenResponseOrNull(body, LocalDateTime.now()) ?: kastExceptionVedFeil(body)
         return AzureToken(tokenResponse.token, tokenResponse.expirationTime)
     }
 
     private fun kastExceptionVedFeil(body: String): Nothing {
-        val error = deserializeErrorResponse(body)
+        val error = jsonSerde.azureErrorResponseOrNull(body)
             ?: throw AzureClientException("Ukjent feil ved henting av token. Kan ikke tolke responsen: $body")
         throw AzureClientException("Feil fra azure: ${error.error}: ${error.description}")
-    }
-
-    private fun deserializeErrorResponse(body: String): AzureErrorResponse? {
-        return try {
-            objectMapper.readValue<AzureErrorResponse>(body)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun deserializeToken(body: String): AzureTokenResponse? {
-        val reader = objectMapper.reader(InjectableValues.Std()
-            .addValue(LocalDateTime::class.java, LocalDateTime.now())
-        ).forType(AzureTokenResponse::class.java)
-        return try {
-            reader.readValue<AzureTokenResponse>(body)
-        } catch (_: Exception) {
-            null
-        }
     }
 
     private fun requestBearerToken(scope: String) = requestToken(buildTokenRequestBody(scope))

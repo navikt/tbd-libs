@@ -1,12 +1,18 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.github.navikt.tbd_libs.azure.JsonSerde.Companion.deserializeOrNull
+import com.github.navikt.tbd_libs.azure.JsonSerde.Companion.stringOrNull
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 internal data class AzureErrorResponse(
-    @JsonProperty("error")
     val error: String,
-    @JsonProperty("error_description")
     val description: String
-)
+) {
+    internal companion object {
+        internal fun JsonSerde.azureErrorResponseOrNull(body: String): AzureErrorResponse? {
+            val json = deserializeOrNull(body) ?: return null
+            val error = json.stringOrNull("error") ?: return null
+            val errorDescription = json.stringOrNull("error_description") ?: return null
+            return AzureErrorResponse(error, errorDescription)
+        }
+    }
+}

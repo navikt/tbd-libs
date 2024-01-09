@@ -1,19 +1,14 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.annotation.JacksonInject
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
+import com.github.navikt.tbd_libs.azure.JsonSerde.Companion.deserializeOrNull
+import com.github.navikt.tbd_libs.azure.JsonSerde.Companion.longOrNull
+import com.github.navikt.tbd_libs.azure.JsonSerde.Companion.stringOrNull
 import java.time.LocalDateTime
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 internal data class AzureTokenResponse(
-    @JsonProperty("token_type")
     val tokenType: String,
-    @JsonProperty("access_token")
     val token: String,
-    @JsonProperty("expires_in")
     val expiresIn: Long,
-    @JacksonInject
     private val utstedtTidspunkt: LocalDateTime
 ) {
     val expirationTime: LocalDateTime = utstedtTidspunkt.plusSeconds(expiresIn)
@@ -21,6 +16,16 @@ internal data class AzureTokenResponse(
     init {
         check(tokenType.lowercase() == "bearer") {
             "Forventer kun token av typen Bearer. Fikk $tokenType"
+        }
+    }
+
+    internal companion object {
+        internal fun JsonSerde.azureTokenResponseOrNull(body: String, utstedtTidspunkt: LocalDateTime): AzureTokenResponse? {
+            val json = deserializeOrNull(body) ?: return null
+            val tokenType = json.stringOrNull("token_type") ?: return null
+            val accessToken = json.stringOrNull("access_token") ?: return null
+            val expiresIn = json.longOrNull("expires_in") ?: return null
+            return AzureTokenResponse(tokenType, accessToken, expiresIn, utstedtTidspunkt)
         }
     }
 }
