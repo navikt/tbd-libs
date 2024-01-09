@@ -1,10 +1,11 @@
 package com.github.navikt.tbd_libs.azure
 
 import com.fasterxml.jackson.annotation.JacksonInject
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import java.time.Duration
 import java.time.LocalDateTime
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 internal data class AzureTokenResponse(
     @JsonProperty("token_type")
     val tokenType: String,

@@ -18,6 +18,7 @@ class AzureTokenResponseTest {
         val json = """{
   "token_type": "Bearer",
   "expires_in": 3599,
+  "ext_expires_in": 3599,
   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Ik1uQ19WWmNBVGZNNXBP..."
 }"""
         val utstedtTidspunkt = LocalDateTime.of(2018, 1, 1, 13, 37, 0, 123)
