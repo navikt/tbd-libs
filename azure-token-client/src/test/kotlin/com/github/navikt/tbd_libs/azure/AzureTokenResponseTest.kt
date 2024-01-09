@@ -1,16 +1,13 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.databind.InjectableValues
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.navikt.tbd_libs.azure.AzureErrorResponse.Companion.azureErrorResponseOrNull
+import com.github.navikt.tbd_libs.azure.AzureTokenResponse.Companion.azureTokenResponseOrNull
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.LocalDateTime
 
 class AzureTokenResponseTest {
-    private val objectMapper = jacksonObjectMapper()
 
     @Test
     fun deserializeTokenResponse() {
@@ -22,12 +19,10 @@ class AzureTokenResponseTest {
   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Ik1uQ19WWmNBVGZNNXBP..."
 }"""
         val utstedtTidspunkt = LocalDateTime.of(2018, 1, 1, 13, 37, 0, 123)
-        val reader = objectMapper.reader(InjectableValues.Std()
-            .addValue(LocalDateTime::class.java, utstedtTidspunkt)
-        ).forType(AzureTokenResponse::class.java)
-
-        val token = assertDoesNotThrow { reader.readValue<AzureTokenResponse>(json) }
-        assertEquals(utstedtTidspunkt.plusSeconds(3599), token.expirationTime)
+        val jackson = requireNotNull(Jackson.azureTokenResponseOrNull(json, utstedtTidspunkt))
+        val orgJson = requireNotNull(OrgJson.azureTokenResponseOrNull(json, utstedtTidspunkt))
+        assertEquals(utstedtTidspunkt.plusSeconds(3599), jackson.expirationTime)
+        assertEquals(jackson, orgJson)
     }
 
     @Test
@@ -43,6 +38,9 @@ class AzureTokenResponseTest {
   "trace_id": "255d1aef-8c98-452f-ac51-23d051240864",
   "correlation_id": "fb3d2015-bc17-4bb9-bb85-30c5cf1aaaa7"
 }"""
-        assertDoesNotThrow { objectMapper.readValue<AzureErrorResponse>(json) }
+        val jackson = requireNotNull(Jackson.azureErrorResponseOrNull(json))
+        val orgJson = requireNotNull(OrgJson.azureErrorResponseOrNull(json))
+        assertEquals("invalid_scope", jackson.error)
+        assertEquals(jackson, orgJson)
     }
 }

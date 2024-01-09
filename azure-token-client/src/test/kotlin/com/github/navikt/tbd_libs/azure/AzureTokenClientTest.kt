@@ -1,8 +1,8 @@
 package com.github.navikt.tbd_libs.azure
 
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.mockOkResponse
-import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserJwtRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserClientSecretRequestBody
+import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserJwtRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserOBOClientSecretRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserOBOJwtRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserPOST
@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.net.URI
 import java.net.http.HttpClient
-import java.time.LocalDateTime
 
 class AzureTokenClientTest {
     private companion object {
@@ -59,13 +58,13 @@ class AzureTokenClientTest {
 
     private fun requestToken(authMethod: AzureAuthMethod): Pair<HttpClient, AzureToken> {
         val httpClient = mockOkResponse()
-        val client = AzureTokenClient(tokenEndpoint, CLIENT_ID, authMethod, httpClient)
+        val client = AzureTokenClient(tokenEndpoint, CLIENT_ID, authMethod, httpClient, Jackson)
         return httpClient to client.bearerToken(SCOPE)
     }
 
     private fun requestOboToken(authMethod: AzureAuthMethod): Pair<HttpClient, AzureToken> {
         val httpClient = mockOkResponse()
-        val client = AzureTokenClient(tokenEndpoint, CLIENT_ID, authMethod, httpClient)
+        val client = AzureTokenClient(tokenEndpoint, CLIENT_ID, authMethod, httpClient, Jackson)
         return httpClient to client.onBehalfOfToken(SCOPE, OTHER_TOKEN)
     }
 }
