@@ -21,8 +21,8 @@ class AzureTokenClient(
     private val objectMapper: ObjectMapper = jacksonObjectMapper()
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
         .registerModule(JavaTimeModule())
-) {
-    fun bearerToken(scope: String): AzureToken {
+) : AzureTokenProvider {
+    override fun bearerToken(scope: String): AzureToken {
         val body = requestToken(scope) ?: throw AzureClientException("Tom responskropp fra Azure")
         val tokenResponse = deserializeToken(body) ?: kastExceptionVedFeil(body)
         return AzureToken(tokenResponse.token, tokenResponse.expirationTime)
