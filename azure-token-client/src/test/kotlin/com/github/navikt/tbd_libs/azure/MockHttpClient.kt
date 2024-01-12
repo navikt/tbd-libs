@@ -1,19 +1,12 @@
 package com.github.navikt.tbd_libs.azure
 
+import com.github.navikt.tbd_libs.mock.MockHttpResponse
+import com.github.navikt.tbd_libs.mock.bodyAsString
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.intellij.lang.annotations.Language
-import java.net.URI
 import java.net.http.HttpClient
-import java.net.http.HttpHeaders
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
-import java.util.*
-import java.util.concurrent.Flow
-import javax.net.ssl.SSLSession
 
 class MockHttpClient {
     companion object {
@@ -28,7 +21,7 @@ class MockHttpClient {
             val httpClient = mockk<HttpClient>()
             every {
                 httpClient.send<String>(any(), any())
-            } returns TestResponse(okTokenResponse)
+            } returns MockHttpResponse(okTokenResponse)
             return httpClient
         }
 
@@ -69,64 +62,6 @@ class MockHttpClient {
                     verifisering(request.bodyAsString())
                 }, any())
             }
-        }
-
-        private fun HttpRequest.bodyAsString(): String {
-            return bodyPublisher().get().let {
-                val subscriber = HttpResponse.BodySubscribers.ofString(StandardCharsets.UTF_8)
-                it.subscribe(StringSubscriber(subscriber))
-                subscriber.body.toCompletableFuture().get()
-            }
-        }
-    }
-
-    private class StringSubscriber(private val other: HttpResponse.BodySubscriber<String>) : Flow.Subscriber<ByteBuffer> {
-        override fun onSubscribe(subscription: Flow.Subscription) {
-            other.onSubscribe(subscription)
-        }
-
-        override fun onNext(item: ByteBuffer) {
-            other.onNext(listOf(item))
-        }
-
-        override fun onError(throwable: Throwable) {
-            other.onError(throwable)
-        }
-
-        override fun onComplete() {
-            other.onComplete()
-        }
-    }
-
-    private class TestResponse(private val body: String) : HttpResponse<String> {
-        override fun body() = body
-
-        override fun statusCode(): Int {
-            throw NotImplementedError("Ikke implementert i mocken")
-        }
-
-        override fun request(): HttpRequest {
-            throw NotImplementedError("Ikke implementert i mocken")
-        }
-
-        override fun previousResponse(): Optional<HttpResponse<String>> {
-            throw NotImplementedError("Ikke implementert i mocken")
-        }
-
-        override fun headers(): HttpHeaders {
-            throw NotImplementedError("Ikke implementert i mocken")
-        }
-
-        override fun sslSession(): Optional<SSLSession> {
-            throw NotImplementedError("Ikke implementert i mocken")
-        }
-
-        override fun uri(): URI {
-            throw NotImplementedError("Ikke implementert i mocken")
-        }
-
-        override fun version(): HttpClient.Version {
-            throw NotImplementedError("Ikke implementert i mocken")
         }
     }
 }

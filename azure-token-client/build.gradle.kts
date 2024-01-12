@@ -6,4 +6,5 @@ dependencies {
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
 
     testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation(project(":mock-http-client"))
 }
