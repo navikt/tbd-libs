@@ -1,4 +1,4 @@
-val mockkVersion = "1.13.9"
+val mockkVersion: String by project
 
 dependencies {
     testImplementation("io.mockk:mockk:$mockkVersion")

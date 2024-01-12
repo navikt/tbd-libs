@@ -1,5 +1,7 @@
 val gradleversjon = "8.5"
 val junitJupiterVersion = "5.10.1"
+val mockkVersion = "1.13.9"
+val jacksonVersion = "2.16.1"
 
 plugins {
     kotlin("jvm") version "1.9.22" apply false
@@ -15,6 +17,9 @@ allprojects {
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.gradle.maven-publish")
+
+    ext.set("jacksonVersion", jacksonVersion)
+    ext.set("mockkVersion", mockkVersion)
 
     val testImplementation by configurations
     val testRuntimeOnly by configurations
