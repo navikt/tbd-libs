@@ -2,13 +2,14 @@ package com.github.navikt.tbd_libs.soap
 
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class SoapResponseHandlerTest {
+class SoapGreetingHandlerTest {
     private companion object {
         private const val NAME_FOR_TEXT_ELEMENT = "innerText"
         private val xmlMapper = XmlMapper.builder()
@@ -17,7 +18,6 @@ class SoapResponseHandlerTest {
             // workaround: https://github.com/FasterXML/jackson-module-kotlin/issues/138#issuecomment-576484905
             .nameForTextElement(NAME_FOR_TEXT_ELEMENT)
             .build()
-        private val handler = SoapResponseHandler(xmlMapper)
     }
 
     @Test
@@ -37,7 +37,7 @@ class SoapResponseHandlerTest {
     </Soap:Body>
 </Soap:Envelope> 
 """
-        val result = handler.deserializeSoapBody(xml, Response::class)
+        val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
         assertEquals(expectedGreeting, result.greeting)
     }
     @Test
@@ -55,15 +55,38 @@ class SoapResponseHandlerTest {
     </Soap:Body>
 </Soap:Envelope> 
 """
-        val result = handler.deserializeSoapBody(xml, ResponseLength::class)
+        val result = deserializeSoapBody<ResponseLength>(xmlMapper, xml)
         assertEquals("METERS", result.length.unit)
         assertEquals(1337, result.length.value)
     }
 
     @Test
+    fun `deserialiserer liste med ett element`() {
+        val expectedGreeting = "Hello, World!"
+        @Language("XML")
+        val xml = """<?xml version="1.0" encoding="UTF-8" ?>
+<Soap:Envelope xmlns:Soap="https://schemas.xmlsoap.org/soap/envelope/">
+    <Soap:Header>
+        <Action xmlns="https://www.w3.org/2005/08/addressing">min action</Action>
+        <MessageID xmlns="https://www.w3.org/2005/08/addressing">en message ID</MessageID>
+        <RelatesTo xmlns="https://www.w3.org/2005/08/addressing">urn:uuid:d8aa0031-4ead-432f-abda-fa663ad4bc71</RelatesTo>
+    </Soap:Header>
+    <Soap:Body>
+        <greetings>
+            <greeting>$expectedGreeting</greeting>
+        </greetings>
+    </Soap:Body>
+</Soap:Envelope> 
+"""
+        val result = deserializeSoapBody<Greetings>(xmlMapper, xml)
+        assertEquals(1, result.greetings.size)
+        assertEquals(expectedGreeting, result.greetings.single().greeting)
+    }
+
+    @Test
     fun `håndterer ugyldig xml`() {
         assertThrows<SoapResponseHandlerException> {
-            handler.deserializeSoapBody("dette er ikke xml", Response::class)
+            deserializeSoapBody(xmlMapper, "dette er ikke xml")
         }
     }
 
@@ -72,13 +95,19 @@ class SoapResponseHandlerTest {
         @Language("XML")
         val xml = "<greeting>Hello</greeting>"
         assertThrows<SoapResponseHandlerException> {
-            handler.deserializeSoapBody(xml, Response::class)
+            deserializeSoapBody(xmlMapper, xml)
         }
     }
 
-    private data class Response(
+    private data class Greeting(
         @JacksonXmlProperty(localName = "greeting")
         val greeting: String
+    )
+
+    private data class Greetings(
+        @JacksonXmlProperty(localName = "greetings")
+        @JacksonXmlElementWrapper(useWrapping = false)
+        val greetings: List<Greeting>
     )
 
     private data class ResponseLength(
