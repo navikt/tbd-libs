@@ -3,11 +3,16 @@ package com.github.navikt.tbd_libs.soap
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
+import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import com.fasterxml.jackson.module.kotlin.readValue
 
 inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): T {
-    try {
-        return mapper.readValue<SoapResponse<T>>(body).body
+    val fault = try {
+        mapper.readValue<SoapResponse<SoapFault>>(body).body.fault
+    } catch (err: Exception) { null }
+    if (fault != null) throw SoapResponseHandlerException("SOAP fault: ${fault.code} - ${fault.messsage}")
+    return try {
+        mapper.readValue<SoapResponse<T>>(body).body
     } catch (err: Exception) {
         throw SoapResponseHandlerException("Kunne ikke oversette resultatet: ${err.message}", err)
     }
@@ -28,6 +33,18 @@ data class SoapResponse<T>(
     val header: SoapHeader,
     @JacksonXmlProperty(localName = "Body")
     val body: T
+)
+
+data class SoapFault(
+    @JacksonXmlProperty(localName = "Fault", namespace = "http://www.w3.org/2003/05/soap-envelope")
+    val fault: Fault
+)
+
+data class Fault(
+    @JacksonXmlProperty(localName = "faultcode")
+    val code: String,
+    @JacksonXmlProperty(localName = "faultstring")
+    val messsage: String
 )
 
 class SoapResponseHandlerException(override val message: String, override val cause: Throwable? = null) : RuntimeException()

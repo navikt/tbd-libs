@@ -84,6 +84,35 @@ class SoapGreetingHandlerTest {
     }
 
     @Test
+    fun `håndterer soap fault`() {
+        val errorCode = "E2000"
+        val errorMessage = "Something bad"
+
+        @Language("XML")
+        val xml = """<?xml version="1.0" encoding="UTF-8" ?>
+<Soap:Envelope xmlns:Soap="https://schemas.xmlsoap.org/soap/envelope/">
+    <Soap:Header>
+        <Action xmlns="https://www.w3.org/2005/08/addressing">min action</Action>
+        <MessageID xmlns="https://www.w3.org/2005/08/addressing">en message ID</MessageID>
+        <RelatesTo xmlns="https://www.w3.org/2005/08/addressing">urn:uuid:d8aa0031-4ead-432f-abda-fa663ad4bc71
+        </RelatesTo>
+    </Soap:Header>
+    <Soap:Body>
+        <Soap:Fault>
+            <faultcode>$errorCode</faultcode>
+            <faultstring>$errorMessage</faultstring>
+        </Soap:Fault>
+    </Soap:Body>
+</Soap:Envelope> 
+"""
+
+        val err = assertThrows<SoapResponseHandlerException> {
+            val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
+        }
+        assertEquals("SOAP fault: $errorCode - $errorMessage", err.message)
+    }
+
+    @Test
     fun `håndterer ugyldig xml`() {
         assertThrows<SoapResponseHandlerException> {
             deserializeSoapBody(xmlMapper, "dette er ikke xml")
