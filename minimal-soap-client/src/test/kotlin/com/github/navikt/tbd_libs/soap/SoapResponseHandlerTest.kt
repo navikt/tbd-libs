@@ -139,9 +139,10 @@ class SoapResponseHandlerTest {
     fun `håndterer mangelfull soap envelope`() {
         @Language("XML")
         val xml = "<greeting>Hello</greeting>"
-        assertThrows<SoapResponseHandlerException> {
+        val message = assertThrows<SoapResponseHandlerException> {
             deserializeSoapBody(xmlMapper, xml)
         }
+        assertEquals("Kunne ikke oversette resultatet: Body er null", message.message)
     }
 
     private data class Greeting(

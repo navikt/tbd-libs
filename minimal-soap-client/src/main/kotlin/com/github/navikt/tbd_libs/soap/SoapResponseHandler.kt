@@ -3,7 +3,6 @@ package com.github.navikt.tbd_libs.soap
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
-import com.fasterxml.jackson.module.kotlin.jacksonTypeRef
 import com.fasterxml.jackson.module.kotlin.readValue
 
 inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): T {
@@ -12,7 +11,7 @@ inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): 
     } catch (err: Exception) { null }
     if (fault != null) throw SoapResponseHandlerException("SOAP fault: ${fault.code} - ${fault.messsage}")
     return try {
-        mapper.readValue<SoapResponse<T>>(body).body
+        checkNotNull(mapper.readValue<SoapResponse<T>>(body).body) { "Body er null" }
     } catch (err: Exception) {
         throw SoapResponseHandlerException("Kunne ikke oversette resultatet: ${err.message}", err)
     }
