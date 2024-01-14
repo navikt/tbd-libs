@@ -5,7 +5,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -122,10 +122,51 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
 
-        val err = assertThrows<SoapResponseHandlerException> {
-            val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
+        val err = assertThrows<SoaptjenesteException> {
+            deserializeSoapBody<Unit>(xmlMapper, xml)
         }
         assertEquals("SOAP fault: $errorCode - $errorMessage", err.message)
+        assertNull(err.detalje)
+    }
+
+    @Test
+    fun `håndterer soap fault med detail`() {
+        val errorCode = "E2000"
+        val errorMessage = "Something bad"
+
+        @Language("XML")
+        val detalje = """<detail> 
+    <sf:simulerBeregningFeilUnderBehandling xmlns:sf="http://nav.no/system/os/tjenester/oppdragService">
+        <errorMessage>UTBETALES-TIL-ID er ikke utfylt</errorMessage>
+        <errorSource>sti til kilde</errorSource>
+        <rootCause>rotårsak</rootCause>
+        <dateTimeStamp>2018-01-01T23:59:59</dateTimeStamp>
+</sf:simulerBeregningFeilUnderBehandling>
+</detail>"""
+        @Language("XML")
+        val xml = """<?xml version="1.0" encoding="UTF-8" ?>
+<Soap:Envelope xmlns:Soap="https://schemas.xmlsoap.org/soap/envelope/">
+    <Soap:Header>
+        <Action xmlns="https://www.w3.org/2005/08/addressing">min action</Action>
+        <MessageID xmlns="https://www.w3.org/2005/08/addressing">en message ID</MessageID>
+        <RelatesTo xmlns="https://www.w3.org/2005/08/addressing">urn:uuid:d8aa0031-4ead-432f-abda-fa663ad4bc71
+        </RelatesTo>
+    </Soap:Header>
+    <Soap:Body>
+        <Soap:Fault>
+            <faultcode>$errorCode</faultcode>
+            <faultstring>$errorMessage</faultstring>
+            $detalje
+        </Soap:Fault>
+    </Soap:Body>
+</Soap:Envelope> 
+"""
+
+        val err = assertThrows<SoaptjenesteException> {
+            deserializeSoapBody<Unit>(xmlMapper, xml)
+        }
+        assertEquals("SOAP fault: $errorCode - $errorMessage", err.message)
+        assertEquals(xmlMapper.readTree(detalje).toPrettyString(), err.detalje)
     }
 
     @Test

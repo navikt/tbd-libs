@@ -1,5 +1,6 @@
 package com.github.navikt.tbd_libs.soap
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
@@ -9,7 +10,7 @@ inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): 
     val fault = try {
         mapper.readValue<SoapResponse<SoapFault>>(body).body.fault
     } catch (err: Exception) { null }
-    if (fault != null) throw SoapResponseHandlerException("SOAP fault: ${fault.code} - ${fault.messsage}")
+    if (fault != null) throw SoaptjenesteException("SOAP fault: ${fault.code} - ${fault.messsage}", fault.detail?.toPrettyString())
     return try {
         checkNotNull(mapper.readValue<SoapResponse<T>>(body).body) { "Body er null" }
     } catch (err: Exception) {
@@ -43,7 +44,10 @@ data class Fault(
     @JacksonXmlProperty(localName = "faultcode")
     val code: String,
     @JacksonXmlProperty(localName = "faultstring")
-    val messsage: String
+    val messsage: String,
+    @JacksonXmlProperty(localName = "detail")
+    val detail: JsonNode?
 )
 
 class SoapResponseHandlerException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
+class SoaptjenesteException(override val message: String, val detalje: String?, override val cause: Throwable? = null) : RuntimeException()
