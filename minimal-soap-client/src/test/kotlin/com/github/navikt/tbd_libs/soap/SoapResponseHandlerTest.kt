@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class SoapGreetingHandlerTest {
+class SoapResponseHandlerTest {
     private companion object {
         private const val NAME_FOR_TEXT_ELEMENT = "innerText"
         private val xmlMapper = XmlMapper.builder()
@@ -32,6 +32,22 @@ class SoapGreetingHandlerTest {
         <MessageID xmlns="https://www.w3.org/2005/08/addressing">en message ID</MessageID>
         <RelatesTo xmlns="https://www.w3.org/2005/08/addressing">urn:uuid:d8aa0031-4ead-432f-abda-fa663ad4bc71</RelatesTo>
     </Soap:Header>
+    <Soap:Body>
+        <greeting>$expectedGreeting</greeting>
+    </Soap:Body>
+</Soap:Envelope> 
+"""
+        val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
+        assertEquals(expectedGreeting, result.greeting)
+    }
+
+    @Test
+    fun `deserialiserer soap response uten header`() {
+        val expectedGreeting = "Hello, World"
+
+        @Language("XML")
+        val xml = """<?xml version="1.0" encoding="UTF-8" ?>
+<Soap:Envelope xmlns:Soap="https://schemas.xmlsoap.org/soap/envelope/">
     <Soap:Body>
         <greeting>$expectedGreeting</greeting>
     </Soap:Body>

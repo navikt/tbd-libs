@@ -30,7 +30,7 @@ data class SoapHeader(
 @JacksonXmlRootElement(localName = "Envelope", namespace = "http://schemas.xmlsoap.org/soap/envelope/")
 data class SoapResponse<T>(
     @JacksonXmlProperty(localName = "Header")
-    val header: SoapHeader,
+    val header: SoapHeader?,
     @JacksonXmlProperty(localName = "Body")
     val body: T
 )
