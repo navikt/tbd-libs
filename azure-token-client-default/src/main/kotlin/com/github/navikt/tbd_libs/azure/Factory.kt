@@ -50,7 +50,6 @@ fun createAzureTokenClientFromEnvironment(env: Map<String, String> = System.gete
 fun createJwkAzureTokenClientFromEnvironment(env: Map<String, String> = System.getenv()): AzureTokenProvider {
     val objectMapper = jacksonObjectMapper().registerModule(JavaTimeModule())
     val jwk: Map<String, Any?> = objectMapper.readValue(env.getValue("AZURE_APP_JWK"))
-
     return createJwkAzureTokenClient(
         tokenEndpoint = URI(env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")),
         clientId = env.getValue("AZURE_APP_CLIENT_ID"),
