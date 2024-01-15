@@ -18,7 +18,7 @@ class JwkTest {
 
     @Test
     fun `Generere client assertion fra JWK`() {
-        val jwk: Map<String, String> = om.readValue(TEST_JWK)
+        val jwk: Map<String, Any?> = om.readValue(TEST_JWK)
         val authMethod = AzureAuthMethod.Jwk(jwk, "test-client-id", URI("http://localhost:8080/token"))
         val assertion = authMethod.requestParameters().getValue("client_assertion")
         val parts = assertion.split(".")
@@ -71,9 +71,9 @@ class JwkTest {
         }
         """
 
-        private fun publicKey(jwk: Map<String, String>): RSAPublicKey {
-            val modulus = jwk.getValue("n").decodeToBigInteger
-            val exponent = jwk.getValue("e").decodeToBigInteger
+        private fun publicKey(jwk: Map<String, Any?>): RSAPublicKey {
+            val modulus = jwk.getValue("n").toString().decodeToBigInteger
+            val exponent = jwk.getValue("e").toString().decodeToBigInteger
             val spec = RSAPublicKeySpec(modulus, exponent)
             val factory = KeyFactory.getInstance("RSA")
             return factory.generatePublic(spec) as RSAPublicKey

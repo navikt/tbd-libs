@@ -50,7 +50,7 @@ sealed interface AzureAuthMethod {
             return base64Encoder.encodeToString(json.toByteArray())
         }
 
-        constructor(jwk: Map<String, String>, clientId: String, tokenEndpoint: URI): this(jwk.somRSAPrivateKey(), jwk.hent("kid", "Key ID"), clientId, tokenEndpoint)
+        constructor(jwk: Map<String, Any?>, clientId: String, tokenEndpoint: URI): this(jwk.somRSAPrivateKey(), jwk.hent("kid", "Key ID"), clientId, tokenEndpoint)
 
         private fun assertion(): String {
             val signingInput = "$header.$claims"
@@ -64,8 +64,8 @@ sealed interface AzureAuthMethod {
             private val base64Decoder = Base64.getUrlDecoder()
             private val base64Encoder = Base64.getUrlEncoder().withoutPadding()
             private val String.decodeToBigInteger get() = BigInteger(1, base64Decoder.decode(this))
-            private fun Map<String, String>.hent(key: String, navn: String) = checkNotNull(get(key)) { "$navn ($key) må være satt. Fant kun $keys" }
-            private fun Map<String, String>.somRSAPrivateKey(): RSAPrivateKey {
+            private fun Map<String, Any?>.hent(key: String, navn: String) = checkNotNull(get(key)?.takeIf { it is String }?.let { it as String }) { "$navn ($key) må være satt. Fant kun $keys" }
+            private fun Map<String, Any?>.somRSAPrivateKey(): RSAPrivateKey {
                 val keyType = hent("kty", "Key type")
                 check(keyType.uppercase() == "RSA") { "Key type (kty) må være RSA" }
                 val modulus = hent("n", "Modulus").decodeToBigInteger
