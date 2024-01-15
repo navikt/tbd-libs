@@ -46,7 +46,7 @@ sealed interface AzureAuthMethod {
         private val claims get() : String {
             val now = Instant.now(Clock.systemUTC())
             val expiry = now.plusSeconds(10)
-            @Language("JSON") val json = """{"aud":"$tokenEndpoint","sub":"$clientId","nbf":${now.toEpochMilli()},"iss":"$clientId","exp":${expiry.toEpochMilli()},"iat":${now.toEpochMilli()},"jti":"${UUID.randomUUID()}"}"""
+            @Language("JSON") val json = """{"aud":"$tokenEndpoint","sub":"$clientId","nbf":${now.epochSecond},"iss":"$clientId","exp":${expiry.epochSecond},"iat":${now.epochSecond},"jti":"${UUID.randomUUID()}"}"""
             return base64Encoder.encodeToString(json.toByteArray())
         }
 
