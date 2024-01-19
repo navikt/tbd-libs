@@ -14,7 +14,8 @@ import java.util.Base64
 class MinimalStsClient(
     private val baseUrl: URI,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
+    private val objectMapper: ObjectMapper = jacksonObjectMapper(),
+    private val proxyAuthorization: (() -> String)?,
 ) : SamlTokenProvider {
     override fun samlToken(username: String, password: String): SamlToken {
         val body = requestSamlToken(username, password)
@@ -24,8 +25,10 @@ class MinimalStsClient(
     private fun requestSamlToken(username: String, password: String): String {
         val encodedCredentials = Base64.getEncoder()
             .encodeToString("$username:$password".toByteArray(StandardCharsets.UTF_8))
+        val proxyAuthorizationToken = proxyAuthorization?.invoke()
         val request = HttpRequest.newBuilder(URI("$baseUrl/rest/v1/sts/samltoken"))
             .header("Authorization", "Basic $encodedCredentials")
+            .apply { if (proxyAuthorizationToken != null) this.header("Proxy-Authorization", proxyAuthorizationToken) }
             .GET()
             .build()
 

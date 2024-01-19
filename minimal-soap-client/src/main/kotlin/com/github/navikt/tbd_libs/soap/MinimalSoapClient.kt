@@ -11,14 +11,17 @@ import java.util.*
 class MinimalSoapClient(
     private val serviceUrl: URI,
     private val tokenProvider: SamlTokenProvider,
-    private val httpClient: HttpClient = HttpClient.newHttpClient()
+    private val httpClient: HttpClient = HttpClient.newHttpClient(),
+    private val proxyAuthorization: (() -> String)?,
 ) {
 
     fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): String {
         val requestBody = createXmlRequest(tokenStrategy.token(tokenProvider), action, body)
+        val proxyAuthorizationToken = proxyAuthorization?.invoke()
         val request = HttpRequest.newBuilder()
             .uri(serviceUrl)
             .header("SOAPAction", action)
+            .apply { if (proxyAuthorizationToken != null) this.header("Proxy-Authorization", proxyAuthorizationToken) }
             .POST(BodyPublishers.ofString(requestBody))
             .build()
 
