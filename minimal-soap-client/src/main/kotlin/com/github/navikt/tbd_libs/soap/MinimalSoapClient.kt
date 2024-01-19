@@ -21,7 +21,7 @@ class MinimalSoapClient(
         val request = HttpRequest.newBuilder()
             .uri(serviceUrl)
             .header("SOAPAction", action)
-            .apply { if (proxyAuthorizationToken != null) this.header("Proxy-Authorization", proxyAuthorizationToken) }
+            .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
             .POST(BodyPublishers.ofString(requestBody))
             .build()
 

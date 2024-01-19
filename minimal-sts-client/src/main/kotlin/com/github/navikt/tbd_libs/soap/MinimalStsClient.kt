@@ -28,7 +28,7 @@ class MinimalStsClient(
         val proxyAuthorizationToken = proxyAuthorization?.invoke()
         val request = HttpRequest.newBuilder(URI("$baseUrl/rest/v1/sts/samltoken"))
             .header("Authorization", "Basic $encodedCredentials")
-            .apply { if (proxyAuthorizationToken != null) this.header("Proxy-Authorization", proxyAuthorizationToken) }
+            .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
             .GET()
             .build()
 
