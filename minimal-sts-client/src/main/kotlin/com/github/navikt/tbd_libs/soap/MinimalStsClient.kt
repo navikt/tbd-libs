@@ -15,7 +15,7 @@ class MinimalStsClient(
     private val baseUrl: URI,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
     private val objectMapper: ObjectMapper = jacksonObjectMapper(),
-    private val proxyAuthorization: (() -> String)?,
+    private val proxyAuthorization: (() -> String)? = null,
 ) : SamlTokenProvider {
     override fun samlToken(username: String, password: String): SamlToken {
         val body = requestSamlToken(username, password)

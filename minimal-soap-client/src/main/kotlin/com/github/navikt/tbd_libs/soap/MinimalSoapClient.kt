@@ -12,7 +12,7 @@ class MinimalSoapClient(
     private val serviceUrl: URI,
     private val tokenProvider: SamlTokenProvider,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
-    private val proxyAuthorization: (() -> String)?,
+    private val proxyAuthorization: (() -> String)? = null,
 ) {
 
     fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): String {
