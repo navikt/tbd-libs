@@ -6,7 +6,7 @@ import java.net.URI
 import java.security.KeyFactory
 import java.security.Signature
 import java.security.interfaces.RSAPrivateKey
-import java.security.spec.RSAPrivateCrtKeySpec
+import java.security.spec.RSAPrivateKeySpec
 import java.time.Clock
 import java.time.Instant
 import java.util.*
@@ -70,13 +70,7 @@ sealed interface AzureAuthMethod {
                 check(keyType.uppercase() == "RSA") { "Key type (kty) må være RSA" }
                 val modulus = hent("n", "Modulus").decodeToBigInteger
                 val privateExponent = hent("d", "Private exponent").decodeToBigInteger
-                val publicExponent = hent("e", "Public exponent").decodeToBigInteger
-                val primeP = hent("p", "Prime P").decodeToBigInteger
-                val primeQ = hent("q", "Prime Q").decodeToBigInteger
-                val primeExponentP = hent("dp", "Prime Exponent P").decodeToBigInteger
-                val primeExponentQ = hent("dq", "Prime Exponent Q").decodeToBigInteger
-                val crtCoefficient = hent("qi", "Certificate Coefficient").decodeToBigInteger
-                val keySpec = RSAPrivateCrtKeySpec(modulus, publicExponent, privateExponent, primeP, primeQ, primeExponentP, primeExponentQ, crtCoefficient)
+                val keySpec = RSAPrivateKeySpec(modulus, privateExponent)
                 val factory = KeyFactory.getInstance("RSA")
                 return (factory.generatePrivate(keySpec) as RSAPrivateKey)
             }
