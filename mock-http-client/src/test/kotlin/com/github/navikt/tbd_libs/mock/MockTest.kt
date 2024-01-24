@@ -10,6 +10,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
+import java.util.*
 
 class MockTest {
 
@@ -17,6 +18,9 @@ class MockTest {
     fun `kan mocke response`() {
         val expectedRequestBody = "Hello, Server!"
         val expectedResponseBody = "Hello, World!"
+        val callId = "${UUID.randomUUID()}"
+        val expectedStatusCode = 201
+
         val actualRequest = HttpRequest
             .newBuilder()
             .uri(URI("http://localhost"))
@@ -25,7 +29,7 @@ class MockTest {
         val httpClient = mockk<HttpClient>()
         every {
             httpClient.send<String>(any(), any())
-        } returns MockHttpResponse(expectedResponseBody)
+        } returns MockHttpResponse(expectedResponseBody, expectedStatusCode, headers = mapOf("X-Call-Id" to callId))
 
         val result = httpClient.send(actualRequest.build(), BodyHandlers.ofString())
 
@@ -33,6 +37,8 @@ class MockTest {
             it.bodyAsString() == expectedRequestBody
         }, any()) }
 
+        assertEquals(expectedStatusCode, result.statusCode())
+        assertEquals(callId, result.headers().firstValue("X-Call-Id").get())
         assertEquals(expectedResponseBody, result.body())
     }
 }

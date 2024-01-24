@@ -39,7 +39,8 @@ private class StringSubscriber(private val other: HttpResponse.BodySubscriber<St
 
 class MockHttpResponse(
     private val body: String,
-    private val statusCode: Int? = null
+    private val statusCode: Int? = null,
+    private val headers: Map<String, String>? = null
 ) : HttpResponse<String> {
     override fun body() = body
 
@@ -54,7 +55,9 @@ class MockHttpResponse(
     }
 
     override fun headers(): HttpHeaders {
-        throw NotImplementedError("Ikke implementert i mocken")
+        if (headers == null) throw NotImplementedError("Ikke implementert i mocken")
+        val acceptAll = { _: String, _: String -> true }
+        return HttpHeaders.of(headers.mapValues { listOf(it.value) }, acceptAll)
     }
 
     override fun sslSession(): Optional<SSLSession> {
