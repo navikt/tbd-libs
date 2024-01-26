@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.test_support
 
 import com.zaxxer.hikari.HikariConfig
+import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -16,6 +17,16 @@ class DatabaseContainer(
             withCreateContainerCmdModifier { command -> command.withName(appnavn) }
             withReuse(true)
             withLabel("app-navn", appnavn)
+            DockerClientFactory.lazyClient().apply {
+                this
+                    .listContainersCmd()
+                    .exec()
+                    .filter { it.labels["app-navn"] == appnavn }
+                    .forEach {
+                        killContainerCmd(it.id).exec()
+                        removeContainerCmd(it.id).withForce(true).exec()
+                    }
+            }
             start()
         }
     }
@@ -26,7 +37,11 @@ class DatabaseContainer(
     }
 
     fun nyTilkobling(): TestDataSource {
-        return tilgjengeligeTilkoblinger.poll(20, TimeUnit.SECONDS) ?: throw RuntimeException("Ventet i 20 sekunder uten å få en ledig database")
+        return tilgjengeligeTilkoblinger.poll(20, TimeUnit.SECONDS) ?: tilkoblingIkkeTilgjengelig()
+    }
+
+    private fun tilkoblingIkkeTilgjengelig(): Nothing {
+        throw RuntimeException("Ventet i 20 sekunder uten å få en ledig database")
     }
 
     private fun opprettTilkoblinger(cleanUpTables: String?, maxHikariPoolSize: Int) =
@@ -50,7 +65,9 @@ class DatabaseContainer(
     fun droppTilkobling(testDataSource: TestDataSource) {
         println("Tilgjengeliggjør datbasen igjen")
         testDataSource.cleanUp()
-        tilgjengeligeTilkoblinger.offer(testDataSource)
+        check(tilgjengeligeTilkoblinger.offer(testDataSource)) {
+            "Kunne ikke returnere tilkoblingen"
+        }
     }
 
     fun ryddOpp() {
