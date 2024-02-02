@@ -13,9 +13,9 @@ object DatabaseContainers {
 
     // gjenbruker containers med samme navn for å unngå
     // å spinne opp mange containers
-    fun container(appnavn: String, cleanUpTables: String? = null, maxHikariPoolSize: Int = 2): DatabaseContainer {
+    fun container(appnavn: String, cleanUpTables: String? = null, maxHikariPoolSize: Int = 2, databasePoolSize: Int = POOL_SIZE): DatabaseContainer {
         return instances.getOrPut(appnavn) {
-            DatabaseContainer(appnavn, POOL_SIZE, cleanUpTables, maxHikariPoolSize)
+            DatabaseContainer(appnavn, databasePoolSize, cleanUpTables, maxHikariPoolSize)
         }
     }
 }

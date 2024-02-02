@@ -1,8 +1,13 @@
 package com.github.navikt.tbd_libs.test_support
 
 import com.zaxxer.hikari.HikariConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
+import java.time.Duration
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 
@@ -36,16 +41,19 @@ class DatabaseContainer(
         ArrayBlockingQueue(poolSize, false, opprettTilkoblinger(cleanUpTables, maxHikariPoolSize))
     }
 
-    fun nyTilkobling(): TestDataSource {
-        return tilgjengeligeTilkoblinger.poll(20, TimeUnit.SECONDS) ?: tilkoblingIkkeTilgjengelig()
+    fun nyTilkobling(timeout: Duration = Duration.ofSeconds(20)): TestDataSource {
+        return tilgjengeligeTilkoblinger.poll(timeout.toMillis(), TimeUnit.MILLISECONDS) ?: tilkoblingIkkeTilgjengelig(timeout)
     }
 
-    private fun tilkoblingIkkeTilgjengelig(): Nothing {
-        throw RuntimeException("Ventet i 20 sekunder uten å få en ledig database")
+    private fun tilkoblingIkkeTilgjengelig(timeout: Duration): Nothing {
+        throw RuntimeException("Ventet i ${timeout.toMillis()} millisekunder uten å få en ledig database")
     }
 
-    private fun opprettTilkoblinger(cleanUpTables: String?, maxHikariPoolSize: Int) =
-        (1..poolSize).map { opprettTilkobling("testdb_$it", cleanUpTables, maxHikariPoolSize) }
+    private fun opprettTilkoblinger(cleanUpTables: String?, maxHikariPoolSize: Int) = runBlocking(Dispatchers.IO) {
+        (1..poolSize)
+            .map { async { opprettTilkobling("testdb_$it", cleanUpTables, maxHikariPoolSize) } }
+            .awaitAll()
+    }
 
     private fun opprettTilkobling(dbnavn: String, cleanUpTables: String? = null, maxHikariPoolSize: Int): TestDataSource {
         opprettDatabase(dbnavn)

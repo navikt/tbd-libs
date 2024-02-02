@@ -1,15 +1,21 @@
 package com.github.navikt.tbd_libs.test_support
 
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import java.time.Duration
 
 class DatabaseContainersTest {
     private companion object {
-        private val databaseContainer = DatabaseContainers.container("tbd-libs")
+        private const val MAX_POOL_SIZE = 4
+        private val databaseContainer = DatabaseContainers.container("tbd-libs", databasePoolSize = MAX_POOL_SIZE)
+
+        @AfterAll
+        @JvmStatic
+        fun remove() {
+            databaseContainer.ryddOpp()
+        }
     }
 
     private lateinit var testDataSource: TestDataSource
@@ -22,6 +28,13 @@ class DatabaseContainersTest {
     @AfterEach
     fun teardown() {
         databaseContainer.droppTilkobling(testDataSource)
+    }
+
+    @Test
+    fun `tømmer bassenget`() {
+        val tilkoblinger = (1..< MAX_POOL_SIZE).map { databaseContainer.nyTilkobling() }
+        assertThrows<RuntimeException> { databaseContainer.nyTilkobling(Duration.ofMillis(10)) }
+        tilkoblinger.forEach { databaseContainer.droppTilkobling(it) }
     }
 
     @Test
