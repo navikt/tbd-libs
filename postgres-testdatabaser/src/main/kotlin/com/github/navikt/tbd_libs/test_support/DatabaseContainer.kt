@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 class DatabaseContainer(
     private val appnavn: String,
     private val poolSize: Int,
-    private val cleanUpTables: String? = null,
+    private val cleanUpTables: CleanupStrategy? = null,
     private val maxHikariPoolSize: Int = 2
 ) {
     private val instance by lazy {
@@ -49,13 +49,13 @@ class DatabaseContainer(
         throw RuntimeException("Ventet i ${timeout.toMillis()} millisekunder uten å få en ledig database")
     }
 
-    private fun opprettTilkoblinger(cleanUpTables: String?, maxHikariPoolSize: Int) = runBlocking(Dispatchers.IO) {
+    private fun opprettTilkoblinger(cleanUpTables: CleanupStrategy?, maxHikariPoolSize: Int) = runBlocking(Dispatchers.IO) {
         (1..poolSize)
             .map { async { opprettTilkobling("testdb_$it", cleanUpTables, maxHikariPoolSize) } }
             .awaitAll()
     }
 
-    private fun opprettTilkobling(dbnavn: String, cleanUpTables: String? = null, maxHikariPoolSize: Int): TestDataSource {
+    private fun opprettTilkobling(dbnavn: String, cleanUpTables: CleanupStrategy?, maxHikariPoolSize: Int): TestDataSource {
         opprettDatabase(dbnavn)
         instance.withDatabaseName(dbnavn)
         return TestDataSource(dbnavn, HikariConfig().apply {

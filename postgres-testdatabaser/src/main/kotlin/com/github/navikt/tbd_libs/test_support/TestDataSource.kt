@@ -4,11 +4,12 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import java.time.Duration
 import org.flywaydb.core.Flyway
+import java.sql.Connection
 
 class TestDataSource(
     private val dbnavn: String,
     config: HikariConfig,
-    private val cleanUpTables: String? = null, // komma-separert liste over tabeller som skal tømmes
+    private val cleanUpTables: CleanupStrategy? = null, // komma-separert liste over tabeller som skal tømmes
     maxHikariPoolSize: Int = 2 // hvor stor hikari-poolen skal være
 ) {
     private val migrationConfig = HikariConfig()
@@ -55,12 +56,25 @@ class TestDataSource(
         }
         println("Tømmer tabellene $cleanUpTables")
         migrationDataSource.connection.use {
-            it.createStatement().execute("truncate table $cleanUpTables restart identity cascade;")
+            cleanUpTables.cleanup(it)
         }
     }
     fun teardown(dropDatabase: (String) -> Unit) {
         migrationDataSource.close()
         dataSource.close()
         dropDatabase(dbnavn)
+    }
+}
+
+fun interface CleanupStrategy {
+    fun cleanup(connection: Connection)
+
+    companion object {
+        // comma-separated list of tables
+        fun tables(tables: String): CleanupStrategy {
+            return CleanupStrategy {
+                it.createStatement().execute("truncate table $tables restart identity cascade;")
+            }
+        }
     }
 }
