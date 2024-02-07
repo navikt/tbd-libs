@@ -55,7 +55,7 @@ class TestDataSource(
         }
         println("Tømmer tabellene $cleanUpTables")
         migrationDataSource.connection.use {
-            it.createStatement().execute("truncate table $cleanUpTables cascade;")
+            it.createStatement().execute("truncate table $cleanUpTables restart identity cascade;")
         }
     }
     fun teardown(dropDatabase: (String) -> Unit) {
