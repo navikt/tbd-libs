@@ -1,6 +1,6 @@
 val testcontainersVersion = "1.19.3"
 val flywayVersion = "10.5.0"
-val postgresqlVersion = "42.7.1"
+val postgresqlVersion = "42.7.2"
 val hikariCPVersion = "5.1.0"
 
 dependencies {
