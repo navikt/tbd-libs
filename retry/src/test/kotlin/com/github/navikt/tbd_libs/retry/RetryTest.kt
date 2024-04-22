@@ -3,8 +3,11 @@ package com.github.navikt.tbd_libs.retry
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.lang.IllegalArgumentException
+import java.time.Duration
 
 internal class RetryTest {
 
@@ -48,6 +51,24 @@ internal class RetryTest {
     fun `Når noe funker med på førsøk 3 suspendable`() = runBlocking {
         val dings = DingsSomFunkerPåForsøk(3)
         assertEquals("Det gikk jo bra på førsøk 3 da", retry { dings.gjørting() })
+    }
+
+    @Test
+    fun `kan sette sine egne predefinerte utsettelser`() {
+        val default = DefaultUtsettelser()
+        assertEquals(Duration.ofMillis(200), default.next())
+        assertEquals(Duration.ofMillis(600), default.next())
+        assertEquals(Duration.ofMillis(1200), default.next())
+        assertFalse(default.hasNext())
+
+        val custom = PredefinerteUtsettelser(Duration.ofMillis(200), Duration.ofMinutes(1), Duration.ofHours(1), Duration.ofMillis(2))
+        assertEquals(Duration.ofMillis(200), custom.next())
+        assertEquals(Duration.ofMinutes(1), custom.next())
+        assertEquals(Duration.ofHours(1), custom.next())
+        assertEquals(Duration.ofMillis(2), custom.next())
+        assertFalse(custom.hasNext())
+
+        assertThrows<IllegalArgumentException> { PredefinerteUtsettelser() }
     }
 
     private class DingsSomFunkerPåForsøk(
