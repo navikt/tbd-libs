@@ -18,17 +18,17 @@ class SignedJwt(private val privateKey: RSAPrivateKey, private val keyId: String
     }
 
     fun generate(headers: Map<String, Any> = emptyMap(), claims: Map<String, Any> = emptyMap()): String {
-        val iat = claims["iat"]?.takeIf { it is Number }?.let { it as Long } ?: Instant.now(Clock.systemUTC()).epochSecond
 
         val alleHeaders = headers
             .plusIfMissing("kid" to keyId)
             .plusIfMissing("typ" to "JWT")
             .plusIfMissing("alg" to "RS256")
 
+        val issuedAt = claims.issuedAt
         val alleClaims = claims
-            .plusIfMissing("iat" to iat)
-            .plusIfMissing("nbf" to iat)
-            .plusIfMissing("exp" to iat + 10)
+            .plusIfMissing("iat" to issuedAt)
+            .plusIfMissing("nbf" to issuedAt)
+            .plusIfMissing("exp" to issuedAt + 10)
             .plusIfMissing("jti" to "${UUID.randomUUID()}")
 
         val signingInput = "${alleHeaders.jwtPart}.${alleClaims.jwtPart}"
@@ -51,6 +51,12 @@ class SignedJwt(private val privateKey: RSAPrivateKey, private val keyId: String
             return (factory.generatePrivate(keySpec) as RSAPrivateKey)
         }
         private val Map<String, Any>.json get() = entries.joinToString(separator = ",", prefix = "{", postfix = "}") { (key, value) -> "\"$key\":${value.jsonValue}"}
+        private val Map<String, Any>.issuedAt get(): Long {
+            val iat = get("iat") ?: return Instant.now(Clock.systemUTC()).epochSecond
+            if (iat is Int) return iat.toLong()
+            if (iat is Long) return iat
+            error("Ugyldig 'iat' satt til $iat")
+        }
 
         private val Any.jsonValue get() = when (this) {
             is Number, is Boolean -> this

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.signedjwt.SignedJwt
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.math.BigInteger
@@ -18,9 +18,15 @@ import java.util.Base64
 
 internal class SignedJwtTest {
 
+    private val jwk: Map<String, Any?> = om.readValue(TEST_JWK)
+    private val verifyer = Signature.getInstance("SHA256withRSA").apply { initVerify(publicKey(jwk)) }
+    private fun assertSignatur(header: String, claims: String, signature: String) {
+        verifyer.update("$header.$claims".toByteArray())
+        assertTrue(verifyer.verify(base64Decoder.decode(signature)))
+    }
+
     @Test
     fun `Generere en søt liten JWT`() {
-        val jwk: Map<String, Any?> = om.readValue(TEST_JWK)
         val signedJwt = SignedJwt(jwk).generate(
             headers = mapOf("testy" to 1234),
             claims = mapOf("aud" to "http://localhost:8080/bjeff", "sub" to "subby", "iss" to "kulIssuer")
@@ -46,13 +52,34 @@ internal class SignedJwtTest {
         val issuedAt = assertDoesNotThrow { claimsMap.getValue("iat").toLong() }
         val notBefore = assertDoesNotThrow { claimsMap.getValue("nbf").toLong() }
         assertEquals(issuedAt, notBefore)
-        Assertions.assertTrue(expiry > issuedAt)
+        assertTrue(expiry > issuedAt)
 
         // Signature
-        val verifyer = Signature.getInstance("SHA256withRSA")
-        verifyer.initVerify(publicKey(jwk))
-        verifyer.update("$header.$claims".toByteArray())
-        Assertions.assertTrue(verifyer.verify(base64Decoder.decode(signature)))
+        assertSignatur(header, claims, signature)
+    }
+
+    @Test
+    fun `Bruker ingen default headers eller claims`() {
+        val jwk: Map<String, Any?> = om.readValue(TEST_JWK)
+        val signedJwt = SignedJwt(jwk).generate(
+            headers = mapOf("kid" to "test-kid", "typ" to "test-typ", "alg" to "test-alg"),
+            claims = mapOf("iat" to 1000, "nbf" to 2000, "exp" to 3000, "jti" to "test-jti")
+        )
+
+        val parts = signedJwt.split(".")
+        assertEquals(3, parts.size)
+        val header = parts[0]
+        val claims = parts[1]
+        val signature = parts[2]
+
+        // Header
+        assertEquals("""{"kid":"test-kid","typ":"test-typ","alg":"test-alg"}""", String(base64Decoder.decode(header)))
+
+        // Claims
+        assertEquals("""{"iat":1000,"nbf":2000,"exp":3000,"jti":"test-jti"}""", String(base64Decoder.decode(claims)))
+
+        // Signature
+        assertSignatur(header, claims, signature)
     }
 
     private companion object {
