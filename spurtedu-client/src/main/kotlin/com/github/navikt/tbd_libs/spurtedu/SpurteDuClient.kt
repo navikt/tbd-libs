@@ -42,7 +42,7 @@ class SpurteDuClient(
             .uri(URI("$baseUrl/vis_meg/$id"))
             .timeout(Duration.ofSeconds(10))
             .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer $token")
+            .header("Authorization", "Bearer ${token.token}")
             .header("callId", "$callId")
             .GET()
             .build()
