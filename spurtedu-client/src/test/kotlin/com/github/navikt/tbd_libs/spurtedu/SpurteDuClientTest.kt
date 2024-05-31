@@ -19,12 +19,31 @@ import java.net.http.HttpClient
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 class SpurteDuClientTest {
     private companion object {
         private val objectMapper = jacksonObjectMapper()
             .registerModule(JavaTimeModule())
             .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+    }
+
+    @Test
+    fun `veksler til 'on behalf of' token hvis det er satt`() {
+        val (spurteDuClient, httpClient) = mockClient(okVisResponse)
+        spurteDuClient.vis(UUID.randomUUID(), "et_bruker_token")
+        verifiserRequestHeader(httpClient, "Authorization") { verdi ->
+            verdi == "Bearer on_behalf_of_token"
+        }
+    }
+
+    @Test
+    fun `veksler til bearer token hvis obo-token ikke er satt`() {
+        val (spurteDuClient, httpClient) = mockClient(okVisResponse)
+        spurteDuClient.vis(UUID.randomUUID())
+        verifiserRequestHeader(httpClient, "Authorization") { verdi ->
+            verdi == "Bearer bearer_token"
+        }
     }
 
     @Test
@@ -57,9 +76,10 @@ class SpurteDuClientTest {
 
     @Test
     fun metadata() {
-        val (spurteDuClient, _) = mockClient(okMetadataResponse)
+        val (spurteDuClient, httpClient) = mockClient(okMetadataResponse)
         val secret = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d")
         val response = spurteDuClient.metadata(secret)
+        verifiserGET(httpClient)
         assertEquals(MetadataResponse(
             opprettet = OffsetDateTime.parse("2024-05-30T20:25:46.226344852+02:00")
         ), response)
@@ -67,9 +87,10 @@ class SpurteDuClientTest {
 
     @Test
     fun `vise skjult verdi - uten tilgang`() {
-        val (spurteDuClient, _) = mockClient(errorVisResponse, 404)
+        val (spurteDuClient, httpClient) = mockClient(errorVisResponse, 404)
         val secret = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d")
         assertThrows<SpurteDuException> { spurteDuClient.vis(secret, "et feilaktig token") }
+        verifiserGET(httpClient)
     }
 
     @Test
@@ -85,6 +106,7 @@ class SpurteDuClientTest {
 
         val response = spurteDuClient.skjul(payload)
 
+        verifiserPOST(httpClient)
         verifiserRequestBody(httpClient, verifisering)
         assertEquals(SkjulResponse(
             id = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d"),
@@ -110,6 +132,30 @@ class SpurteDuClientTest {
         }
         val spurteDuClient = SpurteDuClient(httpClient, objectMapper, tokenProvider)
         return spurteDuClient to httpClient
+    }
+
+    fun verifiserPOST(httpClient: HttpClient) {
+        verifiserRequestMethod(httpClient, "POST")
+    }
+
+    fun verifiserGET(httpClient: HttpClient) {
+        verifiserRequestMethod(httpClient, "GET")
+    }
+
+    fun verifiserRequestMethod(httpClient: HttpClient, method: String) {
+        verify {
+            httpClient.send<String>(match { request ->
+                request.method().uppercase() == method.uppercase()
+            }, any())
+        }
+    }
+
+    fun verifiserRequestHeader(httpClient: HttpClient, headerName: String, verifisering: (String?) -> Boolean) {
+        verify {
+            httpClient.send<String>(match { request ->
+                verifisering(request.headers().firstValue(headerName).getOrNull())
+            }, any())
+        }
     }
 
     private fun verifiserRequestBody(httpClient: HttpClient, verifisering: (body: JsonNode) -> Boolean) {
