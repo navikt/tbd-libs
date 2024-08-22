@@ -1,4 +1,4 @@
-val gradleversjon = "8.5"
+val gradleversjon = "8.10"
 val junitJupiterVersion = "5.10.2"
 val mockkVersion = "1.13.9"
 val jacksonVersion = "2.16.1"
