@@ -1,10 +1,10 @@
 val gradleversjon = "8.10"
-val junitJupiterVersion = "5.10.2"
-val mockkVersion = "1.13.9"
-val jacksonVersion = "2.16.1"
+val junitJupiterVersion = "5.11.0"
+val mockkVersion = "1.13.12"
+val jacksonVersion = "2.17.2"
 
 plugins {
-    kotlin("jvm") version "1.9.22" apply false
+    kotlin("jvm") version "2.0.10" apply false
     `maven-publish`
 }
 
