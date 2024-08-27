@@ -2,6 +2,7 @@ rootProject.name = "tbd-libs"
 include(
     "azure-token-client",
     "azure-token-client-default",
+    "kafka",
     "mock-http-client",
     "minimal-sts-client",
     "minimal-soap-client",
