@@ -2,6 +2,7 @@ val gradleversjon = "8.10"
 val junitJupiterVersion = "5.11.0"
 val mockkVersion = "1.13.12"
 val jacksonVersion = "2.17.2"
+val testcontainersVersion = "1.20.1"
 
 plugins {
     kotlin("jvm") version "2.0.10" apply false
@@ -18,6 +19,7 @@ subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.gradle.maven-publish")
 
+    ext.set("testcontainersVersion", testcontainersVersion)
     ext.set("jacksonVersion", jacksonVersion)
     ext.set("mockkVersion", mockkVersion)
 

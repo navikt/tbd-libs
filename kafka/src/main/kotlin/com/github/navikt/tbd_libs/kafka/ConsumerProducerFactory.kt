@@ -8,7 +8,7 @@ import org.apache.kafka.common.serialization.StringSerializer
 import java.util.*
 
 class ConsumerProducerFactory(private val config: Config) {
-    internal fun createConsumer(groupId: String, properties: Properties = Properties(), withShutdownHook: Boolean = true): KafkaConsumer<String, String> {
+    fun createConsumer(groupId: String, properties: Properties = Properties(), withShutdownHook: Boolean = true): KafkaConsumer<String, String> {
         val deser = StringDeserializer()
         return KafkaConsumer(config.consumerConfig(groupId, properties), deser, deser).also {
             if (withShutdownHook) {

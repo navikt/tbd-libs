@@ -8,6 +8,9 @@ include(
     "minimal-soap-client",
     "postgres-testdatabaser",
     "retry",
+    "rapids-and-rivers-api",
+    "rapids-and-rivers-test",
+    "rapids-and-rivers",
     "signed-jwt",
     "spurtedu-client"
 )
