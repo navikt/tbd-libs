@@ -9,18 +9,14 @@ import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
 
-class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: RandomIdGenerator = RandomIdGenerator.Default) : RapidsConnection.MessageListener {
+class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: RandomIdGenerator = RandomIdGenerator.Default, validationBlock: MessageValidation.() -> Unit) : RapidsConnection.MessageListener {
     private val validations = mutableListOf<PacketValidation>()
-
     private val listeners = mutableListOf<PacketListener>()
+
+    private val validationSpec = validate(validationBlock)
 
     init {
         rapidsConnection.register(this)
-    }
-
-    fun validate(validation: PacketValidation): River {
-        validations.add(validation)
-        return this
     }
 
     fun onSuccess(listener: PacketValidationSuccessListener): River {
@@ -43,12 +39,13 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         try {
             val packet = JsonMessage(message, problems, metrics, randomIdGenerator)
             validations.forEach { it.validate(packet) }
-            if (problems.hasErrors()) {
-                return onError(metrics, problems, context)
+            packet.withValidation(validationSpec)
+            when {
+                problems.hasErrors() -> onError(metrics, problems, context)
+                else -> onPacket(packet, JsonMessageContext(context, packet), metrics)
             }
-            onPacket(packet, JsonMessageContext(context, packet), metrics)
-        } catch (err: MessageProblems.MessageException) {
-            return onSevere(metrics, err, context)
+        } catch (e: MessageProblems.MessageException) {
+            onError(metrics, problems, context)
         }
     }
 
@@ -72,13 +69,6 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
             .tag("event_name", eventName)
             .register(metrics)
         )
-    }
-
-    private fun onSevere(metrics: MeterRegistry, error: MessageProblems.MessageException, context: MessageContext) {
-        listeners.forEach {
-            onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
-            it.onSevere(error, context)
-        }
     }
 
     private fun onError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext) {

@@ -1,15 +1,16 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers_api
 
 class MessageProblems(private val originalMessage: String) {
-    private val errors = mutableListOf<String>()
+    private val errors = mutableMapOf<String, MutableList<String>>()
     private val severe = mutableListOf<String>()
 
-    fun error(melding: String, vararg params: Any) {
-        errors.add(String.format(melding, *params))
+    fun error(key: String, melding: String) {
+        errors.getOrPut(key) { mutableListOf() }.add(melding)
     }
 
-    internal fun error(melding: String, other: MessageProblems) {
-        other.errors.forEach { errors.add("$melding $it") }
+    @Deprecated("ta i bruk den andre")
+    fun error(melding: String) {
+        errors.getOrPut("") { mutableListOf() }.add(melding)
     }
 
     fun severe(melding: String, vararg params: Any): Nothing {
@@ -19,19 +20,21 @@ class MessageProblems(private val originalMessage: String) {
 
     fun hasErrors() = severe.isNotEmpty() || errors.isNotEmpty()
 
+    fun hasProblemsWith(key: String) = key in errors
+
     fun toExtendedReport(): String {
         if (!hasErrors()) return "No errors in message\n"
         val results = StringBuffer()
         results.append("Message has errors:\n\t")
         append("Severe errors", severe, results)
-        append("Errors", errors, results)
+        append("Errors", errors.map { (key, value) -> "$key: $value" }, results)
         results.append("\n")
         results.append("Original message: $originalMessage\n")
         return results.toString()
     }
 
     override fun toString(): String {
-        return (severe.map { "S: $it" } + errors.map { "E: $it" })
+        return (severe.map { "S: $it" } + errors.flatMap { (k, v) -> v.map { "E: $k: $it" } })
             .joinToString(separator = "\n")
     }
 

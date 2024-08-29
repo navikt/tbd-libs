@@ -136,129 +136,46 @@ open class JsonMessage(
             compute("behov") { _, _ -> json.path(NeedKey).map(JsonNode::asText).takeUnless(List<*>::isEmpty) }
         }.toMap()
 
-    fun rejectKey(vararg key: String) {
-        key.forEach { rejectKey(it) }
+    fun withValidation(validation: MessageValidation) {
+        recognizedKeys.putAll(validation.validatedKeys(json, problems).associateWith { key -> node(key) })
     }
 
-    private fun rejectKey(key: String) {
-        val node = node(key)
-        if (!node.isMissingNode && !node.isNull) problems.severe("Rejected key $key exists")
-        accessor(key)
-    }
-
-    fun rejectValue(key: String, value: String) {
-        val node = node(key)
-        if (!node.isMissingOrNull() && node.isTextual && node.asText() == value) problems.severe("Rejected key $key with value $value")
-        accessor(key)
-    }
-
-    fun rejectValue(key: String, value: Boolean) {
-        val node = node(key)
-        if (!node.isMissingOrNull() && node.isBoolean && node.asBoolean() == value) problems.severe("Rejected key $key with value $value")
-        accessor(key)
-    }
-
-    fun rejectValues(key: String, values: List<String>) {
-        val node = node(key)
-        if (!node.isMissingOrNull() && node.asText() in values) problems.severe("Rejected key $key with value ${node.asText()}")
-        accessor(key)
-    }
-
-    fun demandKey(key: String) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (node.isNull) problems.severe("Demanded key $key is null")
-        accessor(key)
-    }
-
-    fun demandValue(key: String, value: String) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (!node.isTextual || node.asText() != value) problems.severe("Demanded $key is not string $value")
-        accessor(key)
-    }
-
-    fun demandValue(key: String, value: Number) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (!node.isNumber || node.numberValue() != value) problems.severe("Demanded $key is not number $value")
-        accessor(key)
-    }
-
-    fun demandValue(key: String, value: Boolean) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (!node.isBoolean || node.booleanValue() != value) problems.severe("Demanded $key is not boolean $value")
-        accessor(key)
-    }
-
-    fun demandAll(key: String, values: List<String>) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (!node.isArray || !node.map(JsonNode::asText).containsAll(values)) problems.severe("Demanded $key does not contains $values")
-        accessor(key)
-    }
-
-    fun demandAny(key: String, values: List<String>) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (!node.isTextual || node.asText() !in values) problems.severe("Demanded $key must be one of $values")
-        accessor(key)
-    }
-
-    fun demandAllOrAny(key: String, values: List<String>) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        if (!node.isArray || node.map(JsonNode::asText).none { it in values }) problems.severe("Demanded array $key does not contain one of $values")
-        accessor(key)
-    }
-
-    fun demandAll(key: String, vararg values: Enum<*>) {
-        demandAll(key, values.map(Enum<*>::name))
-    }
-
-    fun demand(key: String, parser: (JsonNode) -> Any) {
-        val node = node(key)
-        if (node.isMissingNode) problems.severe("Missing demanded key $key")
-        try {
-            parser(node)
-        } catch (err: Exception) {
-            problems.severe("Demanded $key did not match the predicate: ${err.message}")
-        }
-        accessor(key)
-    }
-
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key.toSet() should exist })"))
     fun requireKey(vararg keys: String) {
-        keys.forEach { requireKey(it) }
+        withValidation(validate {
+            keys.toSet() should exist
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should be(value) })"))
     fun requireValue(key: String, value: Boolean) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (!node.isBoolean || node.booleanValue() != value) return problems.error("Required $key is not boolean $value")
-        accessor(key)
+        withValidation(validate {
+            key should be(value)
+        })
     }
+
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should be(value) })"))
     fun requireValue(key: String, value: String) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (!node.isTextual || node.asText() != value) return problems.error("Required $key is not string $value")
-        accessor(key)
+        withValidation(validate {
+            key should be(value)
+        })
     }
 
-    fun requireValue(key: String, value: Number) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (!node.isNumber || node.numberValue() != value) return problems.error("Required $key is not number $value")
-        accessor(key)
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should be(value) })"))
+        fun requireValue(key: String, value: Number) {
+        withValidation(validate {
+            key should be(value)
+        })
     }
 
-    fun requireAny(key: String, values: List<String>) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (!node.isTextual || node.asText() !in values) return problems.error("Required $key must be one of $values")
-        accessor(key)
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should be(values) })"))
+        fun requireAny(key: String, values: List<String>) {
+        withValidation(validate {
+            key should be(values)
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River")
     fun requireArray(key: String, elementsValidation: (JsonMessage.() -> Unit)? = null) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
@@ -268,84 +185,79 @@ open class JsonMessage(
                 val elementJson = element.toString()
                 val elementProblems = MessageProblems(elementJson)
                 JsonMessage(elementJson, elementProblems, metrics).apply(elementsValidation)
-                if (elementProblems.hasErrors()) problems.error("Array element #$index at $key did not pass validation:", elementProblems)
+                if (elementProblems.hasErrors()) problems.error("Array element #$index at $key did not pass validation: $elementProblems")
             }
         }
         if (!problems.hasErrors()) accessor(key)
     }
 
+    @Deprecated("Bruk validate-dsl'en på River",
+        ReplaceWith("withValidation(validate { key should beAll(listOf(value)) })")
+    )
     fun requireContains(key: String, value: String) {
-        requireAll(key, listOf(value))
+        withValidation(validate {
+            key should beAll(listOf(value))
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River",
+        ReplaceWith("withValidation(validate { key should beAllOrAny(values) })")
+    )
     fun requireAllOrAny(key: String, values: List<String>) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (!node.isArray || node.map(JsonNode::asText).none { it in values }) {
-            return problems.error("Required array $key does not contain one of $values")
-        }
-        accessor(key)
+        withValidation(validate {
+            key should beAllOrAny(values)
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should beAll(values) })"))
     fun requireAll(key: String, values: List<String>) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (!node.isArray || !node.map(JsonNode::asText).containsAll(values)) {
-            return problems.error("Required $key does not contains $values")
-        }
-        accessor(key)
+        withValidation(validate {
+            key should beAll(values)
+        })
     }
 
     fun requireAll(key: String, vararg values: Enum<*>) {
         requireAll(key, values.map(Enum<*>::name))
     }
 
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should be(parser) })"))
     fun require(key: String, parser: (JsonNode) -> Any) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        try {
-            parser(node)
-        } catch (err: Exception) {
-            return problems.error("Required $key did not match the predicate: ${err.message}")
-        }
-        accessor(key)
+        withValidation(validate {
+            key should be(parser)
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River")
     fun forbid(vararg key: String) {
         key.forEach { forbid(it) }
     }
 
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should notBe(values) })"))
     fun forbidValues(key: String, values: List<String>) {
-        val node = node(key)
-        if (!node.isMissingOrNull() && node.isTextual && node.asText() in values) return problems.error("Required $key is one of $values")
-        accessor(key)
+        withValidation(validate {
+            key should notBe(values)
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key.toSet() can exist })"))
     fun interestedIn(vararg key: String) {
-        key.forEach { accessor(it) }
+        withValidation(validate {
+            key.toSet() can exist
+        })
     }
 
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key can be(parser) })"))
     fun interestedIn(key: String, parser: (JsonNode) -> Any) {
-        val node = node(key)
-        try {
-            node.takeUnless(JsonNode::isMissingOrNull)?.also { parser(it) }
-        } catch (err: Exception) {
-            return problems.error("Optional $key did not match the predicate: ${err.message}")
-        }
-        accessor(key)
+        withValidation(validate {
+            key can be(parser)
+        })
     }
 
-    private fun requireKey(key: String) {
-        val node = node(key)
-        if (node.isMissingNode) return problems.error("Missing required key $key")
-        if (node.isNull) return problems.error("Required key $key is null")
-        accessor(key)
-    }
-
-    private fun forbid(key: String) {
-        val node = node(key)
-        if (!node.isMissingNode && !node.isNull) return problems.error("Forbidden key $key exists")
-        accessor(key)
+    @Deprecated("Bruk validate-dsl'en på River", ReplaceWith("withValidation(validate { key should notExist })"))
+    fun forbid(key: String) {
+        withValidation(validate {
+            key should notExist
+        })
     }
 
     private fun accessor(key: String) {

@@ -2,59 +2,74 @@ package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import kotlin.math.exp
 
 internal class RiverTest {
 
     @Test
     internal fun `sets id if missing`() {
-        river.onMessage("{}", context, SimpleMeterRegistry())
-        assertTrue(gotMessage)
-        assertDoesNotThrow { gotPacket.id.toUUID() }
+        river { river ->
+            river.onMessage("{}", context, SimpleMeterRegistry())
+            assertTrue(gotMessage)
+            assertDoesNotThrow { gotPacket.id.toUUID() }
+        }
     }
 
     @Test
     internal fun `sets custom id if missing`() {
         val expected = "notSoRandom"
-        river = configureRiver(River(rapid) { expected })
-        river.onMessage("{}", context, SimpleMeterRegistry())
-        assertTrue(gotMessage)
-        assertEquals(expected, gotPacket.id)
+        river({ expected }) { river ->
+            river.onMessage("{}", context, SimpleMeterRegistry())
+            assertTrue(gotMessage)
+            assertEquals(expected, gotPacket.id)
+        }
     }
 
     @Test
     internal fun `invalid json`() {
-        river.onMessage("invalid json", context, SimpleMeterRegistry())
-        assertFalse(gotMessage)
-        assertTrue(messageProblems.hasErrors())
+        river { river ->
+            river.onMessage("invalid json", context, SimpleMeterRegistry())
+            assertFalse(gotMessage)
+            assertTrue(messageProblems.hasErrors())
+        }
     }
 
     @Test
     internal fun `no validations`() {
-        river.onMessage("{}", context, SimpleMeterRegistry())
-        assertTrue(gotMessage)
-        assertFalse(messageProblems.hasErrors())
+        river { river ->
+            river.onMessage("{}", context, SimpleMeterRegistry())
+            assertTrue(gotMessage)
+            assertFalse(messageProblems.hasErrors())
+        }
     }
 
     @Test
     internal fun `failed validations`() {
-        river.validate { it.requireKey("key") }
-        river.onMessage("{}", context, SimpleMeterRegistry())
-        assertFalse(gotMessage)
-        assertTrue(messageProblems.hasErrors())
+        river(validations = {
+            "key" should exist
+        }) { river ->
+            river.onMessage("{}", context, SimpleMeterRegistry())
+            assertFalse(gotMessage)
+            assertTrue(messageProblems.hasErrors())
+        }
     }
 
     @Test
     internal fun `passing validations`() {
-        river.validate { it.requireValue("hello", "world") }
-        river.onMessage("{\"hello\": \"world\"}", context, SimpleMeterRegistry())
-        assertTrue(gotMessage)
-        assertFalse(messageProblems.hasErrors())
+        river(validations = {
+            "hello" should be("world")
+        }) { river ->
+            river.onMessage("{\"hello\": \"world\"}", context, SimpleMeterRegistry())
+            assertTrue(gotMessage)
+            assertFalse(messageProblems.hasErrors())
+        }
     }
 
     private val context = object : MessageContext {
@@ -66,7 +81,7 @@ internal class RiverTest {
     private var gotMessage = false
     private lateinit var gotPacket: JsonMessage
     private lateinit var messageProblems: MessageProblems
-    private lateinit var river: River
+
     private val rapid = object : RapidsConnection() {
         override fun publish(message: String) {}
 
@@ -83,7 +98,10 @@ internal class RiverTest {
     @BeforeEach
     internal fun setup() {
         messageProblems = MessageProblems("{}")
-        river = configureRiver(River(rapid))
+    }
+
+    private fun river(randomIdGenerator: RandomIdGenerator = RandomIdGenerator.Default, validations: MessageValidation.() -> Unit = {}, assertBlock: (River) -> Unit) {
+        configureRiver(River(rapid, randomIdGenerator, validations)).also(assertBlock)
     }
 
     private fun configureRiver(river: River): River =
