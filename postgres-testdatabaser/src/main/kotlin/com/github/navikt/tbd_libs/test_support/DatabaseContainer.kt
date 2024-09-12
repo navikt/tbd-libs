@@ -7,7 +7,6 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.testcontainers.DockerClientFactory
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.utility.TestcontainersConfiguration
 import java.time.Duration
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -34,7 +33,6 @@ class DatabaseContainer(
                     }
             }
             start()
-            TestcontainersConfiguration.getInstance().updateUserConfig("testcontainers.reuse.enable", "true")
         }
     }
 
