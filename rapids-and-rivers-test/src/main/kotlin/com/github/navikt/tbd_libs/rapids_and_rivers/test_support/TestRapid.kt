@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 
-class TestRapid(private val meterRegistry: MeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)) : RapidsConnection() {
+class TestRapid(private val meterRegistry: MeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)) :
+    RapidsConnection() {
     private companion object {
         private val objectMapper = jacksonObjectMapper()
             .registerModule(JavaTimeModule())
@@ -25,6 +27,10 @@ class TestRapid(private val meterRegistry: MeterRegistry = PrometheusMeterRegist
 
     fun sendTestMessage(message: String) {
         notifyMessage(message, this, meterRegistry)
+    }
+
+    fun sendTestMessage(message: String, key: String) {
+        notifyMessage(message, KeyMessageContext(this, key), meterRegistry)
     }
 
     override fun publish(message: String) {
@@ -48,8 +54,9 @@ class TestRapid(private val meterRegistry: MeterRegistry = PrometheusMeterRegist
 
         fun key(index: Int) = messages[index].first
         fun message(index: Int) = jsonMessages.getOrPut(index) { objectMapper.readTree(messages[index].second) }
-        fun field(index: Int, field: String) = requireNotNull(message(index).path(field).takeUnless { it.isMissingNode || it.isNull }) {
-            "Message does not contain field '$field'"
-        }
+        fun field(index: Int, field: String) =
+            requireNotNull(message(index).path(field).takeUnless { it.isMissingNode || it.isNull }) {
+                "Message does not contain field '$field'"
+            }
     }
 }
