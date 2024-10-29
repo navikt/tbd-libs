@@ -12,5 +12,6 @@ include(
     "rapids-and-rivers-test",
     "rapids-and-rivers",
     "signed-jwt",
-    "spurtedu-client"
+    "spurtedu-client",
+    "speed-client"
 )
