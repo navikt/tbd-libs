@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.net.http.HttpClient
 import java.time.LocalDateTime
+import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 
 class SpeedClientTest {
@@ -39,7 +40,9 @@ class SpeedClientTest {
     @Test
     fun `hent fnr og aktørId - feil`() {
         val (speedClient, httpClient) = mockClient(errorResponse, 404)
-        assertThrows<SpeedException> { speedClient.hentFødselsnummerOgAktørId("testident") }
+        assertThrows<SpeedException> { speedClient.hentFødselsnummerOgAktørId("testident") }.also {
+            assertEquals("Feil fra Speed: noe gikk galt", it.message)
+        }
         verifiserPOST(httpClient)
     }
 
@@ -111,7 +114,8 @@ class SpeedClientTest {
 
     @Language("JSON")
     private val errorResponse = """{
-  "feilmelding": "noe gikk galt"
+  "feilmelding": "noe gikk galt",
+  "callId": "${UUID.randomUUID()}"
 }"""
 
     @Language("JSON")

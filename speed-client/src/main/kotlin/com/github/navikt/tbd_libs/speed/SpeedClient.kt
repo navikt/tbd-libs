@@ -1,5 +1,6 @@
 package com.github.navikt.tbd_libs.speed
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -51,8 +52,11 @@ class SpeedClient(
     }
 }
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class IdentRequest(val ident: String)
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class IdentFeilresponse(val feilmelding: String)
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class IdentResponse(
     val fødselsnummer: String,
     val aktørId: String,
