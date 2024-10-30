@@ -46,6 +46,19 @@ class SpeedClientTest {
         verifiserPOST(httpClient)
     }
 
+    @Test
+    fun `slette identer`() {
+        val (speedClient, httpClient) = mockClient(okSlettResponse)
+
+        val identer = listOf("identA", "identB")
+        speedClient.tømMellomlager(identer)
+
+        verifiserDELETE(httpClient)
+        verifiserRequestBody(httpClient) {
+            it.path("identer").isArray && it.path("identer").map(JsonNode::asText) == identer
+        }
+    }
+
     private fun utveksle(ident: String, verifisering: (body: JsonNode) -> Boolean) {
         val (speedClient, httpClient) = mockClient(okResponse)
 
@@ -82,6 +95,10 @@ class SpeedClientTest {
 
     fun verifiserPOST(httpClient: HttpClient) {
         verifiserRequestMethod(httpClient, "POST")
+    }
+
+    fun verifiserDELETE(httpClient: HttpClient) {
+        verifiserRequestMethod(httpClient, "DELETE")
     }
 
     fun verifiserGET(httpClient: HttpClient) {
@@ -125,4 +142,7 @@ class SpeedClientTest {
     "npid": null,
     "kilde": "CACHE"
 }"""
+
+    @Language("JSON")
+    private val okSlettResponse = """"""
 }

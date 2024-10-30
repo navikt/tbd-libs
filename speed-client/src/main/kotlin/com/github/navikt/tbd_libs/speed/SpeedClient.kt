@@ -23,16 +23,32 @@ class SpeedClient(
     private val scope = scope ?: "api://${System.getenv("NAIS_CLUSTER_NAME")}.tbd.speed-api/.default"
 
     fun hentFødselsnummerOgAktørId(ident: String, callId: String = UUID.randomUUID().toString()): IdentResponse {
-        val token = tokenProvider.bearerToken(scope)
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
+        val response = postRequest("/api/ident", jsonInputString, callId)
+        return convertResponseBody(response)
+    }
+
+    fun tømMellomlager(identer: Collection<String>, callId: String = UUID.randomUUID().toString()) {
+        val jsonInputString = objectMapper.writeValueAsString(SlettIdenterRequest(identer.toList()))
+        deleteRequest("/api/ident", jsonInputString, callId)
+    }
+
+    private fun postRequest(action: String, jsonInputString: String, callId: String): HttpResponse<String> =
+        request("POST", action, jsonInputString, callId)
+
+    private fun deleteRequest(action: String, jsonInputString: String, callId: String): HttpResponse<String> =
+        request("DELETE", action, jsonInputString, callId)
+
+    private fun request(method: String, action: String, jsonInputString: String, callId: String): HttpResponse<String> {
+        val token = tokenProvider.bearerToken(scope)
         val request = HttpRequest.newBuilder()
-            .uri(URI("$baseUrl/api/ident"))
+            .uri(URI("$baseUrl$action"))
             .timeout(Duration.ofSeconds(10))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
             .header("Authorization", "Bearer ${token.token}")
             .header("callId", callId)
-            .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
+            .method(method, HttpRequest.BodyPublishers.ofString(jsonInputString))
             .build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -40,7 +56,7 @@ class SpeedClient(
             val feilmelding = convertResponseBody<IdentFeilresponse>(response)
             throw SpeedException("Feil fra Speed: ${feilmelding.feilmelding}")
         }
-        return convertResponseBody(response)
+        return response
     }
 
     private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): T {
@@ -52,8 +68,8 @@ class SpeedClient(
     }
 }
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 data class IdentRequest(val ident: String)
+data class SlettIdenterRequest(val identer: List<String>)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class IdentFeilresponse(val feilmelding: String)
 @JsonIgnoreProperties(ignoreUnknown = true)
