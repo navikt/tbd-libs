@@ -31,7 +31,7 @@ class SpeedClient(
 
     fun hentPersoninfo(ident: String, callId: String = UUID.randomUUID().toString()): PersonResponse {
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
-        val response = postRequest("/api/ident", jsonInputString, callId)
+        val response = postRequest("/api/person", jsonInputString, callId)
         return convertResponseBody(response)
     }
 
