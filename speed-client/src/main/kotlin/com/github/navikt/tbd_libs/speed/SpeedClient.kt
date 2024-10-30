@@ -10,6 +10,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.time.LocalDate
 import java.util.*
 
 class SpeedClient(
@@ -25,6 +26,18 @@ class SpeedClient(
     fun hentFødselsnummerOgAktørId(ident: String, callId: String = UUID.randomUUID().toString()): IdentResponse {
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
         val response = postRequest("/api/ident", jsonInputString, callId)
+        return convertResponseBody(response)
+    }
+
+    fun hentPersoninfo(ident: String, callId: String = UUID.randomUUID().toString()): PersonResponse {
+        val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
+        val response = postRequest("/api/ident", jsonInputString, callId)
+        return convertResponseBody(response)
+    }
+
+    fun hentHistoriskeFødselsnumre(ident: String, callId: String = UUID.randomUUID().toString()): HistoriskeIdenterResponse {
+        val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
+        val response = postRequest("/api/identer", jsonInputString, callId)
         return convertResponseBody(response)
     }
 
@@ -81,6 +94,27 @@ data class IdentResponse(
 ) {
     enum class KildeResponse {
         CACHE, PDL
+    }
+}
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class HistoriskeIdenterResponse(
+    val fødselsnumre: List<String>
+)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class PersonResponse(
+    val fødselsdato: LocalDate,
+    val dødsdato: LocalDate?,
+    val fornavn: String,
+    val mellomnavn: String?,
+    val etternavn: String,
+    val adressebeskyttelse: Adressebeskyttelse,
+    val kjønn: Kjønn,
+) {
+    enum class Adressebeskyttelse {
+        FORTROLIG, STRENGT_FORTROLIG, STRENGT_FORTROLIG_UTLAND, UGRADERT
+    }
+    enum class Kjønn {
+        MANN, KVINNE, UKJENT
     }
 }
 class SpeedException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
