@@ -37,7 +37,7 @@ class SpeedClient(
 
     fun hentHistoriskeFødselsnumre(ident: String, callId: String = UUID.randomUUID().toString()): HistoriskeIdenterResponse {
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
-        val response = postRequest("/api/identer", jsonInputString, callId)
+        val response = postRequest("/api/historiske_identer", jsonInputString, callId)
         return convertResponseBody(response)
     }
 
