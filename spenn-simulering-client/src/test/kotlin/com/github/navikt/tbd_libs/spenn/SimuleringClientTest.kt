@@ -46,6 +46,15 @@ class SimuleringClientTest {
     }
 
     @Test
+    fun `hent simulering - funksjonell feil`() {
+        val (simuleringClient, httpClient) = mockClient(errorResponse, 400)
+        assertThrows<SimuleringFunksjonellFeilException> { simuleringClient.hentSimulering(simuleringRequest()) }.also {
+            assertEquals("Feil fra Spenn Simulering: noe gikk galt", it.message)
+        }
+        verifiserPOST(httpClient)
+    }
+
+    @Test
     fun `hent simulering - utilgjengelig tjeneste`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 503)
         assertThrows<SimuleringUtilgjengeligException> { simuleringClient.hentSimulering(simuleringRequest()) }.also {

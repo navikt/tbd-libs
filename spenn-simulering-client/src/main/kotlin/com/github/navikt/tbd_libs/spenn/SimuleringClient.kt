@@ -44,6 +44,10 @@ class SimuleringClient(
 
         return when (val status = response.statusCode()) {
             200 -> response
+            400 -> {
+                val feilmelding = convertResponseBody<SimuleringFeilresponse>(response)
+                throw SimuleringFunksjonellFeilException("Feil fra Spenn Simulering: ${feilmelding.feilmelding}")
+            }
             503 -> throw SimuleringUtilgjengeligException()
             else -> {
                 val feilmelding = convertResponseBody<SimuleringFeilresponse>(response)
@@ -152,5 +156,6 @@ data class SimuleringResponse(
     )
 }
 class SimuleringUtilgjengeligException() : RuntimeException("Simuleringtjenesten er ikke tilgjengelig")
+class SimuleringFunksjonellFeilException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
 class SimuleringException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
 
