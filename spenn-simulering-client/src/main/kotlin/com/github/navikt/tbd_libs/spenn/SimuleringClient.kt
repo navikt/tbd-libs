@@ -24,7 +24,7 @@ class SimuleringClient(
 
     fun hentSimulering(simulering: SimuleringRequest, callId: String = UUID.randomUUID().toString()): SimuleringResponse {
         val jsonInputString = objectMapper.writeValueAsString(simulering)
-        val response = request("/api/ident", jsonInputString, callId)
+        val response = request("/api/simulering", jsonInputString, callId)
         return convertResponseBody(response)
     }
 
