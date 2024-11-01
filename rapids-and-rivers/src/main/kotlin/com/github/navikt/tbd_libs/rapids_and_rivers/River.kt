@@ -8,6 +8,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import io.opentelemetry.instrumentation.annotations.SpanAttribute
+import io.opentelemetry.instrumentation.annotations.WithSpan
 
 class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: RandomIdGenerator = RandomIdGenerator.Default) : RapidsConnection.MessageListener {
     private val validations = mutableListOf<PacketValidation>()
@@ -60,7 +62,8 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         }
     }
 
-    private fun notifyPacketListener(metrics: MeterRegistry, eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext) {
+    @WithSpan
+    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext) {
         onMessageCounter(metrics, context.rapidName(), packetListener.name(), "ok", eventName)
         val timer = Timer.start(metrics)
         packetListener.onPacket(packet, context)
