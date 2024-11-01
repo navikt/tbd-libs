@@ -13,5 +13,6 @@ include(
     "rapids-and-rivers",
     "signed-jwt",
     "spurtedu-client",
-    "speed-client"
+    "speed-client",
+    "spenn-simulering-client"
 )
