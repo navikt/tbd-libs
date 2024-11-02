@@ -24,19 +24,28 @@ class AzureTokenClient(
 ) : AzureTokenProvider {
 
     override fun onBehalfOfToken(scope: String, token: String) =
-        håndterTokenRespons(requestOnBehalfOfToken(scope, token))
+        try {
+            håndterTokenRespons(requestOnBehalfOfToken(scope, token))
+        } catch (err: Exception) {
+            AzureTokenProvider.AzureTokenResult.Error("Feil ved henting av OBO-token: ${err.message}", err)
+        }
     override fun bearerToken(scope: String) =
-        håndterTokenRespons(requestBearerToken(scope))
+        try {
+            håndterTokenRespons(requestBearerToken(scope))
+        } catch (err: Exception) {
+            AzureTokenProvider.AzureTokenResult.Error("Feil ved henting av token: ${err.message}", err)
+        }
 
-    private fun håndterTokenRespons(body: String): AzureToken {
-        val tokenResponse = deserializeToken(body) ?: kastExceptionVedFeil(body)
-        return AzureToken(tokenResponse.token, tokenResponse.expirationTime)
+    private fun håndterTokenRespons(body: String?): AzureTokenProvider.AzureTokenResult {
+        if (body == null) return AzureTokenProvider.AzureTokenResult.Error("Tom responskropp fra Azure")
+        val tokenResponse = deserializeToken(body) ?: return håndterFeil(body)
+        return AzureTokenProvider.AzureTokenResult.Ok(AzureToken(tokenResponse.token, tokenResponse.expirationTime))
     }
 
-    private fun kastExceptionVedFeil(body: String): Nothing {
+    private fun håndterFeil(body: String): AzureTokenProvider.AzureTokenResult.Error {
         val error = deserializeErrorResponse(body)
-            ?: throw AzureClientException("Ukjent feil ved henting av token. Kan ikke tolke responsen: $body")
-        throw AzureClientException("Feil fra azure: ${error.error}: ${error.description}")
+            ?: return AzureTokenProvider.AzureTokenResult.Error("Ukjent feil ved henting av token. Kan ikke tolke responsen: $body")
+        return AzureTokenProvider.AzureTokenResult.Error("Feil fra azure: ${error.error}: ${error.description}")
     }
 
     private fun deserializeErrorResponse(body: String): AzureErrorResponse? {
@@ -61,14 +70,14 @@ class AzureTokenClient(
     private fun requestBearerToken(scope: String) = requestToken(buildTokenRequestBody(scope))
     private fun requestOnBehalfOfToken(scope: String, token: String) = requestToken(buildOnBehalfOfRequestBody(scope, token))
 
-    private fun requestToken(body: String): String {
+    private fun requestToken(body: String): String? {
         val request = HttpRequest.newBuilder(tokenEndpoint)
             .header("Content-Type", "application/x-www-form-urlencoded")
             .POST(HttpRequest.BodyPublishers.ofString(body))
             .build()
 
         val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-        return response.body() ?: throw AzureClientException("Tom responskropp fra Azure")
+        return response.body()
     }
     private fun buildTokenRequestBody(scope: String): String {
         return buildRequestBody(scope, "client_credentials")

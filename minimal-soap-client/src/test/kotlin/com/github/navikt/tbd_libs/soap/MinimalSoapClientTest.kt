@@ -2,6 +2,7 @@ package com.github.navikt.tbd_libs.soap
 
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
+import com.github.navikt.tbd_libs.soap.SamlTokenProvider.SamlTokenResult
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -37,8 +38,8 @@ class MinimalSoapClientTest {
         val expectedResponseBody = "Hello"
         val (httpClient, soapClient) = mockClient(expectedResponseBody)
         val result = soapClient.doSoapAction(action, body, samlStrategy(USERNAME, PASSWORD))
-
-        assertEquals(expectedResponseBody, result)
+        result as MinimalSoapClient.Result.Ok
+        assertEquals(expectedResponseBody, result.body)
         verifiserSoapRequest(httpClient, action, body)
     }
 
@@ -50,8 +51,8 @@ class MinimalSoapClientTest {
         val expectedResponseBody = "Hello"
         val (httpClient, soapClient) = mockClient(expectedResponseBody)
         val result = soapClient.doSoapAction(action, body, usernamePasswordStrategy(USERNAME, PASSWORD))
-
-        assertEquals(expectedResponseBody, result)
+        result as MinimalSoapClient.Result.Ok
+        assertEquals(expectedResponseBody, result.body)
         verifiserSoapRequest(httpClient, action, body, UNT_ASSERTION)
     }
 
@@ -77,8 +78,8 @@ class MinimalSoapClientTest {
             } returns MockHttpResponse(response)
         }
         val tokenProvider = object : SamlTokenProvider {
-            override fun samlToken(username: String, password: String): SamlToken {
-                return SamlToken(SAML_TOKEN_ASSERTION, LocalDateTime.MAX)
+            override fun samlToken(username: String, password: String): SamlTokenResult {
+                return SamlTokenResult.Ok(SamlToken(SAML_TOKEN_ASSERTION, LocalDateTime.MAX))
             }
         }
         val soapClient = MinimalSoapClient(SERVICE_URL, tokenProvider, httpClient)

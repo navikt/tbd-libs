@@ -13,6 +13,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.net.http.HttpClient
@@ -39,27 +41,27 @@ class SimuleringClientTest {
     @Test
     fun `hent simulering - feil`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 404)
-        assertThrows<SimuleringException> { simuleringClient.hentSimulering(simuleringRequest()) }.also {
-            assertEquals("Feil fra Spenn Simulering (http 404): noe gikk galt", it.message)
-        }
+        val result = simuleringClient.hentSimulering(simuleringRequest())
+        result as SimuleringClient.SimuleringResult.Feilmelding
+        assertEquals("Feil fra Spenn Simulering (http 404): noe gikk galt", result.feilmelding)
+        assertNull(result.exception)
         verifiserPOST(httpClient)
     }
 
     @Test
     fun `hent simulering - funksjonell feil`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 400)
-        assertThrows<SimuleringFunksjonellFeilException> { simuleringClient.hentSimulering(simuleringRequest()) }.also {
-            assertEquals("Feil fra Spenn Simulering: noe gikk galt", it.message)
-        }
+        val result = simuleringClient.hentSimulering(simuleringRequest())
+        result as SimuleringClient.SimuleringResult.FunksjonellFeil
+        assertEquals("Feil i requesten vår til Spenn Simulering: noe gikk galt", result.feilmelding)
         verifiserPOST(httpClient)
     }
 
     @Test
     fun `hent simulering - utilgjengelig tjeneste`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 503)
-        assertThrows<SimuleringUtilgjengeligException> { simuleringClient.hentSimulering(simuleringRequest()) }.also {
-            assertEquals("Simuleringtjenesten er ikke tilgjengelig", it.message)
-        }
+        val result = simuleringClient.hentSimulering(simuleringRequest())
+        assertTrue(result is SimuleringClient.SimuleringResult.SimuleringtjenesteUtilgjengelig)
         verifiserPOST(httpClient)
     }
 
@@ -108,7 +110,7 @@ class SimuleringClientTest {
         val (simuleringClient, httpClient) = mockClient(okResponse)
 
         val response = simuleringClient.hentSimulering(request)
-
+        response as SimuleringClient.SimuleringResult.Ok
         verifiserPOST(httpClient)
         verifiserRequestBody(httpClient, verifisering)
         assertEquals(SimuleringResponse(
@@ -208,7 +210,7 @@ class SimuleringClientTest {
                     )
                 )
             )
-        ), response)
+        ), response.data)
     }
 
     private fun mockClient(response: String, statusCode: Int = 200): Pair<SimuleringClient, HttpClient> {
@@ -218,12 +220,12 @@ class SimuleringClientTest {
             } returns MockHttpResponse(response, statusCode)
         }
         val tokenProvider = object : AzureTokenProvider {
-            override fun onBehalfOfToken(scope: String, token: String): AzureToken {
-                return AzureToken("on_behalf_of_token", LocalDateTime.now())
+            override fun onBehalfOfToken(scope: String, token: String): AzureTokenProvider.AzureTokenResult {
+                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("on_behalf_of_token", LocalDateTime.now()))
             }
 
-            override fun bearerToken(scope: String): AzureToken {
-                return AzureToken("bearer_token", LocalDateTime.now())
+            override fun bearerToken(scope: String): AzureTokenProvider.AzureTokenResult {
+                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("bearer_token", LocalDateTime.now()))
             }
         }
         val simuleringClient = SimuleringClient(httpClient, objectMapper, tokenProvider)

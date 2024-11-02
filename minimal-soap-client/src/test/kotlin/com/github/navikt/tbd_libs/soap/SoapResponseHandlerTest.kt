@@ -1,5 +1,6 @@
 package com.github.navikt.tbd_libs.soap
 
+import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.dataformat.xml.XmlMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
@@ -38,7 +39,10 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
         val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
-        assertEquals(expectedGreeting, result.greeting)
+        when (result) {
+            is SoapResult.Ok -> assertEquals(expectedGreeting, result.response.greeting)
+            else -> error("Forventet OK resultat")
+        }
     }
 
     @Test
@@ -54,7 +58,10 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
         val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
-        assertEquals(expectedGreeting, result.greeting)
+        when (result) {
+            is SoapResult.Ok -> assertEquals(expectedGreeting, result.response.greeting)
+            else -> error("Forventet OK resultat")
+        }
     }
     @Test
     fun `deserialiserer verdi med attributt`() {
@@ -72,8 +79,13 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
         val result = deserializeSoapBody<ResponseLength>(xmlMapper, xml)
-        assertEquals("METERS", result.length.unit)
-        assertEquals(1337, result.length.value)
+        when (result) {
+            is SoapResult.Ok -> {
+                assertEquals("METERS", result.response.length.unit)
+                assertEquals(1337, result.response.length.value)
+            }
+            else -> error("Forventet OK resultat")
+        }
     }
 
     @Test
@@ -95,8 +107,13 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
         val result = deserializeSoapBody<Greetings>(xmlMapper, xml)
-        assertEquals(1, result.greetings.size)
-        assertEquals(expectedGreeting, result.greetings.single().greeting)
+        when (result) {
+            is SoapResult.Ok -> {
+                assertEquals(1, result.response.greetings.size)
+                assertEquals(expectedGreeting, result.response.greetings.single().greeting)
+            }
+            else -> error("Forventet OK resultat")
+        }
     }
 
     @Test
@@ -122,11 +139,14 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
 
-        val err = assertThrows<SoaptjenesteException> {
-            deserializeSoapBody<Unit>(xmlMapper, xml)
+        val result = deserializeSoapBody<Unit>(xmlMapper, xml)
+        when (result) {
+            is SoapResult.Fault -> {
+                assertEquals("SOAP fault: $errorCode - $errorMessage", result.message)
+                assertNull(result.detalje)
+            }
+            else -> error("Forventet Fault resultat")
         }
-        assertEquals("SOAP fault: $errorCode - $errorMessage", err.message)
-        assertNull(err.detalje)
     }
 
     @Test
@@ -162,17 +182,26 @@ class SoapResponseHandlerTest {
 </Soap:Envelope> 
 """
 
-        val err = assertThrows<SoaptjenesteException> {
-            deserializeSoapBody<Unit>(xmlMapper, xml)
+        val result = deserializeSoapBody<Unit>(xmlMapper, xml)
+        when (result) {
+            is SoapResult.Fault -> {
+                assertEquals("SOAP fault: $errorCode - $errorMessage", result.message)
+                assertEquals(xmlMapper.readTree(detalje).toPrettyString(), result.detalje)
+            }
+            else -> error("Forventet Fault resultat")
         }
-        assertEquals("SOAP fault: $errorCode - $errorMessage", err.message)
-        assertEquals(xmlMapper.readTree(detalje).toPrettyString(), err.detalje)
     }
 
     @Test
     fun `håndterer ugyldig xml`() {
-        assertThrows<SoapResponseHandlerException> {
-            deserializeSoapBody(xmlMapper, "dette er ikke xml")
+        val result = deserializeSoapBody<Unit>(xmlMapper, "dette er ikke xml")
+        when (result) {
+            is SoapResult.InvalidResponse -> {
+                assertEquals("dette er ikke xml", result.responseBody)
+                assertNotNull(result.exception)
+                assertInstanceOf(JsonParseException::class.java, result.exception)
+            }
+            else -> error("Forventet InvalidResponse resultat")
         }
     }
 
@@ -180,10 +209,14 @@ class SoapResponseHandlerTest {
     fun `håndterer mangelfull soap envelope`() {
         @Language("XML")
         val xml = "<greeting>Hello</greeting>"
-        val message = assertThrows<SoapResponseHandlerException> {
-            deserializeSoapBody(xmlMapper, xml)
+        val result = deserializeSoapBody<Unit>(xmlMapper, xml)
+        when (result) {
+            is SoapResult.InvalidResponse -> {
+                assertEquals("Body er null", result.responseBody)
+                assertNull(result.exception)
+            }
+            else -> error("Forventet InvalidResponse resultat")
         }
-        assertEquals("Kunne ikke oversette resultatet: Body er null", message.message)
     }
 
     private data class Greeting(

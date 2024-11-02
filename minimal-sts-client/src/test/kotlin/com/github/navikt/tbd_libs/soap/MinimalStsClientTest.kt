@@ -10,7 +10,6 @@ import java.net.http.HttpRequest
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import kotlin.jvm.optionals.getOrNull
@@ -23,6 +22,7 @@ class MinimalStsClientTest {
 
         private fun String.encodeBase64() = Base64.getEncoder().encodeToString(toByteArray(StandardCharsets.UTF_8))
     }
+
     @Test
     fun `dekoder token fra base64`() {
         val base64Token = TOKEN.encodeBase64()
@@ -30,7 +30,8 @@ class MinimalStsClientTest {
 
         val result = stsClient.samlToken(USERNAME, PASSWORD)
 
-        assertEquals(TOKEN, result.token)
+        result as SamlTokenProvider.SamlTokenResult.Ok
+        assertEquals(TOKEN, result.token.token)
         verifiserRequest(httpClient) {
             it.uri() == URI("http://localhost/rest/v1/sts/samltoken")
                 && it.headers().firstValue("Authorization").getOrNull() == "Basic ${"$USERNAME:$PASSWORD".encodeBase64()}"
@@ -41,25 +42,33 @@ class MinimalStsClientTest {
     fun `håndterer at token ikke er saml`() {
         val base64Token = TOKEN.encodeBase64()
         val (_, stsClient) = mockClient(tokenResponse(base64Token, "jwt"))
-        assertThrows<StsClientException> { stsClient.samlToken(USERNAME, PASSWORD) }
+        val result = stsClient.samlToken(USERNAME, PASSWORD)
+        result as SamlTokenProvider.SamlTokenResult.Error
+        assertEquals("Ukjent token type: jwt", result.error)
     }
 
     @Test
     fun `håndterer at token ikke er base 64`() {
         val (_, stsClient) = mockClient(tokenResponse(TOKEN))
-        assertThrows<StsClientException> { stsClient.samlToken(USERNAME, PASSWORD) }
+        val result = stsClient.samlToken(USERNAME, PASSWORD)
+        result as SamlTokenProvider.SamlTokenResult.Error
+        assertEquals("Kunne ikke dekode Base64: Illegal base64 character 3c", result.error)
     }
 
     @Test
     fun `håndterer feil fra server`() {
         val (_, stsClient) = mockClient(errorResponse())
-        assertThrows<StsClientException> { stsClient.samlToken(USERNAME, PASSWORD) }
+        val result = stsClient.samlToken(USERNAME, PASSWORD)
+        result as SamlTokenProvider.SamlTokenResult.Error
+        assertEquals("Feil fra STS: Method Not Allowed - \"Method 'POST' is not supported.\"", result.error)
     }
 
     @Test
     fun `håndterer ugyldig json i response`() {
         val (_, stsClient) = mockClient("Internal Server Error")
-        assertThrows<StsClientException> { stsClient.samlToken(USERNAME, PASSWORD) }
+        val result = stsClient.samlToken(USERNAME, PASSWORD)
+        result as SamlTokenProvider.SamlTokenResult.Error
+        assertEquals("Kunne ikke tolke JSON fra responsen til STS: Internal Server Error", result.error)
     }
 
     private fun verifiserRequest(httpClient: HttpClient, sjekk: (HttpRequest) -> Boolean) {

@@ -37,12 +37,15 @@ class SpurteDuClient(
     }
 
     fun vis(id: UUID, onBehalfOfToken: String? = null, callId: UUID = UUID.randomUUID()): VisTekstResponse {
-        val token = onBehalfOfToken?.let { tokenProvider.onBehalfOfToken(scope, onBehalfOfToken) } ?: tokenProvider.bearerToken(scope)
+        val tokenResult = onBehalfOfToken?.let { tokenProvider.onBehalfOfToken(scope, onBehalfOfToken) } ?: tokenProvider.bearerToken(scope)
+        if (tokenResult is AzureTokenProvider.AzureTokenResult.Error) throw SpurteDuException("Kunne ikke hente token fra azure: ${tokenResult.error}", tokenResult.exception)
+        tokenResult as AzureTokenProvider.AzureTokenResult.Ok
+        val bearerToken = tokenResult.azureToken.token
         val request = HttpRequest.newBuilder()
             .uri(URI("$baseUrl/vis_meg/$id"))
             .timeout(Duration.ofSeconds(10))
             .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.token}")
+            .header("Authorization", "Bearer $bearerToken")
             .header("callId", "$callId")
             .GET()
             .build()

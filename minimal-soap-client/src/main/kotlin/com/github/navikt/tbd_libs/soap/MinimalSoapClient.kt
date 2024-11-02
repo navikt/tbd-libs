@@ -15,18 +15,28 @@ class MinimalSoapClient(
     private val proxyAuthorization: (() -> String)? = null,
 ) {
 
-    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): String {
-        val requestBody = createXmlRequest(tokenStrategy.token(tokenProvider), action, body)
-        val proxyAuthorizationToken = proxyAuthorization?.invoke()
-        val request = HttpRequest.newBuilder()
-            .uri(serviceUrl)
-            .header("SOAPAction", action)
-            .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
-            .POST(BodyPublishers.ofString(requestBody))
-            .build()
+    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): Result {
+        try {
+            val assertion = tokenStrategy.token(tokenProvider)
+            return when (assertion) {
+                is SoapAssertionStrategy.SoapAssertionResult.Error -> Result.Error("Fikk ikke tak i assertion: ${assertion.error}", assertion.exception)
+                is SoapAssertionStrategy.SoapAssertionResult.Ok -> {
+                    val requestBody = createXmlRequest(assertion.body, action, body)
+                    val proxyAuthorizationToken = proxyAuthorization?.invoke()
+                    val request = HttpRequest.newBuilder()
+                        .uri(serviceUrl)
+                        .header("SOAPAction", action)
+                        .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
+                        .POST(BodyPublishers.ofString(requestBody))
+                        .build()
 
-        val response = httpClient.send(request, BodyHandlers.ofString())
-        return response.body() ?: throw SoapClientException("Tom responskropp fra tjenesten")
+                    val response = httpClient.send(request, BodyHandlers.ofString()) ?: return Result.Error("Tom responskropp fra tjenesten")
+                    return Result.Ok(response.body())
+                }
+            }
+        } catch (err: Exception) {
+            return Result.Error("Feil ved utføring av SOAP-kall: ${err.message}", err)
+        }
     }
 
     private fun createXmlRequest(assertion: String, action: String, body: String, messageId: UUID = UUID.randomUUID()): String {
@@ -58,7 +68,9 @@ class MinimalSoapClient(
     </soap:Body>
 </soap:Envelope>"""
     }
+
+    sealed interface Result {
+        data class Ok(val body: String) : Result
+        data class Error(val error: String, val exception: Throwable? = null) : Result
+    }
 }
-
-
-class SoapClientException(override val message: String, override val cause: Throwable? = null) : RuntimeException()

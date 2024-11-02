@@ -3,6 +3,7 @@ package com.github.navikt.tbd_libs.spenn
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import java.net.URI
 import java.net.http.HttpClient
@@ -22,46 +23,76 @@ class SimuleringClient(
     private val baseUrl = baseUrl ?: "http://spenn-simulering-api"
     private val scope = scope ?: "api://${System.getenv("NAIS_CLUSTER_NAME")}.tbd.spenn-simulering-api/.default"
 
-    fun hentSimulering(simulering: SimuleringRequest, callId: String = UUID.randomUUID().toString()): SimuleringResponse {
-        val jsonInputString = objectMapper.writeValueAsString(simulering)
-        val response = request("/api/simulering", jsonInputString, callId)
-        return convertResponseBody(response)
+    fun hentSimulering(simulering: SimuleringRequest, callId: String = UUID.randomUUID().toString()): SimuleringResult {
+        return try {
+            when (val token = tokenProvider.bearerToken(scope)) {
+                is AzureTokenProvider.AzureTokenResult.Error -> SimuleringResult.Feilmelding("Feil ved henting av token: ${token.error}", token.exception)
+                is AzureTokenProvider.AzureTokenResult.Ok -> {
+                    val jsonInputString = objectMapper.writeValueAsString(simulering)
+                    val response = request("/api/simulering", token.azureToken, jsonInputString, callId)
+                    håndterRespons(response)
+                }
+            }
+        } catch (err: Exception) {
+            SimuleringResult.Feilmelding("Feil ved simulering: ${err.message}", err)
+        }
     }
 
-    private fun request(action: String, jsonInputString: String, callId: String): HttpResponse<String> {
-        val token = tokenProvider.bearerToken(scope)
+    private fun håndterRespons(response: HttpResponse<String>): SimuleringResult {
+        val body: String? = response.body()
+        if (body == null) return SimuleringResult.Feilmelding("Tom responskropp fra simulering-api")
+        return tolkResponskoder(response.statusCode(), body)
+    }
+
+    private fun tolkResponskoder(status: Int, body: String): SimuleringResult {
+        return when (status) {
+            200 -> convertResponseBody<SimuleringResponse>(body).fold(
+                onSuccess = { SimuleringResult.Ok(it) },
+                onFailure = { SimuleringResult.Feilmelding(it.message ?: "JSON parsing error", it) }
+            )
+            400 -> {
+                convertResponseBody<SimuleringFeilresponse>(body).fold(
+                    onSuccess = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.feilmelding}") },
+                    onFailure = { SimuleringResult.Feilmelding("Det er feil i requesten vår, men vi klarte ikke tolke feilrespons fra Spenn simulering: ${it.message}", it) }
+                )
+            }
+            503 -> SimuleringResult.SimuleringtjenesteUtilgjengelig
+            else -> {
+                convertResponseBody<SimuleringFeilresponse>(body).fold(
+                    onSuccess = { SimuleringResult.Feilmelding("Feil fra Spenn Simulering (http $status): ${it.feilmelding}") },
+                    onFailure = { SimuleringResult.Feilmelding("Klarte ikke tolke feilrespons fra Spenn simulering (http $status): ${it.message}", it) }
+                )
+            }
+        }
+    }
+
+    private fun request(action: String, bearerToken: AzureToken, jsonInputString: String, callId: String): HttpResponse<String> {
         val request = HttpRequest.newBuilder()
             .uri(URI("$baseUrl$action"))
             .timeout(Duration.ofSeconds(10))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${token.token}")
+            .header("Authorization", "Bearer ${bearerToken.token}")
             .header("callId", callId)
             .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
             .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+    }
 
-        return when (val status = response.statusCode()) {
-            200 -> response
-            400 -> {
-                val feilmelding = convertResponseBody<SimuleringFeilresponse>(response)
-                throw SimuleringFunksjonellFeilException("Feil fra Spenn Simulering: ${feilmelding.feilmelding}")
-            }
-            503 -> throw SimuleringUtilgjengeligException()
-            else -> {
-                val feilmelding = convertResponseBody<SimuleringFeilresponse>(response)
-                throw SimuleringException("Feil fra Spenn Simulering (http $status): ${feilmelding.feilmelding}")
-            }
+    private inline fun <reified T> convertResponseBody(response: String): Result<T> {
+        return try {
+            Result.success(objectMapper.readValue<T>(response))
+        } catch (err: Exception) {
+            Result.failure(err)
         }
     }
 
-    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): T {
-        return try {
-            objectMapper.readValue<T>(response.body())
-        } catch (err: Exception) {
-            throw SimuleringException(err.message ?: "JSON parsing error", err)
-        }
+    sealed interface SimuleringResult {
+        data class Ok(val data: SimuleringResponse) : SimuleringResult
+        data object SimuleringtjenesteUtilgjengelig : SimuleringResult
+        data class FunksjonellFeil(val feilmelding: String) : SimuleringResult
+        data class Feilmelding(val feilmelding: String, val exception: Throwable? = null) : SimuleringResult
     }
 }
 
@@ -155,7 +186,3 @@ data class SimuleringResponse(
         val refunderesOrgNr: String
     )
 }
-class SimuleringUtilgjengeligException() : RuntimeException("Simuleringtjenesten er ikke tilgjengelig")
-class SimuleringFunksjonellFeilException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
-class SimuleringException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
-

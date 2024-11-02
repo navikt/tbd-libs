@@ -1,5 +1,6 @@
 package com.github.navikt.tbd_libs.azure
 
+import com.github.navikt.tbd_libs.azure.AzureTokenProvider.AzureTokenResult
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
@@ -12,11 +13,15 @@ class InMemoryAzureTokenCache(private val other: AzureTokenProvider) : AzureToke
     override fun bearerToken(scope: String) =
         fraCacheEllerHentNy(scope) { other.bearerToken(scope) }
 
-    private fun fraCacheEllerHentNy(cacheKey: String, hentNy: () -> AzureToken) =
+    private fun fraCacheEllerHentNy(cacheKey: String, hentNy: () -> AzureTokenResult) =
         cachedToken(cacheKey) ?: lagreNy(cacheKey, hentNy())
 
-    private fun cachedToken(cacheKey: String) = cache[cacheKey]?.takeUnless { it.isExpired }
-    private fun lagreNy(cacheKey: String, token: AzureToken) = token.also { cache[cacheKey] = it }
+    private fun cachedToken(cacheKey: String) = cache[cacheKey]?.takeUnless { it.isExpired }?.let {
+        AzureTokenResult.Ok(it)
+    }
+    private fun lagreNy(cacheKey: String, token: AzureTokenResult) = token.also {
+        if (token is AzureTokenResult.Ok) cache[cacheKey] = token.azureToken
+    }
 
 
     @OptIn(ExperimentalStdlibApi::class)

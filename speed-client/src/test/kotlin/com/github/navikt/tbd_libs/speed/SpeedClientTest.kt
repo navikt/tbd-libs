@@ -81,12 +81,12 @@ class SpeedClientTest {
             } returns MockHttpResponse(response, statusCode)
         }
         val tokenProvider = object : AzureTokenProvider {
-            override fun onBehalfOfToken(scope: String, token: String): AzureToken {
-                return AzureToken("on_behalf_of_token", LocalDateTime.now())
+            override fun onBehalfOfToken(scope: String, token: String): AzureTokenProvider.AzureTokenResult {
+                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("on_behalf_of_token", LocalDateTime.now()))
             }
 
-            override fun bearerToken(scope: String): AzureToken {
-                return AzureToken("bearer_token", LocalDateTime.now())
+            override fun bearerToken(scope: String): AzureTokenProvider.AzureTokenResult {
+                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("bearer_token", LocalDateTime.now()))
             }
         }
         val speedClient = SpeedClient(httpClient, objectMapper, tokenProvider)
