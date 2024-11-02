@@ -23,10 +23,10 @@ inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): 
     }
 }
 
-sealed interface SoapResult<T> {
+sealed interface SoapResult<out T> {
     data class Ok<T>(val response: T) : SoapResult<T>
-    data class Fault<T>( val message: String, val detalje: String?) : SoapResult<T>
-    data class InvalidResponse<T>(val responseBody: String, val exception: Throwable?) : SoapResult<T>
+    data class Fault( val message: String, val detalje: String?) : SoapResult<Nothing>
+    data class InvalidResponse(val responseBody: String, val exception: Throwable?) : SoapResult<Nothing>
 }
 
 @JacksonXmlRootElement(localName = "Envelope", namespace = "http://schemas.xmlsoap.org/soap/envelope/")
