@@ -14,7 +14,7 @@ inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): 
     return try {
         checkNotNull(mapper.readValue<SoapResponse<T>>(body).body) { "Body er null" }
     } catch (err: Exception) {
-        throw SoapResponseHandlerException("Kunne ikke oversette resultatet: ${err.message}", err)
+        throw SoapResponseHandlerException("Kunne ikke oversette resultatet: ${err.message}", body, err)
     }
 }
 
@@ -49,5 +49,5 @@ data class Fault(
     val detail: JsonNode?
 )
 
-class SoapResponseHandlerException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
+class SoapResponseHandlerException(override val message: String, val responseBody: String, override val cause: Throwable? = null) : RuntimeException()
 class SoaptjenesteException(override val message: String, val detalje: String?, override val cause: Throwable? = null) : RuntimeException()
