@@ -31,7 +31,10 @@ class MinimalSoapClient(
                         .build()
 
                     val response = httpClient.send(request, BodyHandlers.ofString()) ?: return Result.Error("Tom responskropp fra tjenesten")
-                    return Result.Ok(response.body())
+                    return when (val status = response.statusCode()) {
+                        200 -> Result.Ok(response.body())
+                        else -> Result.Error("Tjenesten svarte med http $status")
+                    }
                 }
             }
         } catch (err: Exception) {
