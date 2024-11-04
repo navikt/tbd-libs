@@ -119,21 +119,24 @@ fun Application.standardApiModule(
     install(StatusPages) {
         exception<BadRequestException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, FeilResponse(
-                feilmelding = "Ugyldig request: ${cause.message}\n${cause.stackTraceToString()}",
-                callId = call.callId
+                feilmelding = "Ugyldig request: ${cause.message}",
+                callId = call.callId,
+                stacktrace = cause.stackTraceToString()
             ))
         }
         exception<NotFoundException> { call, cause ->
             call.respond(HttpStatusCode.NotFound, FeilResponse(
-                feilmelding = "Ikke funnet: ${cause.message}\n${cause.stackTraceToString()}",
-                callId = call.callId
+                feilmelding = "Ikke funnet: ${cause.message}",
+                callId = call.callId,
+                stacktrace = cause.stackTraceToString()
             ))
         }
         exception<Throwable> { call, cause ->
             call.application.log.info("ukjent feil: ${cause.message}. svarer med InternalServerError og en feilmelding i JSON", cause)
             call.respond(HttpStatusCode.InternalServerError, FeilResponse(
-                feilmelding = "Tjeneren møtte på en uventet feil: ${cause.message}\n${cause.stackTraceToString()}",
-                callId = call.callId
+                feilmelding = "Tjeneren møtte på en uventet feil: ${cause.message}",
+                callId = call.callId,
+                stacktrace = cause.stackTraceToString()
             ))
         }
     }
@@ -165,5 +168,6 @@ fun Application.standardApiModule(
 
 data class FeilResponse(
     val feilmelding: String,
-    val callId: String?
+    val callId: String?,
+    val stacktrace: String? = null
 )
