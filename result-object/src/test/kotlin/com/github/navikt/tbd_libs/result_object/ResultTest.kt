@@ -63,6 +63,26 @@ class ResultTest {
         }
     }
 
+    @Test
+    fun flatten() {
+        listOf(
+            "A".ok(),
+            "B".ok(),
+            "C".error()
+        ).flatten().also { result ->
+            result as Result.Error
+            assertEquals("C", result.error)
+        }
+        listOf(
+            "A".ok(),
+            "B".ok(),
+            "C".ok()
+        ).flatten().also { result ->
+            result as Result.Ok
+            assertEquals(listOf("A", "B", "C"), result.value)
+        }
+    }
+
     private fun testfun(feil: Boolean): Result<Testobject> {
         return when (feil) {
             true -> Result.Error("Denne gir feil altså!")
