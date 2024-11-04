@@ -144,7 +144,7 @@ data class VergemålEllerFremtidsfullmaktResponse(
         MIDLERTIDIG_FOR_VOKSEN,
         MINDREÅRIG,
         MIDLERTIDIG_FOR_MINDREÅRIG,
-        FORVALTNING_UTEN_FORVERGEMÅL,
+        FORVALTNING_UTENFOR_VERGEMÅL,
         STADFESTET_FREMTIDSFULLMAKT
     }
 }
