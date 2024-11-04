@@ -52,14 +52,14 @@ class SimuleringClient(
             )
             400 -> {
                 convertResponseBody<SimuleringFeilresponse>(body).fold(
-                    onSuccess = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.feilmelding}") },
+                    onSuccess = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.detail}") },
                     onFailure = { SimuleringResult.Feilmelding("Det er feil i requesten vår, men vi klarte ikke tolke feilrespons fra Spenn simulering: ${it.message}", it) }
                 )
             }
             503 -> SimuleringResult.SimuleringtjenesteUtilgjengelig
             else -> {
                 convertResponseBody<SimuleringFeilresponse>(body).fold(
-                    onSuccess = { SimuleringResult.Feilmelding("Feil fra Spenn Simulering (http $status): ${it.feilmelding}") },
+                    onSuccess = { SimuleringResult.Feilmelding("Feil fra Spenn Simulering (http $status): ${it.detail}") },
                     onFailure = { SimuleringResult.Feilmelding("Klarte ikke tolke feilrespons fra Spenn simulering (http $status): ${it.message}", it) }
                 )
             }
@@ -146,7 +146,15 @@ data class SimuleringRequest(
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class SimuleringFeilresponse(val feilmelding: String)
+data class SimuleringFeilresponse(
+    val type: URI,
+    val title: String,
+    val status: Int,
+    val detail: String?,
+    val instance: URI,
+    val callId: String?,
+    val stacktrace: String? = null
+)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SimuleringResponse(
     val gjelderId: String,

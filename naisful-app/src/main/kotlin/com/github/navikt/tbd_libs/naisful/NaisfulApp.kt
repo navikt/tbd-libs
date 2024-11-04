@@ -24,6 +24,8 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.path
+import io.ktor.server.request.uri
+import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
@@ -36,6 +38,7 @@ import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import org.slf4j.Logger
 import org.slf4j.event.Level
+import java.net.URI
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.String
@@ -118,23 +121,35 @@ fun Application.standardApiModule(
     }
     install(StatusPages) {
         exception<BadRequestException> { call, cause ->
+            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
             call.respond(HttpStatusCode.BadRequest, FeilResponse(
-                feilmelding = "Ugyldig request: ${cause.message}",
+                status = HttpStatusCode.BadRequest,
+                type = URI("urn:error:bad_request"),
+                detail = cause.message,
+                instance = URI(call.request.uri),
                 callId = call.callId,
                 stacktrace = cause.stackTraceToString()
             ))
         }
         exception<NotFoundException> { call, cause ->
+            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
             call.respond(HttpStatusCode.NotFound, FeilResponse(
-                feilmelding = "Ikke funnet: ${cause.message}",
+                status = HttpStatusCode.NotFound,
+                type = URI("urn:error:not_found"),
+                detail = cause.message,
+                instance = URI(call.request.uri),
                 callId = call.callId,
                 stacktrace = cause.stackTraceToString()
             ))
         }
         exception<Throwable> { call, cause ->
             call.application.log.info("ukjent feil: ${cause.message}. svarer med InternalServerError og en feilmelding i JSON", cause)
+            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
             call.respond(HttpStatusCode.InternalServerError, FeilResponse(
-                feilmelding = "Tjeneren møtte på en uventet feil: ${cause.message}",
+                status = HttpStatusCode.InternalServerError,
+                type = URI("urn:error:internal_error"),
+                detail = "Uventet feil: ${cause.message}",
+                instance = URI(call.request.uri),
                 callId = call.callId,
                 stacktrace = cause.stackTraceToString()
             ))
@@ -166,8 +181,23 @@ fun Application.standardApiModule(
     }
 }
 
+// implementerer Problem Details for HTTP APIs
+// https://www.rfc-editor.org/rfc/rfc9457.html
 data class FeilResponse(
-    val feilmelding: String,
+    val type: URI,
+    val title: String,
+    val status: Int,
+    val detail: String?,
+    val instance: URI,
     val callId: String?,
     val stacktrace: String? = null
-)
+) {
+    constructor(
+        status: HttpStatusCode,
+        type: URI,
+        detail: String?,
+        instance: URI,
+        callId: String?,
+        stacktrace: String? = null
+    ) : this(type, status.description, status.value, detail, instance, callId, stacktrace)
+}

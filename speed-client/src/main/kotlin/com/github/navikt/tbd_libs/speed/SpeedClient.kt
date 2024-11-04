@@ -69,7 +69,7 @@ class SpeedClient(
                 val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
                 if (response.statusCode() != 200) {
                     val feilmelding = convertResponseBody<IdentFeilresponse>(response)
-                    throw SpeedException("Feil fra Speed: ${feilmelding.feilmelding}")
+                    throw SpeedException("Feil fra Speed: ${feilmelding.detail}")
                 }
                 return response
             }
@@ -88,7 +88,15 @@ class SpeedClient(
 data class IdentRequest(val ident: String)
 data class SlettIdenterRequest(val identer: List<String>)
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class IdentFeilresponse(val feilmelding: String)
+data class IdentFeilresponse(
+    val type: URI,
+    val title: String,
+    val status: Int,
+    val detail: String?,
+    val instance: URI,
+    val callId: String?,
+    val stacktrace: String? = null
+)
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class IdentResponse(
     val fødselsnummer: String,

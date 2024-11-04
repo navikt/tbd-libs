@@ -2,19 +2,31 @@ package com.github.navikt.tbd_libs.naisful
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.HttpClient
+import io.ktor.client.call.body
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.ktor.http.isSuccess
+import io.ktor.serialization.jackson.JacksonConverter
+import io.ktor.server.application.Application
 import io.ktor.server.engine.connector
+import io.ktor.server.routing.get
+import io.ktor.server.routing.route
+import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import org.apache.http.HttpStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
+import java.net.URI
 
 class NaisfulAppTest {
 
@@ -41,7 +53,29 @@ class NaisfulAppTest {
         }
     }
 
-    private fun testApp(naisEndpoints: NaisEndpoints, testBlock: suspend HttpClient.() -> Unit) {
+    @Test
+    fun `problem json`() {
+        testApp(
+            applicationModule = {
+                routing {
+                    get("/problem") {
+                        throw RuntimeException("Denne feilen forventet DU IKKE")
+                    }
+                }
+            }
+        ) {
+            val response = get("/problem")
+            val body = response.body<FeilResponse>()
+            assertEquals(ContentType.Application.ProblemJson, response.contentType())
+            assertEquals(URI("urn:error:internal_error"), body.type)
+            assertEquals(HttpStatusCode.InternalServerError.description, body.title)
+            assertEquals(HttpStatusCode.InternalServerError.value, body.status)
+            assertEquals(URI("/problem"), body.instance)
+            assertEquals("Uventet feil: Denne feilen forventet DU IKKE", body.detail)
+        }
+    }
+
+    private fun testApp(naisEndpoints: NaisEndpoints = NaisEndpoints.Default, applicationModule: Application.() -> Unit = {}, testBlock: suspend HttpClient.() -> Unit) {
         val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
         val objectMapper = jacksonObjectMapper()
         val randomPort = ServerSocket(0).localPort
@@ -58,12 +92,16 @@ class NaisfulAppTest {
             }
             application {
                 standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, "callId")
+                applicationModule()
             }
             startApplication()
 
             val testClient = createClient {
                 defaultRequest {
                     port = randomPort
+                }
+                install(ContentNegotiation) {
+                    register(ContentType.Application.Json, JacksonConverter(objectMapper))
                 }
             }
 

@@ -14,5 +14,6 @@ dependencies {
     api("io.ktor:ktor-server-metrics-micrometer:$ktorVersion")
     api("io.micrometer:micrometer-registry-prometheus:$micrometerRegistryPrometheusVersion")
 
-    implementation("io.ktor:ktor-server-test-host:$ktorVersion")
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
+    testImplementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
 }

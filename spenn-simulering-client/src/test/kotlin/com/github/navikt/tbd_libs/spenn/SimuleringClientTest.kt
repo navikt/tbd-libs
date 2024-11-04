@@ -262,8 +262,13 @@ class SimuleringClientTest {
 
     @Language("JSON")
     private val errorResponse = """{
-  "feilmelding": "noe gikk galt",
-  "callId": "${UUID.randomUUID()}"
+  "type": "urn:error:internal_error",
+  "title": "Internal Server Error",
+  "status": 500,
+  "detail": "noe gikk galt",
+  "instance": "/problem",
+  "callId": "${UUID.randomUUID()}",
+  "stacktrace": null
 }"""
 
     @Language("JSON")
