@@ -1,7 +1,6 @@
 package com.github.navikt.tbd_libs.speed
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
@@ -9,6 +8,7 @@ import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
+import com.github.navikt.tbd_libs.speed.IdentResponse.KildeResponse
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -48,6 +48,13 @@ class SpeedClient(
         }
     }
 
+    fun hentVergemålEllerFremtidsfullmakt(ident: String, callId: String = UUID.randomUUID().toString()): Result<VergemålEllerFremtidsfullmaktResponse> {
+        val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
+        return postRequest("/api/vergemål_eller_fremtidsfullmakt", jsonInputString, callId).map {
+            convertResponseBody<VergemålEllerFremtidsfullmaktResponse>(it)
+        }
+    }
+
     fun tømMellomlager(identer: Collection<String>, callId: String = UUID.randomUUID().toString()) {
         val jsonInputString = objectMapper.writeValueAsString(SlettIdenterRequest(identer.toList()))
         deleteRequest("/api/ident", jsonInputString, callId)
@@ -74,7 +81,7 @@ class SpeedClient(
 
                 val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
                 if (response.statusCode() != 200) {
-                    convertResponseBody<IdentFeilresponse>(response).map {
+                    convertResponseBody<Feilresponse>(response).map {
                         Result.Error("Feil fra Speed: ${it.detail}")
                     }
                 } else {
@@ -98,7 +105,7 @@ class SpeedClient(
 data class IdentRequest(val ident: String)
 data class SlettIdenterRequest(val identer: List<String>)
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class IdentFeilresponse(
+data class Feilresponse(
     val type: URI,
     val title: String,
     val status: Int,
@@ -122,6 +129,25 @@ data class IdentResponse(
 data class HistoriskeIdenterResponse(
     val fødselsnumre: List<String>
 )
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class VergemålEllerFremtidsfullmaktResponse(
+    val vergemålEllerFremtidsfullmakter: List<Vergemål>,
+    val kilde: KildeResponse
+) {
+    data class Vergemål(
+        val type: Vergemåltype
+    )
+    enum class Vergemåltype {
+        ENSLIG_MINDREÅRIG_ASYLSØKER,
+        ENSLIG_MINDREÅRIG_FLYKTNING,
+        VOKSEN,
+        MIDLERTIDIG_FOR_VOKSEN,
+        MINDREÅRIG,
+        MIDLERTIDIG_FOR_MINDREÅRIG,
+        FORVALTNING_UTEN_FORVERGEMÅL,
+        STADFESTET_FREMTIDSFULLMAKT
+    }
+}
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class PersonResponse(
     val fødselsdato: LocalDate,
