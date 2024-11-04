@@ -6,6 +6,8 @@ include(
     "mock-http-client",
     "minimal-sts-client",
     "minimal-soap-client",
+    "naisful-app",
+    "naisful-test-app",
     "postgres-testdatabaser",
     "retry",
     "rapids-and-rivers-api",
