@@ -1,10 +1,7 @@
 package com.github.navikt.tbd_libs.soap
 
-interface SamlTokenProvider {
-    fun samlToken(username: String, password: String): SamlTokenResult
+import com.github.navikt.tbd_libs.result_object.Result
 
-    sealed interface SamlTokenResult {
-        data class Ok(val token: SamlToken) : SamlTokenResult
-        data class Error(val error: String, val exception: Throwable? = null) : SamlTokenResult
-    }
+interface SamlTokenProvider {
+    fun samlToken(username: String, password: String): Result<SamlToken>
 }

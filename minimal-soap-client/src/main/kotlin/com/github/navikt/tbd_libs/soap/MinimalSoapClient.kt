@@ -1,5 +1,9 @@
 package com.github.navikt.tbd_libs.soap
 
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.map
+import com.github.navikt.tbd_libs.result_object.ok
 import org.intellij.lang.annotations.Language
 import java.net.URI
 import java.net.http.HttpClient
@@ -12,17 +16,18 @@ class MinimalSoapClient(
     private val serviceUrl: URI,
     private val tokenProvider: SamlTokenProvider,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
-    private val proxyAuthorization: (() -> String)? = null,
+    private val proxyAuthorization: (() -> Result<String>)? = null,
 ) {
 
-    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): Result {
-        try {
-            val assertion = tokenStrategy.token(tokenProvider)
-            return when (assertion) {
-                is SoapAssertionStrategy.SoapAssertionResult.Error -> Result.Error("Fikk ikke tak i assertion: ${assertion.error}", assertion.exception)
-                is SoapAssertionStrategy.SoapAssertionResult.Ok -> {
-                    val requestBody = createXmlRequest(assertion.body, action, body)
-                    val proxyAuthorizationToken = proxyAuthorization?.invoke()
+    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): Result<String> {
+        val proxyAuthorizationResult = when (proxyAuthorization) {
+            null -> Result.Ok(null)
+            else -> proxyAuthorization()
+        }
+        return try {
+            tokenStrategy.token(tokenProvider).map { assertion ->
+                proxyAuthorizationResult.map { proxyAuthorizationToken ->
+                    val requestBody = createXmlRequest(assertion, action, body)
                     val request = HttpRequest.newBuilder()
                         .uri(serviceUrl)
                         .header("SOAPAction", action)
@@ -30,15 +35,17 @@ class MinimalSoapClient(
                         .POST(BodyPublishers.ofString(requestBody))
                         .build()
 
-                    val response = httpClient.send(request, BodyHandlers.ofString()) ?: return Result.Error("Tom responskropp fra tjenesten")
-                    return when (val status = response.statusCode()) {
-                        200 -> Result.Ok(response.body())
-                        else -> Result.Error("Tjenesten svarte med http $status")
+                    val result = httpClient.send(request, BodyHandlers.ofString())?.ok() ?: "Tom responskropp fra tjenesten".error()
+                    result.map { response ->
+                        when (val status = response.statusCode()) {
+                            200 -> response.body().ok()
+                            else -> "Tjenesten svarte med http $status".error()
+                        }
                     }
                 }
             }
         } catch (err: Exception) {
-            return Result.Error("Feil ved utføring av SOAP-kall: ${err.message}", err)
+            err.error("Feil ved utføring av SOAP-kall: ${err.message}")
         }
     }
 
@@ -70,10 +77,5 @@ class MinimalSoapClient(
         {{body}}
     </soap:Body>
 </soap:Envelope>"""
-    }
-
-    sealed interface Result {
-        data class Ok(val body: String) : Result
-        data class Error(val error: String, val exception: Throwable? = null) : Result
     }
 }

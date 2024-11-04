@@ -1,5 +1,7 @@
 package com.github.navikt.tbd_libs.soap
 
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -17,12 +19,12 @@ class InMemoryStsClientTest {
     fun `henter fra kilde om cache er tom`() {
         val kilde = mockk<SamlTokenProvider>(relaxed = true)
         val token = SamlToken("<samltoken>", LocalDateTime.MAX)
-        every { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) } returns SamlTokenProvider.SamlTokenResult.Ok(token)
+        every { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) } returns token.ok()
 
         val cachedClient = InMemoryStsClient(kilde)
         val result = cachedClient.samlToken(USERNAME, PASSWORD)
-        result as SamlTokenProvider.SamlTokenResult.Ok
-        assertSame(token, result.token)
+        result as Result.Ok
+        assertSame(token, result.value)
         verify(exactly = 1) { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) }
     }
 
@@ -30,15 +32,15 @@ class InMemoryStsClientTest {
     fun `henter fra cache om verdi ikke er utgått`() {
         val kilde = mockk<SamlTokenProvider>(relaxed = true)
         val token = SamlToken("<samltoken>", LocalDateTime.MAX)
-        every { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) } returns SamlTokenProvider.SamlTokenResult.Ok(token)
+        every { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) } returns token.ok()
 
         val cachedClient = InMemoryStsClient(kilde)
         val result1 = cachedClient.samlToken(USERNAME, PASSWORD) // første kall
         val result2 = cachedClient.samlToken(USERNAME, PASSWORD) // andre kall
-        result1 as SamlTokenProvider.SamlTokenResult.Ok
-        result2 as SamlTokenProvider.SamlTokenResult.Ok
-        assertSame(token, result1.token)
-        assertSame(result1.token, result2.token)
+        result1 as Result.Ok
+        result2 as Result.Ok
+        assertSame(token, result1.value)
+        assertSame(result1.value, result2.value)
         verify(exactly = 1) { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) }
     }
 
@@ -47,18 +49,18 @@ class InMemoryStsClientTest {
         val kilde = mockk<SamlTokenProvider>(relaxed = true)
         val token1 = SamlToken("<samltoken>", LocalDateTime.MIN)
         val token2 = SamlToken("<nytt samltoken>", LocalDateTime.MIN)
-        every { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) } returns SamlTokenProvider.SamlTokenResult.Ok(token1) andThen SamlTokenProvider.SamlTokenResult.Ok(token2)
+        every { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) } returns token1.ok() andThen token2.ok()
 
         val cachedClient = InMemoryStsClient(kilde)
         val result1 = cachedClient.samlToken(USERNAME, PASSWORD) // første kall
         val result2 = cachedClient.samlToken(USERNAME, PASSWORD) // andre kall, oppfrisker
 
-        result1 as SamlTokenProvider.SamlTokenResult.Ok
-        result2 as SamlTokenProvider.SamlTokenResult.Ok
+        result1 as Result.Ok
+        result2 as Result.Ok
 
-        assertSame(token1, result1.token)
-        assertNotSame(result1.token, result2.token)
-        assertSame(result2.token, result2.token)
+        assertSame(token1, result1.value)
+        assertNotSame(result1.value, result2.value)
+        assertSame(result2.value, result2.value)
         verify(exactly = 2) { kilde.samlToken(eq(USERNAME), eq(PASSWORD)) }
     }
 }

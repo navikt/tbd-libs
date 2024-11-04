@@ -2,7 +2,8 @@ package com.github.navikt.tbd_libs.soap
 
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
-import com.github.navikt.tbd_libs.soap.SamlTokenProvider.SamlTokenResult
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -38,8 +39,8 @@ class MinimalSoapClientTest {
         val expectedResponseBody = "Hello"
         val (httpClient, soapClient) = mockClient(expectedResponseBody)
         val result = soapClient.doSoapAction(action, body, samlStrategy(USERNAME, PASSWORD))
-        result as MinimalSoapClient.Result.Ok
-        assertEquals(expectedResponseBody, result.body)
+        result as com.github.navikt.tbd_libs.result_object.Result.Ok
+        assertEquals(expectedResponseBody, result.value)
         verifiserSoapRequest(httpClient, action, body)
     }
 
@@ -51,8 +52,8 @@ class MinimalSoapClientTest {
         val expectedResponseBody = "Hello"
         val (httpClient, soapClient) = mockClient(expectedResponseBody)
         val result = soapClient.doSoapAction(action, body, usernamePasswordStrategy(USERNAME, PASSWORD))
-        result as MinimalSoapClient.Result.Ok
-        assertEquals(expectedResponseBody, result.body)
+        result as Result.Ok
+        assertEquals(expectedResponseBody, result.value)
         verifiserSoapRequest(httpClient, action, body, UNT_ASSERTION)
     }
 
@@ -78,8 +79,8 @@ class MinimalSoapClientTest {
             } returns MockHttpResponse(response, statusCode)
         }
         val tokenProvider = object : SamlTokenProvider {
-            override fun samlToken(username: String, password: String): SamlTokenResult {
-                return SamlTokenResult.Ok(SamlToken(SAML_TOKEN_ASSERTION, LocalDateTime.MAX))
+            override fun samlToken(username: String, password: String): Result<SamlToken> {
+                return SamlToken(SAML_TOKEN_ASSERTION, LocalDateTime.MAX).ok()
             }
         }
         val soapClient = MinimalSoapClient(SERVICE_URL, tokenProvider, httpClient)

@@ -3,7 +3,11 @@ package com.github.navikt.tbd_libs.soap
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.github.navikt.tbd_libs.soap.SamlTokenProvider.SamlTokenResult
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.fold
+import com.github.navikt.tbd_libs.result_object.map
+import com.github.navikt.tbd_libs.result_object.ok
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -16,57 +20,64 @@ class MinimalStsClient(
     private val baseUrl: URI,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
     private val objectMapper: ObjectMapper = jacksonObjectMapper(),
-    private val proxyAuthorization: (() -> String)? = null,
+    private val proxyAuthorization: (() -> Result<String>)? = null,
 ) : SamlTokenProvider {
-    override fun samlToken(username: String, password: String): SamlTokenResult {
+    override fun samlToken(username: String, password: String): Result<SamlToken> {
         return try {
-            val body = requestSamlToken(username, password) ?: return SamlTokenResult.Error("Tom responskropp fra STS")
-            decodeSamlTokenResponse(body)
+            requestSamlToken(username, password).map { body ->
+                decodeSamlTokenResponse(body)
+            }
         } catch (err: Exception) {
-            SamlTokenResult.Error("Feil ved henting av SAML-token: ${err.message}", err)
+            err.error("Feil ved henting av SAML-token: ${err.message}")
         }
     }
 
-    private fun requestSamlToken(username: String, password: String): String? {
+    private fun requestSamlToken(username: String, password: String): Result<String> {
         val encodedCredentials = Base64.getEncoder()
             .encodeToString("$username:$password".toByteArray(StandardCharsets.UTF_8))
-        val proxyAuthorizationToken = proxyAuthorization?.invoke()
+        val proxyAuthorizationToken = when (proxyAuthorization) {
+            null -> null
+            else -> when (val result = proxyAuthorization()) {
+                is Result.Error -> return result
+                is Result.Ok -> result.value
+            }
+        }
         val request = HttpRequest.newBuilder(URI("$baseUrl/rest/v1/sts/samltoken"))
             .header("Authorization", "Basic $encodedCredentials")
             .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
             .GET()
             .build()
 
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()
+        return httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body()?.ok() ?: "Tom responskropp fra STS".error()
     }
 
-    private fun decodeSamlTokenResponse(body: String): SamlTokenResult {
+    private fun decodeSamlTokenResponse(body: String): Result<SamlToken> {
         val node = try {
             objectMapper.readTree(body)
         } catch (err: Exception) {
-            return SamlTokenResult.Error("Kunne ikke tolke JSON fra responsen til STS: $body", err)
+            return err.error("Kunne ikke tolke JSON fra responsen til STS: $body")
         }
         return extractSamlTokenFromResponse(node) ?: handleErrorResponse(node)
     }
 
-    private fun extractSamlTokenFromResponse(node: JsonNode): SamlTokenResult? {
+    private fun extractSamlTokenFromResponse(node: JsonNode): Result<SamlToken>? {
         val accessToken = node.path("access_token").takeIf(JsonNode::isTextual)?.asText() ?: return null
         val issuedTokenType = node.path("issued_token_type").takeIf(JsonNode::isTextual)?.asText() ?: return null
         val expiresIn = node.path("expires_in").takeIf(JsonNode::isNumber)?.asLong() ?: return null
-        if (issuedTokenType != "urn:ietf:params:oauth:token-type:saml2") return SamlTokenResult.Error("Ukjent token type: $issuedTokenType")
+        if (issuedTokenType != "urn:ietf:params:oauth:token-type:saml2") return "Ukjent token type: $issuedTokenType".error()
         return try {
-            SamlTokenResult.Ok(SamlToken(
+            SamlToken(
                 Base64.getDecoder().decode(accessToken).decodeToString(),
                 LocalDateTime.now().plusSeconds(expiresIn)
-            ))
+            ).ok()
         } catch (err: Exception) {
-            SamlTokenResult.Error("Kunne ikke dekode Base64: ${err.message}", err)
+            err.error("Kunne ikke dekode Base64: ${err.message}")
         }
     }
 
-    private fun handleErrorResponse(node: JsonNode): SamlTokenResult {
+    private fun handleErrorResponse(node: JsonNode): Result<SamlToken> {
         val title = node.path("title").asText()
-        val errorDetail = node.path("detail").takeIf(JsonNode::isTextual) ?: return SamlTokenResult.Error("Ukjent respons fra STS: $node")
-        return SamlTokenResult.Error("Feil fra STS: $title - $errorDetail")
+        val errorDetail = node.path("detail").takeIf(JsonNode::isTextual) ?: return "Ukjent respons fra STS: $node".error()
+        return "Feil fra STS: $title - $errorDetail".error()
     }
 }

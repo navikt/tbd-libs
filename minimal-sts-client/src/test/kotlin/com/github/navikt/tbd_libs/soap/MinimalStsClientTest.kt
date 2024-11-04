@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.soap
 
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
+import com.github.navikt.tbd_libs.result_object.Result
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -30,8 +31,8 @@ class MinimalStsClientTest {
 
         val result = stsClient.samlToken(USERNAME, PASSWORD)
 
-        result as SamlTokenProvider.SamlTokenResult.Ok
-        assertEquals(TOKEN, result.token.token)
+        result as Result.Ok
+        assertEquals(TOKEN, result.value.token)
         verifiserRequest(httpClient) {
             it.uri() == URI("http://localhost/rest/v1/sts/samltoken")
                 && it.headers().firstValue("Authorization").getOrNull() == "Basic ${"$USERNAME:$PASSWORD".encodeBase64()}"
@@ -43,7 +44,7 @@ class MinimalStsClientTest {
         val base64Token = TOKEN.encodeBase64()
         val (_, stsClient) = mockClient(tokenResponse(base64Token, "jwt"))
         val result = stsClient.samlToken(USERNAME, PASSWORD)
-        result as SamlTokenProvider.SamlTokenResult.Error
+        result as Result.Error
         assertEquals("Ukjent token type: jwt", result.error)
     }
 
@@ -51,7 +52,7 @@ class MinimalStsClientTest {
     fun `håndterer at token ikke er base 64`() {
         val (_, stsClient) = mockClient(tokenResponse(TOKEN))
         val result = stsClient.samlToken(USERNAME, PASSWORD)
-        result as SamlTokenProvider.SamlTokenResult.Error
+        result as Result.Error
         assertEquals("Kunne ikke dekode Base64: Illegal base64 character 3c", result.error)
     }
 
@@ -59,7 +60,7 @@ class MinimalStsClientTest {
     fun `håndterer feil fra server`() {
         val (_, stsClient) = mockClient(errorResponse())
         val result = stsClient.samlToken(USERNAME, PASSWORD)
-        result as SamlTokenProvider.SamlTokenResult.Error
+        result as Result.Error
         assertEquals("Feil fra STS: Method Not Allowed - \"Method 'POST' is not supported.\"", result.error)
     }
 
@@ -67,7 +68,7 @@ class MinimalStsClientTest {
     fun `håndterer ugyldig json i response`() {
         val (_, stsClient) = mockClient("Internal Server Error")
         val result = stsClient.samlToken(USERNAME, PASSWORD)
-        result as SamlTokenProvider.SamlTokenResult.Error
+        result as Result.Error
         assertEquals("Kunne ikke tolke JSON fra responsen til STS: Internal Server Error", result.error)
     }
 

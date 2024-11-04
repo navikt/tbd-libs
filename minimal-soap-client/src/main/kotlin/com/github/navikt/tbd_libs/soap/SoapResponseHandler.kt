@@ -5,28 +5,30 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.ok
 
-inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): SoapResult<T> {
+inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): Result<SoapResult<T>> {
     val fault = try {
         mapper.readValue<SoapResponse<SoapFault>>(body).body.fault
     } catch (_: Exception) { null }
     return when (fault) {
         null -> try {
             when (val ting = mapper.readValue<SoapResponse<T?>>(body).body) {
-                null -> SoapResult.InvalidResponse("Body er null", null)
-                else -> SoapResult.Ok(ting)
+                null -> "SOAP Body er null".error()
+                else -> SoapResult.Ok(ting).ok()
             }
         } catch (err: Exception) {
-            SoapResult.InvalidResponse(body, err)
+            err.error("Klarte ikke tolke SOAP-responsen")
         }
-        else -> SoapResult.Fault("SOAP fault: ${fault.code} - ${fault.messsage}", fault.detail?.toPrettyString())
+        else -> SoapResult.Fault("SOAP fault: ${fault.code} - ${fault.messsage}", fault.detail?.toPrettyString()).ok()
     }
 }
 
 sealed interface SoapResult<out T> {
     data class Ok<T>(val response: T) : SoapResult<T>
     data class Fault( val message: String, val detalje: String?) : SoapResult<Nothing>
-    data class InvalidResponse(val responseBody: String, val exception: Throwable?) : SoapResult<Nothing>
 }
 
 @JacksonXmlRootElement(localName = "Envelope", namespace = "http://schemas.xmlsoap.org/soap/envelope/")
