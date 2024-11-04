@@ -29,6 +29,22 @@ class ResultTest {
         }
     }
 
+    @Test
+    fun map() {
+        testfun(false).map {
+            "Hei, ${it.name}!".ok()
+        }.also { result ->
+            result as Result.Ok
+            assertEquals("Hei, foo!", result.value)
+        }
+        testfun(true).map {
+            "Hei, ${it.name}!".ok()
+        }.also { result ->
+            result as Result.Error
+            assertEquals("Denne gir feil altså!", result.error)
+        }
+    }
+
     private fun testfun(feil: Boolean): Result<Testobject> {
         return when (feil) {
             true -> Result.Error("Denne gir feil altså!")

@@ -8,16 +8,13 @@ import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
-import com.github.navikt.tbd_libs.speed.IdentResponse
-import com.github.navikt.tbd_libs.speed.SpeedClient
-import com.github.navikt.tbd_libs.speed.SpeedException
+import com.github.navikt.tbd_libs.result_object.Result
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.net.http.HttpClient
 import java.time.LocalDateTime
 import java.util.UUID
@@ -40,9 +37,9 @@ class SpeedClientTest {
     @Test
     fun `hent fnr og aktørId - feil`() {
         val (speedClient, httpClient) = mockClient(errorResponse, 404)
-        assertThrows<SpeedException> { speedClient.hentFødselsnummerOgAktørId("testident") }.also {
-            assertEquals("Feil fra Speed: noe gikk galt", it.message)
-        }
+        val result = speedClient.hentFødselsnummerOgAktørId("testident")
+        result as Result.Error
+        assertEquals("Feil fra Speed: noe gikk galt", result.error)
         verifiserPOST(httpClient)
     }
 
@@ -63,7 +60,7 @@ class SpeedClientTest {
         val (speedClient, httpClient) = mockClient(okResponse)
 
         val response = speedClient.hentFødselsnummerOgAktørId(ident)
-
+        response as Result.Ok
         verifiserPOST(httpClient)
         verifiserRequestBody(httpClient, verifisering)
         assertEquals(IdentResponse(
@@ -71,7 +68,7 @@ class SpeedClientTest {
             aktørId = "aktørId",
             npid = null,
             kilde = IdentResponse.KildeResponse.CACHE
-        ), response)
+        ), response.value)
     }
 
     private fun mockClient(response: String, statusCode: Int = 200): Pair<SpeedClient, HttpClient> {

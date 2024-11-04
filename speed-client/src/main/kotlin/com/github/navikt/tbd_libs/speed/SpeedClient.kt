@@ -5,6 +5,10 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.map
+import com.github.navikt.tbd_libs.result_object.ok
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -23,22 +27,25 @@ class SpeedClient(
     private val baseUrl = baseUrl ?: "http://speed-api"
     private val scope = scope ?: "api://${System.getenv("NAIS_CLUSTER_NAME")}.tbd.speed-api/.default"
 
-    fun hentFødselsnummerOgAktørId(ident: String, callId: String = UUID.randomUUID().toString()): IdentResponse {
+    fun hentFødselsnummerOgAktørId(ident: String, callId: String = UUID.randomUUID().toString()): Result<IdentResponse> {
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
-        val response = postRequest("/api/ident", jsonInputString, callId)
-        return convertResponseBody(response)
+        return postRequest("/api/ident", jsonInputString, callId).map {
+            convertResponseBody<IdentResponse>(it)
+        }
     }
 
-    fun hentPersoninfo(ident: String, callId: String = UUID.randomUUID().toString()): PersonResponse {
+    fun hentPersoninfo(ident: String, callId: String = UUID.randomUUID().toString()): Result<PersonResponse> {
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
-        val response = postRequest("/api/person", jsonInputString, callId)
-        return convertResponseBody(response)
+        return postRequest("/api/person", jsonInputString, callId).map {
+            convertResponseBody<PersonResponse>(it)
+        }
     }
 
-    fun hentHistoriskeFødselsnumre(ident: String, callId: String = UUID.randomUUID().toString()): HistoriskeIdenterResponse {
+    fun hentHistoriskeFødselsnumre(ident: String, callId: String = UUID.randomUUID().toString()): Result<HistoriskeIdenterResponse> {
         val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
-        val response = postRequest("/api/historiske_identer", jsonInputString, callId)
-        return convertResponseBody(response)
+        return postRequest("/api/historiske_identer", jsonInputString, callId).map {
+            convertResponseBody<HistoriskeIdenterResponse>(it)
+        }
     }
 
     fun tømMellomlager(identer: Collection<String>, callId: String = UUID.randomUUID().toString()) {
@@ -46,41 +53,47 @@ class SpeedClient(
         deleteRequest("/api/ident", jsonInputString, callId)
     }
 
-    private fun postRequest(action: String, jsonInputString: String, callId: String): HttpResponse<String> =
+    private fun postRequest(action: String, jsonInputString: String, callId: String): Result<HttpResponse<String>> =
         request("POST", action, jsonInputString, callId)
 
-    private fun deleteRequest(action: String, jsonInputString: String, callId: String): HttpResponse<String> =
+    private fun deleteRequest(action: String, jsonInputString: String, callId: String): Result<HttpResponse<String>> =
         request("DELETE", action, jsonInputString, callId)
 
-    private fun request(method: String, action: String, jsonInputString: String, callId: String): HttpResponse<String> {
-        when (val token = tokenProvider.bearerToken(scope)) {
-            is AzureTokenProvider.AzureTokenResult.Error -> throw SpeedException("Feil ved henting av token: ${token.error}", token.exception)
-            is AzureTokenProvider.AzureTokenResult.Ok -> {
-                val request = HttpRequest.newBuilder()
-                    .uri(URI("$baseUrl$action"))
-                    .timeout(Duration.ofSeconds(10))
-                    .header("Accept", "application/json")
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer ${token.azureToken.token}")
-                    .header("callId", callId)
-                    .method(method, HttpRequest.BodyPublishers.ofString(jsonInputString))
-                    .build()
+    private fun request(method: String, action: String, jsonInputString: String, callId: String): Result<HttpResponse<String>> {
+        return try {
+            when (val token = tokenProvider.bearerToken(scope)) {
+                is AzureTokenProvider.AzureTokenResult.Error -> Result.Error("Feil ved henting av token: ${token.error}", token.exception)
+                is AzureTokenProvider.AzureTokenResult.Ok -> {
+                    val request = HttpRequest.newBuilder()
+                        .uri(URI("$baseUrl$action"))
+                        .timeout(Duration.ofSeconds(10))
+                        .header("Accept", "application/json")
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", "Bearer ${token.azureToken.token}")
+                        .header("callId", callId)
+                        .method(method, HttpRequest.BodyPublishers.ofString(jsonInputString))
+                        .build()
 
-                val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-                if (response.statusCode() != 200) {
-                    val feilmelding = convertResponseBody<IdentFeilresponse>(response)
-                    throw SpeedException("Feil fra Speed: ${feilmelding.detail}")
+                    val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+                    if (response.statusCode() != 200) {
+                        convertResponseBody<IdentFeilresponse>(response).map {
+                            Result.Error("Feil fra Speed: ${it.detail}")
+                        }
+                    } else {
+                        Result.Ok(response)
+                    }
                 }
-                return response
             }
+        } catch (err: Exception) {
+            Result.Error("Feil ved sending av request: ${err.message}", err)
         }
     }
 
-    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): T {
+    private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): Result<T> {
         return try {
-            objectMapper.readValue<T>(response.body())
+            objectMapper.readValue<T>(response.body()).ok()
         } catch (err: Exception) {
-            throw SpeedException(err.message ?: "JSON parsing error", err)
+            err.error(err.message ?: "JSON parsing error")
         }
     }
 }
@@ -129,5 +142,3 @@ data class PersonResponse(
         MANN, KVINNE, UKJENT
     }
 }
-class SpeedException(override val message: String, override val cause: Throwable? = null) : RuntimeException()
-
