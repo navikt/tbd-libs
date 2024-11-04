@@ -60,32 +60,29 @@ class SpeedClient(
         request("DELETE", action, jsonInputString, callId)
 
     private fun request(method: String, action: String, jsonInputString: String, callId: String): Result<HttpResponse<String>> {
-        return try {
-            when (val token = tokenProvider.bearerToken(scope)) {
-                is AzureTokenProvider.AzureTokenResult.Error -> Result.Error("Feil ved henting av token: ${token.error}", token.exception)
-                is AzureTokenProvider.AzureTokenResult.Ok -> {
-                    val request = HttpRequest.newBuilder()
-                        .uri(URI("$baseUrl$action"))
-                        .timeout(Duration.ofSeconds(10))
-                        .header("Accept", "application/json")
-                        .header("Content-Type", "application/json")
-                        .header("Authorization", "Bearer ${token.azureToken.token}")
-                        .header("callId", callId)
-                        .method(method, HttpRequest.BodyPublishers.ofString(jsonInputString))
-                        .build()
+        return tokenProvider.bearerToken(scope).map { token ->
+            try {
+                val request = HttpRequest.newBuilder()
+                    .uri(URI("$baseUrl$action"))
+                    .timeout(Duration.ofSeconds(10))
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer ${token.token}")
+                    .header("callId", callId)
+                    .method(method, HttpRequest.BodyPublishers.ofString(jsonInputString))
+                    .build()
 
-                    val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-                    if (response.statusCode() != 200) {
-                        convertResponseBody<IdentFeilresponse>(response).map {
-                            Result.Error("Feil fra Speed: ${it.detail}")
-                        }
-                    } else {
-                        Result.Ok(response)
+                val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+                if (response.statusCode() != 200) {
+                    convertResponseBody<IdentFeilresponse>(response).map {
+                        Result.Error("Feil fra Speed: ${it.detail}")
                     }
+                } else {
+                    Result.Ok(response)
                 }
+            } catch (err: Exception) {
+                "Feil ved sending av request: ${err.message}".error(err)
             }
-        } catch (err: Exception) {
-            Result.Error("Feil ved sending av request: ${err.message}", err)
         }
     }
 

@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.github.navikt.tbd_libs.azure.AzureTokenProvider.AzureTokenResult
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -21,7 +22,7 @@ class InMemoryAzureTokenCacheTest {
     @Test
     fun `henter ikke verdi når cache finnes`() {
         val mock = mockk<AzureTokenProvider> {
-            every { bearerToken(any()) } returns AzureTokenProvider.AzureTokenResult.Ok(AzureToken("", LocalDateTime.MAX))
+            every { bearerToken(any()) } returns AzureToken("", LocalDateTime.MAX).ok()
         }
         val cache = InMemoryAzureTokenCache(mock)
         val scope = "testscope"
@@ -35,7 +36,7 @@ class InMemoryAzureTokenCacheTest {
         val mock = mockk<AzureTokenProvider>(relaxed = true)
         every {
             mock.bearerToken(any())
-        } returns AzureTokenProvider.AzureTokenResult.Ok(AzureToken("access_token", LocalDateTime.now().minusSeconds(1)))
+        } returns AzureToken("access_token", LocalDateTime.now().minusSeconds(1)).ok()
         val cache = InMemoryAzureTokenCache(mock)
         val scope = "testscope"
         cache.bearerToken(scope) // første kall
@@ -56,16 +57,16 @@ class InMemoryAzureTokenCacheTest {
     @Test
     fun `henter obo token fra cache`() {
         val mock = mockk<AzureTokenProvider> {
-            every { onBehalfOfToken(any(), any()) } returns AzureTokenProvider.AzureTokenResult.Ok(AzureToken("", LocalDateTime.MAX))
+            every { onBehalfOfToken(any(), any()) } returns AzureToken("", LocalDateTime.MAX).ok()
         }
         val cache = InMemoryAzureTokenCache(mock)
         val scope = "testscope"
         val result1 = cache.onBehalfOfToken(scope, "ett token")
-        result1 as AzureTokenResult.Ok
+        result1 as Result.Ok
         cache.onBehalfOfToken(scope, "to token")
         val result2 = cache.onBehalfOfToken(scope, "ett token")
-        result2 as AzureTokenResult.Ok
+        result2 as Result.Ok
         verify(exactly = 1) { mock.onBehalfOfToken(scope, "ett token") }
-        assertSame(result1.azureToken, result2.azureToken)
+        assertSame(result1.value, result2.value)
     }
 }

@@ -8,6 +8,8 @@ import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
+import com.github.navikt.tbd_libs.result_object.ok
+import com.github.navikt.tbd_libs.result_object.Result
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -122,12 +124,12 @@ class SpurteDuClientTest {
             } returns MockHttpResponse(response, statusCode)
         }
         val tokenProvider = object : AzureTokenProvider {
-            override fun onBehalfOfToken(scope: String, token: String): AzureTokenProvider.AzureTokenResult {
-                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("on_behalf_of_token", LocalDateTime.now()))
+            override fun onBehalfOfToken(scope: String, token: String): Result<AzureToken> {
+                return AzureToken("on_behalf_of_token", LocalDateTime.now()).ok()
             }
 
-            override fun bearerToken(scope: String): AzureTokenProvider.AzureTokenResult {
-                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("bearer_token", LocalDateTime.now()))
+            override fun bearerToken(scope: String): Result<AzureToken> {
+                return AzureToken("bearer_token", LocalDateTime.now()).ok()
             }
         }
         val spurteDuClient = SpurteDuClient(httpClient, objectMapper, tokenProvider)

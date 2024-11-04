@@ -10,6 +10,14 @@ fun <T, R> Result<T>.map(whenOk: (T) -> Result<R>) = when (this) {
     is Result.Ok -> whenOk(value)
 }
 
+fun <T, R> Result<T>.fold(
+    whenOk: (T) -> Result<R>,
+    whenError: (String, Throwable?) -> Result<R>
+) = when (this) {
+    is Result.Error -> whenError(error, cause)
+    is Result.Ok -> whenOk(value)
+}
+
 fun <T> T.ok() = Result.Ok(this)
 fun Throwable.error(message: String) = Result.Error(message, this)
 fun String.error(cause: Throwable? = null) = Result.Error(this, cause)

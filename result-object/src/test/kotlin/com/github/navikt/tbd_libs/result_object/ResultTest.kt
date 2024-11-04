@@ -45,6 +45,24 @@ class ResultTest {
         }
     }
 
+    @Test
+    fun fold() {
+        testfun(false).fold(
+            whenOk = { "Hei, ${it.name}!".ok() },
+            whenError = { msg, cause -> "Error: $msg".error(cause) }
+        ).also { result ->
+            result as Result.Ok
+            assertEquals("Hei, foo!", result.value)
+        }
+        testfun(true).fold(
+            whenOk = { "Hei, ${it.name}!".ok() },
+            whenError = { msg, cause -> "Error: $msg".error(cause) }
+        ).also { result ->
+            result as Result.Error
+            assertEquals("Error: Denne gir feil altså!", result.error)
+        }
+    }
+
     private fun testfun(feil: Boolean): Result<Testobject> {
         return when (feil) {
             true -> Result.Error("Denne gir feil altså!")

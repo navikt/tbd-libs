@@ -8,6 +8,8 @@ import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -16,7 +18,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.net.http.HttpClient
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -42,9 +43,9 @@ class SimuleringClientTest {
     fun `hent simulering - feil`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 404)
         val result = simuleringClient.hentSimulering(simuleringRequest())
-        result as SimuleringClient.SimuleringResult.Feilmelding
-        assertEquals("Feil fra Spenn Simulering (http 404): noe gikk galt", result.feilmelding)
-        assertNull(result.exception)
+        result as Result.Error
+        assertEquals("Feil fra Spenn Simulering (http 404): noe gikk galt", result.error)
+        assertNull(result.cause)
         verifiserPOST(httpClient)
     }
 
@@ -52,8 +53,10 @@ class SimuleringClientTest {
     fun `hent simulering - funksjonell feil`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 400)
         val result = simuleringClient.hentSimulering(simuleringRequest())
-        result as SimuleringClient.SimuleringResult.FunksjonellFeil
-        assertEquals("Feil i requesten vår til Spenn Simulering: noe gikk galt", result.feilmelding)
+        result as Result.Ok
+        val funksjonellFeil = result.value
+        funksjonellFeil as SimuleringClient.SimuleringResult.FunksjonellFeil
+        assertEquals("Feil i requesten vår til Spenn Simulering: noe gikk galt", funksjonellFeil.feilmelding)
         verifiserPOST(httpClient)
     }
 
@@ -61,7 +64,9 @@ class SimuleringClientTest {
     fun `hent simulering - utilgjengelig tjeneste`() {
         val (simuleringClient, httpClient) = mockClient(errorResponse, 503)
         val result = simuleringClient.hentSimulering(simuleringRequest())
-        assertTrue(result is SimuleringClient.SimuleringResult.SimuleringtjenesteUtilgjengelig)
+        result as Result.Ok
+        val simuleringresultat = result.value
+        assertTrue(simuleringresultat is SimuleringClient.SimuleringResult.SimuleringtjenesteUtilgjengelig)
         verifiserPOST(httpClient)
     }
 
@@ -110,9 +115,12 @@ class SimuleringClientTest {
         val (simuleringClient, httpClient) = mockClient(okResponse)
 
         val response = simuleringClient.hentSimulering(request)
-        response as SimuleringClient.SimuleringResult.Ok
+        response as Result.Ok
         verifiserPOST(httpClient)
         verifiserRequestBody(httpClient, verifisering)
+
+        val simuleringresultat = response.value
+        simuleringresultat as SimuleringClient.SimuleringResult.Ok
         assertEquals(SimuleringResponse(
             gjelderId = "02889298149",
             gjelderNavn = "MUFFINS NORMAL",
@@ -210,7 +218,7 @@ class SimuleringClientTest {
                     )
                 )
             )
-        ), response.data)
+        ), simuleringresultat.data)
     }
 
     private fun mockClient(response: String, statusCode: Int = 200): Pair<SimuleringClient, HttpClient> {
@@ -220,12 +228,12 @@ class SimuleringClientTest {
             } returns MockHttpResponse(response, statusCode)
         }
         val tokenProvider = object : AzureTokenProvider {
-            override fun onBehalfOfToken(scope: String, token: String): AzureTokenProvider.AzureTokenResult {
-                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("on_behalf_of_token", LocalDateTime.now()))
+            override fun onBehalfOfToken(scope: String, token: String): Result<AzureToken> {
+                return AzureToken("on_behalf_of_token", LocalDateTime.now()).ok()
             }
 
-            override fun bearerToken(scope: String): AzureTokenProvider.AzureTokenResult {
-                return AzureTokenProvider.AzureTokenResult.Ok(AzureToken("bearer_token", LocalDateTime.now()))
+            override fun bearerToken(scope: String): Result<AzureToken> {
+                return AzureToken("bearer_token", LocalDateTime.now()).ok()
             }
         }
         val simuleringClient = SimuleringClient(httpClient, objectMapper, tokenProvider)

@@ -5,6 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.fold
+import com.github.navikt.tbd_libs.result_object.map
+import com.github.navikt.tbd_libs.result_object.ok
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -23,69 +28,66 @@ class SimuleringClient(
     private val baseUrl = baseUrl ?: "http://spenn-simulering-api"
     private val scope = scope ?: "api://${System.getenv("NAIS_CLUSTER_NAME")}.tbd.spenn-simulering-api/.default"
 
-    fun hentSimulering(simulering: SimuleringRequest, callId: String = UUID.randomUUID().toString()): SimuleringResult {
-        return try {
-            when (val token = tokenProvider.bearerToken(scope)) {
-                is AzureTokenProvider.AzureTokenResult.Error -> SimuleringResult.Feilmelding("Feil ved henting av token: ${token.error}", token.exception)
-                is AzureTokenProvider.AzureTokenResult.Ok -> {
-                    val jsonInputString = objectMapper.writeValueAsString(simulering)
-                    val response = request("/api/simulering", token.azureToken, jsonInputString, callId)
-                    håndterRespons(response)
-                }
+    fun hentSimulering(simulering: SimuleringRequest, callId: String = UUID.randomUUID().toString()): Result<SimuleringResult> {
+        return tokenProvider.bearerToken(scope)
+            .map { token ->
+                val jsonInputString = objectMapper.writeValueAsString(simulering)
+                request("/api/simulering", token, jsonInputString, callId)
             }
-        } catch (err: Exception) {
-            SimuleringResult.Feilmelding("Feil ved simulering: ${err.message}", err)
-        }
+            .map { response ->
+                håndterRespons(response)
+            }
     }
 
-    private fun håndterRespons(response: HttpResponse<String>): SimuleringResult {
+    private fun håndterRespons(response: HttpResponse<String>): Result<SimuleringResult> {
         val body: String? = response.body()
-        if (body == null) return SimuleringResult.Feilmelding("Tom responskropp fra simulering-api")
+        if (body == null) return "Tom responskropp fra simulering-api".error()
         return tolkResponskoder(response.statusCode(), body)
     }
 
-    private fun tolkResponskoder(status: Int, body: String): SimuleringResult {
+    private fun tolkResponskoder(status: Int, body: String): Result<SimuleringResult> {
         return when (status) {
-            200 -> convertResponseBody<SimuleringResponse>(body).fold(
-                onSuccess = { SimuleringResult.Ok(it) },
-                onFailure = { SimuleringResult.Feilmelding(it.message ?: "JSON parsing error", it) }
-            )
-            204 -> SimuleringResult.OkMenTomt
-            400 -> {
-                convertResponseBody<SimuleringFeilresponse>(body).fold(
-                    onSuccess = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.detail}") },
-                    onFailure = { SimuleringResult.Feilmelding("Det er feil i requesten vår, men vi klarte ikke tolke feilrespons fra Spenn simulering: ${it.message}", it) }
-                )
+            200 -> convertResponseBody<SimuleringResponse>(body).map {
+                SimuleringResult.Ok(it).ok()
             }
-            503 -> SimuleringResult.SimuleringtjenesteUtilgjengelig
+            204 -> SimuleringResult.OkMenTomt.ok()
+            400 -> convertResponseBody<SimuleringFeilresponse>(body).fold(
+                whenOk = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.detail}").ok() },
+                whenError = { msg, cause -> "Det er feil i requesten vår, men vi klarte ikke tolke feilrespons fra Spenn simulering: $msg".error(cause) }
+            )
+            503 -> SimuleringResult.SimuleringtjenesteUtilgjengelig.ok()
             else -> {
                 convertResponseBody<SimuleringFeilresponse>(body).fold(
-                    onSuccess = { SimuleringResult.Feilmelding("Feil fra Spenn Simulering (http $status): ${it.detail}") },
-                    onFailure = { SimuleringResult.Feilmelding("Klarte ikke tolke feilrespons fra Spenn simulering (http $status): ${it.message}", it) }
+                    whenOk = { "Feil fra Spenn Simulering (http $status): ${it.detail}".error() },
+                    whenError = { msg, cause -> "Klarte ikke tolke feilrespons fra Spenn simulering (http $status): $msg".error(cause) }
                 )
             }
         }
     }
 
-    private fun request(action: String, bearerToken: AzureToken, jsonInputString: String, callId: String): HttpResponse<String> {
-        val request = HttpRequest.newBuilder()
-            .uri(URI("$baseUrl$action"))
-            .timeout(Duration.ofSeconds(10))
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer ${bearerToken.token}")
-            .header("callId", callId)
-            .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
-            .build()
+    private fun request(action: String, bearerToken: AzureToken, jsonInputString: String, callId: String): Result<HttpResponse<String>> {
+        return try {
+            val request = HttpRequest.newBuilder()
+                .uri(URI("$baseUrl$action"))
+                .timeout(Duration.ofSeconds(10))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer ${bearerToken.token}")
+                .header("callId", callId)
+                .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
+                .build()
 
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString()).ok()
+        } catch (err: Exception) {
+            err.error("Feil ved sending av http request")
+        }
     }
 
     private inline fun <reified T> convertResponseBody(response: String): Result<T> {
         return try {
-            Result.success(objectMapper.readValue<T>(response))
+            objectMapper.readValue<T>(response).ok()
         } catch (err: Exception) {
-            Result.failure(err)
+            err.error(err.message ?: "JSON parsing error")
         }
     }
 
@@ -94,7 +96,6 @@ class SimuleringClient(
         data object OkMenTomt : SimuleringResult
         data object SimuleringtjenesteUtilgjengelig : SimuleringResult
         data class FunksjonellFeil(val feilmelding: String) : SimuleringResult
-        data class Feilmelding(val feilmelding: String, val exception: Throwable? = null) : SimuleringResult
     }
 }
 

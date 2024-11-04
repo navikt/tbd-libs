@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.error
+import com.github.navikt.tbd_libs.result_object.ok
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -27,25 +30,25 @@ class AzureTokenClient(
         try {
             håndterTokenRespons(requestOnBehalfOfToken(scope, token))
         } catch (err: Exception) {
-            AzureTokenProvider.AzureTokenResult.Error("Feil ved henting av OBO-token: ${err.message}", err)
+            err.error("Feil ved henting av OBO-token: ${err.message}")
         }
     override fun bearerToken(scope: String) =
         try {
             håndterTokenRespons(requestBearerToken(scope))
         } catch (err: Exception) {
-            AzureTokenProvider.AzureTokenResult.Error("Feil ved henting av token: ${err.message}", err)
+            err.error("Feil ved henting av token: ${err.message}")
         }
 
-    private fun håndterTokenRespons(body: String?): AzureTokenProvider.AzureTokenResult {
-        if (body == null) return AzureTokenProvider.AzureTokenResult.Error("Tom responskropp fra Azure")
+    private fun håndterTokenRespons(body: String?): Result<AzureToken> {
+        if (body == null) return "Tom responskropp fra Azure".error()
         val tokenResponse = deserializeToken(body) ?: return håndterFeil(body)
-        return AzureTokenProvider.AzureTokenResult.Ok(AzureToken(tokenResponse.token, tokenResponse.expirationTime))
+        return AzureToken(tokenResponse.token, tokenResponse.expirationTime).ok()
     }
 
-    private fun håndterFeil(body: String): AzureTokenProvider.AzureTokenResult.Error {
+    private fun håndterFeil(body: String): Result.Error {
         val error = deserializeErrorResponse(body)
-            ?: return AzureTokenProvider.AzureTokenResult.Error("Ukjent feil ved henting av token. Kan ikke tolke responsen: $body")
-        return AzureTokenProvider.AzureTokenResult.Error("Feil fra azure: ${error.error}: ${error.description}")
+            ?: return "Ukjent feil ved henting av token. Kan ikke tolke responsen: $body".error()
+        return "Feil fra azure: ${error.error}: ${error.description}".error()
     }
 
     private fun deserializeErrorResponse(body: String): AzureErrorResponse? {

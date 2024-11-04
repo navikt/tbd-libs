@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
+import com.github.navikt.tbd_libs.result_object.Result
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -38,9 +39,9 @@ class SpurteDuClient(
 
     fun vis(id: UUID, onBehalfOfToken: String? = null, callId: UUID = UUID.randomUUID()): VisTekstResponse {
         val tokenResult = onBehalfOfToken?.let { tokenProvider.onBehalfOfToken(scope, onBehalfOfToken) } ?: tokenProvider.bearerToken(scope)
-        if (tokenResult is AzureTokenProvider.AzureTokenResult.Error) throw SpurteDuException("Kunne ikke hente token fra azure: ${tokenResult.error}", tokenResult.exception)
-        tokenResult as AzureTokenProvider.AzureTokenResult.Ok
-        val bearerToken = tokenResult.azureToken.token
+        if (tokenResult is Result.Error) throw SpurteDuException("Kunne ikke hente token fra azure: ${tokenResult.error}", tokenResult.cause)
+        tokenResult as Result.Ok
+        val bearerToken = tokenResult.value.token
         val request = HttpRequest.newBuilder()
             .uri(URI("$baseUrl/vis_meg/$id"))
             .timeout(Duration.ofSeconds(10))
