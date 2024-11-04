@@ -13,6 +13,7 @@ include(
     "rapids-and-rivers-api",
     "rapids-and-rivers-test",
     "rapids-and-rivers",
+    "result-object",
     "signed-jwt",
     "spurtedu-client",
     "speed-client",
