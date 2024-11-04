@@ -1,7 +1,7 @@
 val gradleversjon = "8.10"
 val junitJupiterVersion = "5.11.0"
 val mockkVersion = "1.13.12"
-val jacksonVersion = "2.17.2"
+val jacksonVersion = "2.18.1"
 val testcontainersVersion = "1.20.1"
 
 plugins {
