@@ -50,6 +50,7 @@ class SimuleringClient(
                 onSuccess = { SimuleringResult.Ok(it) },
                 onFailure = { SimuleringResult.Feilmelding(it.message ?: "JSON parsing error", it) }
             )
+            204 -> SimuleringResult.OkMenTomt
             400 -> {
                 convertResponseBody<SimuleringFeilresponse>(body).fold(
                     onSuccess = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.detail}") },
@@ -90,6 +91,7 @@ class SimuleringClient(
 
     sealed interface SimuleringResult {
         data class Ok(val data: SimuleringResponse) : SimuleringResult
+        data object OkMenTomt : SimuleringResult
         data object SimuleringtjenesteUtilgjengelig : SimuleringResult
         data class FunksjonellFeil(val feilmelding: String) : SimuleringResult
         data class Feilmelding(val feilmelding: String, val exception: Throwable? = null) : SimuleringResult
