@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.result_object
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 
 class ResultTest {
@@ -86,6 +87,31 @@ class ResultTest {
         ).flatten().also { result ->
             result as Result.Ok
             assertEquals(listOf("A", "B", "C"), result.value)
+        }
+    }
+
+    @Test
+    fun `get or throw`() {
+        assertThrows<RuntimeException> {
+            "Error msg".error().getOrThrow()
+        }.also { assertEquals("Error msg", it.message) }
+
+        assertEquals("Hei", "Hei".ok().getOrThrow())
+    }
+
+    @Test
+    fun tryCatching() {
+        tryCatch {
+            "Hei, på deg!"
+        }.also {
+            it as Result.Ok
+            assertEquals("Hei, på deg!", it.value)
+        }
+        tryCatch<String> {
+            error("Whoops!")
+        }.also {
+            it as Result.Error
+            assertEquals("Whoops!", it.error)
         }
     }
 

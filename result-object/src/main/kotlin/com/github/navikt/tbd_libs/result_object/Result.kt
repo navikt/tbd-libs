@@ -5,6 +5,11 @@ sealed interface Result<out T> {
     data class Error(val error: String, val cause: Throwable? = null) : Result<Nothing>
 }
 
+fun <T> Result<T>.getOrThrow() = when (this) {
+    is Result.Error -> throw RuntimeException(error, cause)
+    is Result.Ok -> value
+}
+
 fun <T, R> Result<T>.map(whenOk: (T) -> Result<R>) = when (this) {
     is Result.Error -> this
     is Result.Ok -> whenOk(value)
@@ -16,6 +21,14 @@ fun <T, R> Result<T>.fold(
 ) = when (this) {
     is Result.Error -> whenError(error, cause)
     is Result.Ok -> whenOk(value)
+}
+
+fun <R> tryCatch(block: () -> R): Result<R> {
+    return try {
+        block().ok()
+    } catch (err: Exception) {
+        err.error(err.message.toString())
+    }
 }
 
 fun <T> List<Result<T>>.flatten(): Result<List<T>> {
