@@ -55,6 +55,13 @@ class SpeedClient(
         }
     }
 
+    fun hentGeografiskTilknytning(ident: String, callId: String = UUID.randomUUID().toString()): Result<GeografiskTilknytningResponse> {
+        val jsonInputString = objectMapper.writeValueAsString(IdentRequest(ident))
+        return postRequest("/api/geografisk_tilknytning", jsonInputString, callId).map {
+            convertResponseBody<GeografiskTilknytningResponse>(it)
+        }
+    }
+
     fun tømMellomlager(identer: Collection<String>, callId: String = UUID.randomUUID().toString()) {
         val jsonInputString = objectMapper.writeValueAsString(SlettIdenterRequest(identer.toList()))
         deleteRequest("/api/ident", jsonInputString, callId)
@@ -163,5 +170,18 @@ data class PersonResponse(
     }
     enum class Kjønn {
         MANN, KVINNE, UKJENT
+    }
+}
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class GeografiskTilknytningResponse(
+    val type: GeografiskTilknytningType,
+    val land: String?,
+    val kommune: String?,
+    val bydel: String?,
+    val kilde: KildeResponse
+) {
+    enum class GeografiskTilknytningType {
+        BYDEL, KOMMUNE, UTLAND, UTLAND_UKJENT, UDEFINERT
     }
 }
