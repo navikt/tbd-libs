@@ -1,8 +1,7 @@
 val ktorVersion = "3.0.1"
 
 dependencies {
-    implementation(project(":naisful-app"))
-
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-server-test-host:$ktorVersion")
+    api(project(":naisful-app"))
+    api("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    api("io.ktor:ktor-server-test-host:$ktorVersion")
 }
