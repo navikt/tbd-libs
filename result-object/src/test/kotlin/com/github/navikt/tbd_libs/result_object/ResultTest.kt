@@ -61,6 +61,12 @@ class ResultTest {
             result as Result.Error
             assertEquals("Error: Denne gir feil altså!", result.error)
         }
+        "A".ok().fold(
+            whenOk = { "Hei, $it" },
+            whenError = { msg, cause -> "Error: $msg" }
+        ).also {
+            assertEquals("Hei, A", it)
+        }
     }
 
     @Test
