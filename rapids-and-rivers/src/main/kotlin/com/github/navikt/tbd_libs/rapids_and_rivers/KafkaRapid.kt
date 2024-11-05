@@ -43,9 +43,6 @@ class KafkaRapid(
 
     init {
         log.info("rapid initialized, autoCommit=$autoCommit")
-
-        KafkaClientMetrics(consumer).bindTo(meterRegistry)
-        KafkaClientMetrics(producer).bindTo(meterRegistry)
     }
 
     fun seekToBeginning() {
@@ -77,9 +74,15 @@ class KafkaRapid(
         }
     }
 
+    private fun registerMetrics() {
+        KafkaClientMetrics(consumer).bindTo(meterRegistry)
+        KafkaClientMetrics(producer).bindTo(meterRegistry)
+    }
+
     override fun start() {
         log.info("starting rapid")
         if (Started == running.getAndSet(Started)) return log.info("rapid already started")
+        registerMetrics()
         consumeMessages()
     }
 
