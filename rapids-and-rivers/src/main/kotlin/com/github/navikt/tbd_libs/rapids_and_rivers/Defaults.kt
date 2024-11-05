@@ -45,7 +45,7 @@ fun createDefaultKafkaRapid(
 }
 
 fun createDefaultKafkaRapidFromEnv(factory: ConsumerProducerFactory, meterRegistry: MeterRegistry, env: Map<String, String> = System.getenv()): KafkaRapid {
-    val resetPolicy = env["KAFKA_RESET_POLICY"]?.let { OffsetResetStrategy.valueOf(it) } ?: OffsetResetStrategy.LATEST
+    val resetPolicy = env["KAFKA_RESET_POLICY"]?.let { OffsetResetStrategy.valueOf(it.uppercase()) } ?: OffsetResetStrategy.LATEST
     return createDefaultKafkaRapid(
         factory = factory,
         consumerGroupId = env.getValue("KAFKA_CONSUMER_GROUP_ID"),
