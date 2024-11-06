@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - name: upload artifacts
-        run: ./gradlew -Pversion="$(echo $VERSION)" publish
+        run: ./gradlew -Pversion="$(echo $VERSION)" publish --parallel
         env:
           GITHUB_USERNAME: x-access-token
           GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
