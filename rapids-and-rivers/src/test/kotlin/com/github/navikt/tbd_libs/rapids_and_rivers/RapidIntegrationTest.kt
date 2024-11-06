@@ -23,7 +23,7 @@ import org.apache.kafka.common.config.SaslConfigs
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.testcontainers.containers.KafkaContainer
+import org.testcontainers.kafka.ConfluentKafkaContainer
 import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.time.LocalDateTime
@@ -40,7 +40,7 @@ internal class RapidIntegrationTest {
     private val testTopic = "a-test-topic"
     private val anotherTestTopic = "a-test-topic"
 
-    private val kafkaContainer = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.2.1"))
+    private val kafkaContainer = ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.7.1"))
 
     private lateinit var kafkaProducer: Producer<String, String>
     private lateinit var kafkaConsumer: Consumer<String, String>
@@ -262,7 +262,7 @@ internal class RapidIntegrationTest {
         rapidJob = GlobalScope.launch {
             try {
                 this@startNonBlocking.start()
-            } catch (err: Exception) {
+            } catch (_: Exception) {
                 // swallow
             }
         }
@@ -307,7 +307,7 @@ internal class RapidIntegrationTest {
 
 }
 
-private class LocalKafkaConfig(private val kafkaContainer: KafkaContainer) : Config {
+private class LocalKafkaConfig(private val kafkaContainer: ConfluentKafkaContainer) : Config {
     override fun producerConfig(properties: Properties): Properties {
         return properties.apply {
             connectionConfig(this)

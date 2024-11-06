@@ -1,8 +1,9 @@
 val gradleversjon = "8.10"
 val junitJupiterVersion = "5.11.0"
-val mockkVersion = "1.13.12"
+val mockkVersion = "1.13.13"
 val jacksonVersion = "2.18.1"
-val testcontainersVersion = "1.20.1"
+val testcontainersVersion = "1.20.3"
+val kotlinxCoroutinesVersion = "1.9.0"
 
 plugins {
     kotlin("jvm") version "2.0.10" apply false
@@ -22,6 +23,7 @@ subprojects {
     ext.set("testcontainersVersion", testcontainersVersion)
     ext.set("jacksonVersion", jacksonVersion)
     ext.set("mockkVersion", mockkVersion)
+    ext.set("kotlinxCoroutinesVersion", kotlinxCoroutinesVersion)
 
     val testImplementation by configurations
     val testRuntimeOnly by configurations
