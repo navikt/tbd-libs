@@ -15,11 +15,17 @@ class DatabaseContainer(
     private val appnavn: String,
     private val poolSize: Int,
     private val cleanUpTables: CleanupStrategy? = null,
-    private val maxHikariPoolSize: Int = 2
+    private val maxHikariPoolSize: Int = 2,
+    private val walLevelLogical: Boolean = false
 ) {
     private val instance by lazy {
         PostgreSQLContainer<Nothing>("postgres:15").apply {
             withCreateContainerCmdModifier { command -> command.withName(appnavn) }
+            if (walLevelLogical) {
+                // Cloud SQL har wal_level = 'logical' på grunn av flagget cloudsql.logical_decoding i
+                // naiserator.yaml. Vi må sette det samme lokalt for at flyway migrering skal fungere.
+                withCommand("postgres", "-c", "wal_level=logical")
+            }
             withReuse(true)
             withLabel("app-navn", appnavn)
             DockerClientFactory.lazyClient().apply {
