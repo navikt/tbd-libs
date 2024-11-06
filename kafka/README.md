@@ -15,7 +15,7 @@ private val defaultConsumerProperties = Properties().apply {
 }
 
 private val running = AtomicBoolean(false)
-private val factory.createConsumer(groupId, defaultConsumerProperties)
+private val consumer = factory.createConsumer(groupId, defaultConsumerProperties)
         
 fun main() {
     factory.createProducer().use { producer ->
