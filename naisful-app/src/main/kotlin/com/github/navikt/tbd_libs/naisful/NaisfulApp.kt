@@ -5,6 +5,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStarted
 import io.ktor.server.application.install
 import io.ktor.server.application.log
@@ -64,6 +65,7 @@ fun naisApp(
     callLogger: Logger,
     naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
     callIdHeaderName: String = "callId",
+    mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
     port: Int = 8080,
     applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
@@ -72,7 +74,7 @@ fun naisApp(
             log = applicationLogger
         }
     ) {
-        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName) }
+        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName, mdcEntries) }
         module(applicationModule)
     }
     val app = EmbeddedServer(config, CIO) {
@@ -88,7 +90,8 @@ fun Application.standardApiModule(
     objectMapper: ObjectMapper,
     callLogger: Logger,
     naisEndpoints: NaisEndpoints,
-    callIdHeaderName: String
+    callIdHeaderName: String,
+    mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
 ) {
     val readyToggle = AtomicBoolean(false)
     monitor.subscribe(ApplicationStarted) {
@@ -106,6 +109,7 @@ fun Application.standardApiModule(
         logger = callLogger
         level = Level.INFO
         callIdMdc(callIdHeaderName)
+        mdcEntries.forEach { (k, v) -> mdc(k, v)}
         disableDefaultColors()
 
         val ignoredPaths = setOf(
