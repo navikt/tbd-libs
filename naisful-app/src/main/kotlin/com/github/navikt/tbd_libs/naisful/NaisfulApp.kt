@@ -31,6 +31,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import io.micrometer.core.instrument.Timer
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
@@ -65,6 +66,7 @@ fun naisApp(
     callLogger: Logger,
     naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
     callIdHeaderName: String = "callId",
+    timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
     port: Int = 8080,
     applicationModule: Application.() -> Unit
@@ -74,7 +76,7 @@ fun naisApp(
             log = applicationLogger
         }
     ) {
-        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName, mdcEntries) }
+        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName, timersConfig, mdcEntries) }
         module(applicationModule)
     }
     val app = EmbeddedServer(config, CIO) {
@@ -91,6 +93,7 @@ fun Application.standardApiModule(
     callLogger: Logger,
     naisEndpoints: NaisEndpoints,
     callIdHeaderName: String,
+    timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
 ) {
     val readyToggle = AtomicBoolean(false)
@@ -161,6 +164,7 @@ fun Application.standardApiModule(
     }
     install(MicrometerMetrics) {
         registry = meterRegistry
+        timers(timersConfig)
         meterBinders = listOf(
             ClassLoaderMetrics(),
             JvmMemoryMetrics(),
