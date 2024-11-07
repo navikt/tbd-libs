@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 import java.net.URI
 import java.time.Duration
+import java.util.concurrent.atomic.AtomicBoolean
 
 class NaisfulAppTest {
 
@@ -38,6 +39,16 @@ class NaisfulAppTest {
             assertEquals("ALIVE", get("/isalive").bodyAsText())
             assertEquals("READY", get("/isready").bodyAsText())
             assertTrue(get("/metrics").bodyAsText().contains("jvm_memory_used_bytes"))
+        }
+    }
+
+    @Test
+    fun `ready check`() {
+        val ready = AtomicBoolean(true)
+        testApp(readyCheck = ready::get) {
+            assertEquals("READY", get("/isready").bodyAsText())
+            ready.set(false)
+            assertEquals("NOT READY", get("/isready").bodyAsText())
         }
     }
 
@@ -106,7 +117,12 @@ class NaisfulAppTest {
         }
     }
 
-    private fun testApp(naisEndpoints: NaisEndpoints = NaisEndpoints.Default, applicationModule: Application.() -> Unit = {}, testBlock: suspend HttpClient.() -> Unit) {
+    private fun testApp(
+        naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
+        readyCheck: () -> Boolean = { true },
+        applicationModule: Application.() -> Unit = {},
+        testBlock: suspend HttpClient.() -> Unit
+    ) {
         val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
         val objectMapper = jacksonObjectMapper()
         val randomPort = ServerSocket(0).localPort
@@ -122,9 +138,15 @@ class NaisfulAppTest {
                 }
             }
             application {
-                standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, "callId", {
-                    delay(250)
-                })
+                standardApiModule(
+                    meterRegistry = meterRegistry,
+                    objectMapper = objectMapper,
+                    callLogger = environment.log,
+                    naisEndpoints = naisEndpoints,
+                    callIdHeaderName = "callId",
+                    preStopHook = { delay(250) },
+                    readyCheck = readyCheck
+                )
                 applicationModule()
             }
             startApplication()

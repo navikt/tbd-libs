@@ -15,6 +15,7 @@ import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.EngineConnectorBuilder
 import io.ktor.server.engine.applicationEnvironment
+import io.ktor.server.engine.connector
 import io.ktor.server.metrics.micrometer.MicrometerMetrics
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
@@ -73,7 +74,9 @@ fun naisApp(
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
     port: Int = 8080,
+    readyCheck: () -> Boolean = { true },
     preStopHook: suspend () -> Unit = { delay(5000) },
+    cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     val config = serverConfig(
@@ -81,13 +84,24 @@ fun naisApp(
             log = applicationLogger
         }
     ) {
-        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName, preStopHook, timersConfig, mdcEntries) }
+        module {
+            standardApiModule(
+                meterRegistry = meterRegistry,
+                objectMapper = objectMapper,
+                callLogger = callLogger,
+                naisEndpoints = naisEndpoints,
+                callIdHeaderName = callIdHeaderName,
+                preStopHook = preStopHook,
+                readyCheck = readyCheck,
+                timersConfig = timersConfig,
+                mdcEntries = mdcEntries
+            )
+        }
         module(applicationModule)
     }
     val app = EmbeddedServer(config, CIO) {
-        connectors.add(EngineConnectorBuilder().apply {
-            this.port = port
-        })
+        connector { this.port = port }
+        apply(cioConfiguration)
     }
     return app
 }
@@ -99,6 +113,7 @@ fun Application.standardApiModule(
     naisEndpoints: NaisEndpoints,
     callIdHeaderName: String,
     preStopHook: suspend () -> Unit = { delay(5000) },
+    readyCheck: () -> Boolean = { true },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
 ) {
@@ -192,7 +207,7 @@ fun Application.standardApiModule(
         }
 
         get(naisEndpoints.isreadyEndpoint) {
-            if (!readyToggle.get()) return@get call.respondText("NOT READY", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
+            if (!readyToggle.get() || !readyCheck()) return@get call.respondText("NOT READY", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
             call.respondText("READY", ContentType.Text.Plain)
         }
 
