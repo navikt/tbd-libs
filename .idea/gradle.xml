@@ -11,10 +11,23 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/azure-token-client" />
             <option value="$PROJECT_DIR$/azure-token-client-default" />
+            <option value="$PROJECT_DIR$/jackson-helpers" />
+            <option value="$PROJECT_DIR$/kafka" />
             <option value="$PROJECT_DIR$/minimal-soap-client" />
             <option value="$PROJECT_DIR$/minimal-sts-client" />
             <option value="$PROJECT_DIR$/mock-http-client" />
+            <option value="$PROJECT_DIR$/naisful-app" />
+            <option value="$PROJECT_DIR$/naisful-test-app" />
             <option value="$PROJECT_DIR$/postgres-testdatabaser" />
+            <option value="$PROJECT_DIR$/rapids-and-rivers" />
+            <option value="$PROJECT_DIR$/rapids-and-rivers-api" />
+            <option value="$PROJECT_DIR$/rapids-and-rivers-test" />
+            <option value="$PROJECT_DIR$/result-object" />
+            <option value="$PROJECT_DIR$/retry" />
+            <option value="$PROJECT_DIR$/signed-jwt" />
+            <option value="$PROJECT_DIR$/speed-client" />
+            <option value="$PROJECT_DIR$/spenn-simulering-client" />
+            <option value="$PROJECT_DIR$/spurtedu-client" />
           </set>
         </option>
       </GradleProjectSettings>
