@@ -13,7 +13,6 @@ import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
-import io.ktor.server.engine.EngineConnectorBuilder
 import io.ktor.server.engine.applicationEnvironment
 import io.ktor.server.engine.connector
 import io.ktor.server.metrics.micrometer.MicrometerMetrics
@@ -74,6 +73,7 @@ fun naisApp(
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
     port: Int = 8080,
+    aliveCheck: () -> Boolean = { true },
     readyCheck: () -> Boolean = { true },
     preStopHook: suspend () -> Unit = { delay(5000) },
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
@@ -92,6 +92,7 @@ fun naisApp(
                 naisEndpoints = naisEndpoints,
                 callIdHeaderName = callIdHeaderName,
                 preStopHook = preStopHook,
+                aliveCheck = aliveCheck,
                 readyCheck = readyCheck,
                 timersConfig = timersConfig,
                 mdcEntries = mdcEntries
@@ -113,6 +114,7 @@ fun Application.standardApiModule(
     naisEndpoints: NaisEndpoints,
     callIdHeaderName: String,
     preStopHook: suspend () -> Unit = { delay(5000) },
+    aliveCheck: () -> Boolean = { true },
     readyCheck: () -> Boolean = { true },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
@@ -203,9 +205,9 @@ fun Application.standardApiModule(
             call.respond(HttpStatusCode.OK)
         }
         get(naisEndpoints.isaliveEndpoint) {
+            if (!aliveCheck()) return@get call.respondText("DEAD", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
             call.respondText("ALIVE", ContentType.Text.Plain)
         }
-
         get(naisEndpoints.isreadyEndpoint) {
             if (!readyToggle.get() || !readyCheck()) return@get call.respondText("NOT READY", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
             call.respondText("READY", ContentType.Text.Plain)

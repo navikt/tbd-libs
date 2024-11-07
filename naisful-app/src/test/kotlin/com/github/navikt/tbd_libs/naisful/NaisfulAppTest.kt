@@ -53,6 +53,16 @@ class NaisfulAppTest {
     }
 
     @Test
+    fun `alive check`() {
+        val alive = AtomicBoolean(true)
+        testApp(aliveCheck = alive::get) {
+            assertEquals("ALIVE", get("/isalive").bodyAsText())
+            alive.set(false)
+            assertEquals("DEAD", get("/isalive").bodyAsText())
+        }
+    }
+
+    @Test
     fun `custom routes`() {
         val endpoints = NaisEndpoints(
             isaliveEndpoint = "/erILive",
@@ -119,6 +129,7 @@ class NaisfulAppTest {
 
     private fun testApp(
         naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
+        aliveCheck: () -> Boolean = { true },
         readyCheck: () -> Boolean = { true },
         applicationModule: Application.() -> Unit = {},
         testBlock: suspend HttpClient.() -> Unit
@@ -145,6 +156,7 @@ class NaisfulAppTest {
                     naisEndpoints = naisEndpoints,
                     callIdHeaderName = "callId",
                     preStopHook = { delay(250) },
+                    aliveCheck = aliveCheck,
                     readyCheck = readyCheck
                 )
                 applicationModule()
