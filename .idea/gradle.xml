@@ -11,7 +11,7 @@
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/azure-token-client" />
             <option value="$PROJECT_DIR$/azure-token-client-default" />
-            <option value="$PROJECT_DIR$/jackson-helpers" />
+            <option value="$PROJECT_DIR$/jackson" />
             <option value="$PROJECT_DIR$/kafka" />
             <option value="$PROJECT_DIR$/minimal-soap-client" />
             <option value="$PROJECT_DIR$/minimal-sts-client" />

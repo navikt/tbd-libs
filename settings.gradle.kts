@@ -18,5 +18,5 @@ include(
     "spurtedu-client",
     "speed-client",
     "spenn-simulering-client",
-    "jackson-helpers"
+    "jackson"
 )

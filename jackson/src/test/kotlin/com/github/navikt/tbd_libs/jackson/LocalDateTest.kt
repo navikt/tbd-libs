@@ -1,4 +1,4 @@
-package com.github.navikt.tbd_libs.jackson_helpers
+package com.github.navikt.tbd_libs.jackson
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -9,19 +9,24 @@ import java.time.format.DateTimeParseException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class LocalDateTest {
+internal class LocalDateTest {
 
     @Test
     fun `Successfully parse LocalDate`() {
-        val objectNode = jsonNode("""{"date": "2024-01-01"}""")
-        assertEquals(LocalDate.of(2024, 1, 1), objectNode.asLocalDate("date"))
+        val expected = LocalDate.of(2024, 1, 1)
+        val objectNode = jsonNode("""{"date": "$expected"}""")
+        assertEquals(expected, objectNode.get("date").asLocalDate())
+        assertEquals(expected, objectNode.path("date").asLocalDate())
     }
 
     @Test
     fun `Cannot parse LocalDate if the field is missing`() {
         val objectNode = jsonNode("""{}""")
+        assertThrows<NullPointerException> {
+            objectNode.get("date").asLocalDate()
+        }
         assertThrows<IllegalArgumentException> {
-            objectNode.asLocalDate("date")
+            objectNode.path("date").asLocalDate()
         }
     }
 
@@ -29,58 +34,48 @@ class LocalDateTest {
     fun `Cannot parse LocalDate if the value of the field is not a valid date`() {
         val objectNode = jsonNode("""{"date": "foo"}""")
         assertThrows<DateTimeParseException> {
-            objectNode.asLocalDate("date")
+            objectNode.get("date").asLocalDate()
+            objectNode.path("date").asLocalDate()
         }
     }
 
     @Test
     fun `Cannot parse LocalDate if the value of the field is null`() {
         val objectNode = jsonNode("""{"date": null}""")
-        assertThrows<DateTimeParseException> {
-            objectNode.asLocalDate("date")
-        }
-    }
-
-    @Test
-    fun `Cannot parse LocalDate if the function is called on something other than an ObjectNode`() {
-        val objectNode = jsonNode("""{"date": null}""")
         assertThrows<IllegalArgumentException> {
-            objectNode.path("date").asLocalDate("date")
+            objectNode.get("date").asLocalDate()
+            objectNode.path("date").asLocalDate()
         }
     }
 
     @Test
     fun `Successfully parse LocalDate with the OrNull variant`() {
-        val objectNode = jsonNode("""{"date": "2024-01-01"}""")
-        assertEquals(LocalDate.of(2024, 1, 1), objectNode.asLocalDateOrNull("date"))
-        assertEquals(LocalDate.of(2024, 1, 1), objectNode.asLocalDateOrNull("date"))
+        val expected = LocalDate.of(2024, 1, 1)
+        val objectNode = jsonNode("""{"date": "$expected"}""")
+        assertEquals(expected, objectNode.get("date").asLocalDateOrNull())
+        assertEquals(expected, objectNode.path("date").asLocalDateOrNull())
     }
 
     @Test
     fun `Successfully parse LocalDate and get null back if the value is null with the OrNull variant`() {
         val objectNode = jsonNode("""{"date": null}""")
-        assertEquals(null, objectNode.asLocalDateOrNull("date"))
+        assertEquals(null, objectNode.get("date").asLocalDateOrNull())
+        assertEquals(null, objectNode.path("date").asLocalDateOrNull())
     }
 
     @Test
     fun `Successfully parse LocalDate and get null back if the field is missing with the OrNull variant`() {
         val objectNode = jsonNode("""{}""")
-        assertEquals(null, objectNode.asLocalDateOrNull("date"))
+        assertEquals(null, objectNode.get("date").asLocalDateOrNull())
+        assertEquals(null, objectNode.path("date").asLocalDateOrNull())
     }
 
     @Test
     fun `Cannot parse LocalDate if the value of the field is not a valid date with the OrNull variant`() {
         val objectNode = jsonNode("""{"date": "foo"}""")
         assertThrows<DateTimeParseException> {
-            objectNode.asLocalDateOrNull("date")
-        }
-    }
-
-    @Test
-    fun `Cannot parse LocalDate if the function is called on something other than an ObjectNode with the OrNull variant`() {
-        val objectNode = jsonNode("""{"date": null}""")
-        assertThrows<IllegalArgumentException> {
-            objectNode.path("date").asLocalDateOrNull("date")
+            objectNode.get("date").asLocalDateOrNull()
+            objectNode.path("date").asLocalDateOrNull()
         }
     }
 
