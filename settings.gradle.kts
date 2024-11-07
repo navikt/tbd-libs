@@ -17,5 +17,6 @@ include(
     "signed-jwt",
     "spurtedu-client",
     "speed-client",
-    "spenn-simulering-client"
+    "spenn-simulering-client",
+    "jackson-helpers"
 )
