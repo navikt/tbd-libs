@@ -17,7 +17,8 @@ class NaisfulTestAppTest {
         val endpoints = NaisEndpoints(
             isaliveEndpoint = "/erILive",
             isreadyEndpoint = "/erKlar",
-            metricsEndpoint = "/metrikker"
+            metricsEndpoint = "/metrikker",
+            preStopEndpoint = "/stopp",
         )
         naisfulTestApp({}, jacksonObjectMapper(), PrometheusMeterRegistry(PrometheusConfig.DEFAULT), endpoints) {
             assertEquals("ALIVE", client.get(endpoints.isaliveEndpoint).bodyAsText())

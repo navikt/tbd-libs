@@ -15,18 +15,20 @@ import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.engine.connector
 import io.ktor.server.routing.get
-import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import org.apache.http.HttpStatus
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 import java.net.URI
+import java.time.Duration
 
 class NaisfulAppTest {
 
@@ -44,13 +46,42 @@ class NaisfulAppTest {
         val endpoints = NaisEndpoints(
             isaliveEndpoint = "/erILive",
             isreadyEndpoint = "/erKlar",
-            metricsEndpoint = "/metrikker"
+            metricsEndpoint = "/metrikker",
+            preStopEndpoint = "/stopp",
         )
         testApp(endpoints) {
             assertEquals("ALIVE", get(endpoints.isaliveEndpoint).bodyAsText())
             assertEquals("READY", get(endpoints.isreadyEndpoint).bodyAsText())
             assertTrue(get(endpoints.metricsEndpoint).bodyAsText().contains("jvm_memory_used_bytes"))
         }
+    }
+
+    @Test
+    fun `shutdown hook`() {
+        testApp {
+            val stopRequest = async(Dispatchers.IO) {
+                get("/stop")
+            }
+            val maxWait = Duration.ofSeconds(5)
+            assertUntil(maxWait) {
+                assertEquals("NOT READY", get("/isready").bodyAsText())
+            }
+            val response = stopRequest.await()
+            assertTrue(response.status.isSuccess())
+        }
+    }
+
+    private suspend fun assertUntil(maxWait: Duration, assertion: suspend () -> Unit) {
+        val startTime = System.currentTimeMillis()
+        lateinit var lastAssertionError: AssertionError
+        while ((System.currentTimeMillis() - startTime) < maxWait.toMillis()) {
+            try {
+                return assertion()
+            } catch (err: AssertionError) {
+                lastAssertionError = err
+            }
+        }
+        throw lastAssertionError
     }
 
     @Test
@@ -91,7 +122,9 @@ class NaisfulAppTest {
                 }
             }
             application {
-                standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, "callId")
+                standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, "callId", {
+                    delay(250)
+                })
                 applicationModule()
             }
             startApplication()

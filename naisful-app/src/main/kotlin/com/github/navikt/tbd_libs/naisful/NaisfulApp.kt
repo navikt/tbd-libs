@@ -29,6 +29,7 @@ import io.ktor.server.request.uri
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondText
+import io.ktor.server.routing.application
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.micrometer.core.instrument.Timer
@@ -38,6 +39,7 @@ import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import kotlinx.coroutines.delay
 import org.slf4j.Logger
 import org.slf4j.event.Level
 import java.net.URI
@@ -48,13 +50,15 @@ import kotlin.String
 data class NaisEndpoints(
     val isaliveEndpoint: String,
     val isreadyEndpoint: String,
-    val metricsEndpoint: String
+    val metricsEndpoint: String,
+    val preStopEndpoint: String
 ) {
     companion object {
         val Default = NaisEndpoints(
             isaliveEndpoint = "/isalive",
             isreadyEndpoint = "/isready",
-            metricsEndpoint = "/metrics"
+            metricsEndpoint = "/metrics",
+            preStopEndpoint = "/stop"
         )
     }
 }
@@ -69,6 +73,7 @@ fun naisApp(
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
     port: Int = 8080,
+    preStopHook: suspend () -> Unit = { delay(5000) },
     applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     val config = serverConfig(
@@ -76,7 +81,7 @@ fun naisApp(
             log = applicationLogger
         }
     ) {
-        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName, timersConfig, mdcEntries) }
+        module { standardApiModule(meterRegistry, objectMapper, callLogger, naisEndpoints, callIdHeaderName, preStopHook, timersConfig, mdcEntries) }
         module(applicationModule)
     }
     val app = EmbeddedServer(config, CIO) {
@@ -93,6 +98,7 @@ fun Application.standardApiModule(
     callLogger: Logger,
     naisEndpoints: NaisEndpoints,
     callIdHeaderName: String,
+    preStopHook: suspend () -> Unit = { delay(5000) },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
 ) {
@@ -174,6 +180,13 @@ fun Application.standardApiModule(
         )
     }
     routing {
+        get(naisEndpoints.preStopEndpoint) {
+            application.log.info("Received shutdown signal via preStopHookPath, calling actual stop hook")
+            readyToggle.set(false)
+            preStopHook()
+            application.log.info("Stop hook returned, responding to preStopHook request with 200 OK")
+            call.respond(HttpStatusCode.OK)
+        }
         get(naisEndpoints.isaliveEndpoint) {
             call.respondText("ALIVE", ContentType.Text.Plain)
         }

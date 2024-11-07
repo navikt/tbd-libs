@@ -14,6 +14,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.engine.connector
 import io.ktor.server.testing.testApplication
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 
@@ -23,6 +24,7 @@ fun naisfulTestApp(
     meterRegistry: PrometheusMeterRegistry,
     naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
     callIdHeaderName: String = "callId",
+    preStopHook: suspend () -> Unit = { delay(5000) },
     testblokk: suspend TestContext.() -> Unit
 ) {
     val randomPort = ServerSocket(0).localPort
@@ -37,7 +39,7 @@ fun naisfulTestApp(
             }
         }
         application {
-            standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName)
+            standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName, preStopHook)
             testApplicationModule()
         }
         startApplication()
