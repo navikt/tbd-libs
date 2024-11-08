@@ -217,36 +217,6 @@ internal class RapidIntegrationTest {
         assertDoesNotThrow { LocalDateTime.parse(objectMapper.readTree(metadata).path("time").asText()) }
     }
 
-    @DelicateCoroutinesApi
-    @Test
-    fun `seek to beginning`() {
-        val readMessages = mutableListOf<JsonMessage>()
-        River(rapid).onSuccess { packet: JsonMessage, _: MessageContext -> readMessages.add(packet) }
-
-        var producedMessages = 0
-        await("wait until the rapid has read the test message")
-            .atMost(5, SECONDS)
-            .until {
-                rapid.publish("{\"foo\": \"bar\"}")
-                producedMessages += 1
-                readMessages.size >= 1
-            }
-
-        rapid.stop()
-        runBlocking { rapidJob.cancelAndJoin() }
-
-        readMessages.clear()
-
-        rapid = createTestRapid()
-        River(rapid).onSuccess { packet: JsonMessage, _: MessageContext -> readMessages.add(packet) }
-        rapid.seekToBeginning()
-        rapid.startNonBlocking()
-
-        await("wait until the rapid has read more than one message")
-            .atMost(20, SECONDS)
-            .until { readMessages.size >= producedMessages }
-    }
-
     @Test
     fun `read from others topics and produce to rapid topic`() {
         val serviceId = "my-service"

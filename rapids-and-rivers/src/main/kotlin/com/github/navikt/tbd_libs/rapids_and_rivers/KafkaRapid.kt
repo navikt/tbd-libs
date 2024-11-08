@@ -39,15 +39,8 @@ class KafkaRapid(
 
     private val topics = listOf(rapidTopic) + extraTopics
 
-    private var seekToBeginning = false
-
     init {
         log.info("rapid initialized, autoCommit=$autoCommit")
-    }
-
-    fun seekToBeginning() {
-        check(Stopped == running.get()) { "cannot reset consumer after rapid has started" }
-        seekToBeginning = true
     }
 
     fun isRunning() = running.get()
@@ -97,7 +90,6 @@ class KafkaRapid(
     override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
         if (partitions.isEmpty()) return
         log.info("partitions assigned: $partitions")
-        ensureConsumerPosition(partitions)
         notifyReady()
     }
 
@@ -105,13 +97,6 @@ class KafkaRapid(
         log.info("partitions revoked: $partitions")
         partitions.forEach { it.commitSync() }
         notifyNotReady()
-    }
-
-    private fun ensureConsumerPosition(partitions: Collection<TopicPartition>) {
-        if (!seekToBeginning) return
-        log.info("seeking to beginning for $partitions")
-        consumer.seekToBeginning(partitions)
-        seekToBeginning = false
     }
 
     private fun onRecords(records: ConsumerRecords<String, String>) {
