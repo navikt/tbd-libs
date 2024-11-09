@@ -3,6 +3,7 @@ include(
     "azure-token-client",
     "azure-token-client-default",
     "kafka",
+    "kafka-test",
     "mock-http-client",
     "minimal-sts-client",
     "minimal-soap-client",

@@ -13,6 +13,7 @@
             <option value="$PROJECT_DIR$/azure-token-client-default" />
             <option value="$PROJECT_DIR$/jackson" />
             <option value="$PROJECT_DIR$/kafka" />
+            <option value="$PROJECT_DIR$/kafka-test" />
             <option value="$PROJECT_DIR$/minimal-soap-client" />
             <option value="$PROJECT_DIR$/minimal-sts-client" />
             <option value="$PROJECT_DIR$/mock-http-client" />
