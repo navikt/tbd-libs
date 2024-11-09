@@ -9,7 +9,7 @@ import java.time.Duration
 class DatabaseContainersTest {
     private companion object {
         private const val MAX_POOL_SIZE = 4
-        private val databaseContainer = DatabaseContainers.container("tbd-libs", databasePoolSize = MAX_POOL_SIZE)
+        private val databaseContainer = DatabaseContainers.container("tbd-libs-psql", databasePoolSize = MAX_POOL_SIZE)
 
         @AfterAll
         @JvmStatic
