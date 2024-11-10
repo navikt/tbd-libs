@@ -53,7 +53,7 @@ class KafkaContainer(
         }
     }
 
-    suspend fun nyTopic(timeout: Duration = Duration.ofSeconds(20)): TestTopic {
+    suspend fun nyTopic(timeout: Duration = Duration.ofSeconds(40)): TestTopic {
         return nyeTopics(1, timeout).single()
     }
 
