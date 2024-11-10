@@ -2,6 +2,7 @@ package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics
@@ -9,6 +10,7 @@ import org.apache.kafka.clients.consumer.*
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.*
+import org.apache.kafka.common.record.TimestampType
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -127,7 +129,14 @@ class KafkaRapid(
         withMDC(recordDiganostics(record)) {
             val recordValue = record.value() ?: return@withMDC log.info("ignoring record with offset ${record.offset()} in partition ${record.partition()} because value is null (tombstone)")
             val context = KeyMessageContext(this, record.key())
-            notifyMessage(recordValue, context, meterRegistry)
+            val metadata = MessageMetadata(
+                topic = record.topic(),
+                partition = record.partition(),
+                offset = record.offset(),
+                key = record.key(),
+                headers = record.headers().associate { it.key() to it.value() }
+            )
+            notifyMessage(recordValue, context, metadata, meterRegistry)
         }
     }
 

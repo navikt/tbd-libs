@@ -1,8 +1,10 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -13,7 +15,7 @@ internal class RiverTest {
 
     @Test
     internal fun `sets id if missing`() {
-        river.onMessage("{}", context, SimpleMeterRegistry())
+        river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertTrue(gotMessage)
         assertDoesNotThrow { gotPacket.id.toUUID() }
     }
@@ -22,21 +24,21 @@ internal class RiverTest {
     internal fun `sets custom id if missing`() {
         val expected = "notSoRandom"
         river = configureRiver(River(rapid) { expected })
-        river.onMessage("{}", context, SimpleMeterRegistry())
+        river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertTrue(gotMessage)
         assertEquals(expected, gotPacket.id)
     }
 
     @Test
     internal fun `invalid json`() {
-        river.onMessage("invalid json", context, SimpleMeterRegistry())
+        river.onMessage("invalid json", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertFalse(gotMessage)
         assertTrue(messageProblems.hasErrors())
     }
 
     @Test
     internal fun `no validations`() {
-        river.onMessage("{}", context, SimpleMeterRegistry())
+        river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertTrue(gotMessage)
         assertFalse(messageProblems.hasErrors())
     }
@@ -44,7 +46,7 @@ internal class RiverTest {
     @Test
     internal fun `failed validations`() {
         river.validate { it.requireKey("key") }
-        river.onMessage("{}", context, SimpleMeterRegistry())
+        river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertFalse(gotMessage)
         assertTrue(messageProblems.hasErrors())
     }
@@ -52,7 +54,7 @@ internal class RiverTest {
     @Test
     internal fun `passing validations`() {
         river.validate { it.requireValue("hello", "world") }
-        river.onMessage("{\"hello\": \"world\"}", context, SimpleMeterRegistry())
+        river.onMessage("{\"hello\": \"world\"}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertTrue(gotMessage)
         assertFalse(messageProblems.hasErrors())
     }
@@ -88,7 +90,7 @@ internal class RiverTest {
 
     private fun configureRiver(river: River): River =
         river.register(object : River.PacketListener {
-            override fun onPacket(packet: JsonMessage, context: MessageContext) {
+            override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
                 gotPacket = packet
                 gotMessage = true
             }
@@ -100,7 +102,7 @@ internal class RiverTest {
                 messageProblems = error.problems
             }
 
-            override fun onError(problems: MessageProblems, context: MessageContext) {
+            override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
                 messageProblems = problems
             }
         })

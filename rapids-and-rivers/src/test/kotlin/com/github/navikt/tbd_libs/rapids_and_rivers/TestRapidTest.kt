@@ -20,7 +20,7 @@ internal class TestRapidTest {
         val originalMessage = "a test message!"
         val key = "a key"
 
-        testRapid.register { _: String, context: MessageContext, _ ->
+        testRapid.register { _: String, context: MessageContext, _, _ ->
             context.publish(originalMessage)
         }
 
@@ -35,7 +35,7 @@ internal class TestRapidTest {
         val originalMessage = "a test message!"
         val key = "a key"
 
-        testRapid.register { _: String, context: MessageContext, _ ->
+        testRapid.register { _: String, context: MessageContext, _, _ ->
             context.publish(originalMessage)
         }
 

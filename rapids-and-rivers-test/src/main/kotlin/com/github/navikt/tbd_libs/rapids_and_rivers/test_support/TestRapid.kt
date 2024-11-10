@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusConfig
@@ -26,11 +27,11 @@ class TestRapid(private val meterRegistry: MeterRegistry = PrometheusMeterRegist
     }
 
     fun sendTestMessage(message: String) {
-        notifyMessage(message, this, meterRegistry)
+        notifyMessage(message, this, MessageMetadata("test.message", -1, -1, null, emptyMap()), meterRegistry)
     }
 
     fun sendTestMessage(message: String, key: String) {
-        notifyMessage(message, KeyMessageContext(this, key), meterRegistry)
+        notifyMessage(message, KeyMessageContext(this, key), MessageMetadata("test.message", -1, -1, key, emptyMap()), meterRegistry)
     }
 
     override fun publish(message: String) {

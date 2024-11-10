@@ -6,9 +6,11 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.kafka.Config
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.test_support.KafkaContainers
 import com.github.navikt.tbd_libs.test_support.TestTopic
+import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import kotlinx.coroutines.*
@@ -87,7 +89,7 @@ internal class RapidIntegrationTest {
     fun `should stop on errors`() {
         assertThrows<RuntimeException> {
             rapidE2E {
-                rapid.register { _, _, _ -> throw RuntimeException("oh shit") }
+                rapid.register { _, _, _, _ -> throw RuntimeException("oh shit") }
 
                 await("wait until the rapid stops")
                     .atMost(20, SECONDS)
@@ -126,7 +128,7 @@ internal class RapidIntegrationTest {
 
         River(rapid)
             .validate { it.requireKey("test_message_index") }
-            .onSuccess { packet: JsonMessage, _: MessageContext ->
+            .onSuccess { packet: JsonMessage, _: MessageContext, _, _ ->
                 val index = packet["test_message_index"].asInt()
                 println("Read test_message_index=$index")
                 if (index == failOnMessage) {
@@ -164,7 +166,7 @@ internal class RapidIntegrationTest {
 
     private fun TestContext.ensureRapidIsActive() {
         val readMessages = mutableListOf<JsonMessage>()
-        River(rapid).onSuccess { packet: JsonMessage, _: MessageContext -> readMessages.add(packet) }
+        River(rapid).onSuccess { packet: JsonMessage, _: MessageContext, _, _ -> readMessages.add(packet) }
 
         await("wait until the rapid has read the test message")
                 .atMost(5, SECONDS)
@@ -241,12 +243,12 @@ internal class RapidIntegrationTest {
             validate { it.requireValue("@event", eventName) }
             validate { it.forbid("service_id") }
             register(object : River.PacketListener {
-                override fun onPacket(packet: JsonMessage, context: MessageContext) {
+                override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
                     packet["service_id"] = serviceId
                     context.publish(packet.toJson())
                 }
 
-                override fun onError(problems: MessageProblems, context: MessageContext) {}
+                override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
             })
         }
     }

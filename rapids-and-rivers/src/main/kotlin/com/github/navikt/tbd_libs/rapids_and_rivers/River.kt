@@ -2,6 +2,7 @@ package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.River.PacketListener.Companion.Name
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
@@ -40,33 +41,33 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         return this
     }
 
-    override fun onMessage(message: String, context: MessageContext, metrics: MeterRegistry) {
+    override fun onMessage(message: String, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
         val problems = MessageProblems(message)
         try {
             val packet = JsonMessage(message, problems, metrics, randomIdGenerator)
             validations.forEach { it.validate(packet) }
             if (problems.hasErrors()) {
-                return onError(metrics, problems, context)
+                return onError(metrics, problems, context, metadata)
             }
-            onPacket(packet, JsonMessageContext(context, packet), metrics)
+            onPacket(packet, JsonMessageContext(context, packet), metadata, metrics)
         } catch (err: MessageProblems.MessageException) {
             return onSevere(metrics, err, context)
         }
     }
 
-    private fun onPacket(packet: JsonMessage, context: MessageContext, metrics: MeterRegistry) {
+    private fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
         packet.interestedIn("@event_name")
         val eventName = packet["@event_name"].textValue() ?: "ukjent"
         listeners.forEach {
-            notifyPacketListener(metrics, eventName, it, packet, context)
+            notifyPacketListener(metrics, eventName, it, packet, context, metadata)
         }
     }
 
     @WithSpan
-    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext) {
+    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext, metadata: MessageMetadata) {
         onMessageCounter(metrics, context.rapidName(), packetListener.name(), "ok", eventName)
         val timer = Timer.start(metrics)
-        packetListener.onPacket(packet, context)
+        packetListener.onPacket(packet, context, metadata, metrics)
         timer.stop(
             Timer.builder("on_packet_seconds")
             .description("Hvor lang det tar å lese en gjenkjent melding i sekunder")
@@ -84,10 +85,10 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         }
     }
 
-    private fun onError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext) {
+    private fun onError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
         listeners.forEach {
             onMessageCounter(metrics, context.rapidName(), it.name(), "error")
-            it.onError(problems, context)
+            it.onError(problems, context, metadata)
         }
     }
 
@@ -108,18 +109,18 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     }
 
     fun interface PacketValidationSuccessListener {
-        fun onPacket(packet: JsonMessage, context: MessageContext)
+        fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry)
     }
 
     fun interface PacketValidationErrorListener {
-        fun onError(problems: MessageProblems, context: MessageContext)
+        fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata)
     }
 
     interface PacketListener : PacketValidationErrorListener, PacketValidationSuccessListener {
         companion object {
             fun Name(obj: Any) = obj::class.simpleName ?: "ukjent"
         }
-        override fun onError(problems: MessageProblems, context: MessageContext) {}
+        override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
 
         fun onSevere(error: MessageProblems.MessageException, context: MessageContext) {}
 
@@ -130,17 +131,17 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         private val packetHandler: PacketValidationSuccessListener,
         private val errorHandler: PacketValidationErrorListener
     ) : PacketListener {
-        constructor(packetHandler: PacketValidationSuccessListener) : this(packetHandler, { _, _ -> })
-        constructor(errorHandler: PacketValidationErrorListener) : this({ _, _ -> }, errorHandler)
+        constructor(packetHandler: PacketValidationSuccessListener) : this(packetHandler, { _, _, _ -> })
+        constructor(errorHandler: PacketValidationErrorListener) : this({ _, _, _, _ -> }, errorHandler)
 
         override fun name() = Name(packetHandler)
 
-        override fun onError(problems: MessageProblems, context: MessageContext) {
-            errorHandler.onError(problems, context)
+        override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+            errorHandler.onError(problems, context, metadata)
         }
 
-        override fun onPacket(packet: JsonMessage, context: MessageContext) {
-            packetHandler.onPacket(packet, context)
+        override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+            packetHandler.onPacket(packet, context, metadata, meterRegistry)
         }
     }
 

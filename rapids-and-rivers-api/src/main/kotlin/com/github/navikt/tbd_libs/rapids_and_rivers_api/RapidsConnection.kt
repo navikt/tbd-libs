@@ -17,7 +17,6 @@ abstract class RapidsConnection : MessageContext {
 
     private val statusListeners = mutableListOf<StatusListener>()
     private val listeners = mutableListOf<MessageListener>()
-    private val replayMessages = mutableListOf<Pair<String, MessageContext>>()
 
     fun register(listener: StatusListener) {
         statusListeners.add(listener)
@@ -27,26 +26,8 @@ abstract class RapidsConnection : MessageContext {
         listeners.add(listener)
     }
 
-    fun queueReplayMessage(key: String, message: String) {
-        val context = KeyMessageContext(this, key)
-        replayMessages.add(message to context)
-    }
-
-    private fun replayMessage(replayMessage: Pair<String, MessageContext>, metrics: MeterRegistry) {
-        sikkerLogg.info("replayer melding:\n\t${replayMessage.first}")
-        notifyMessage(replayMessage.first, replayMessage.second, metrics)
-    }
-
-    protected fun notifyMessage(message: String, context: MessageContext, metrics: MeterRegistry) {
-        listeners.forEach { it.onMessage(message, context, metrics) }
-        replayMessages(metrics)
-    }
-
-    private fun replayMessages(metrics: MeterRegistry) {
-        if (replayMessages.isEmpty()) return
-        log.info("det er ${replayMessages.size} meldinger køet for replay")
-        sikkerLogg.info("det er ${replayMessages.size} meldinger køet for replay")
-        replayMessage(replayMessages.removeAt(0),  metrics)
+    protected fun notifyMessage(message: String, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
+        listeners.forEach { it.onMessage(message, context, metadata, metrics) }
     }
 
     protected fun notifyStartup() {
@@ -90,6 +71,6 @@ abstract class RapidsConnection : MessageContext {
     }
 
     fun interface MessageListener {
-        fun onMessage(message: String, context: MessageContext, metrics: MeterRegistry)
+        fun onMessage(message: String, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry)
     }
 }
