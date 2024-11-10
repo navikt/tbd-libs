@@ -64,7 +64,6 @@ class KafkaContainer(
     }
     private suspend fun fåTopicsOrThrow(antall: Int, timeout: Duration): List<TestTopic> {
         return withTimeoutOrNull(timeout.toKotlinDuration()) {
-            var claimedTopics: List<TestTopic> = emptyList()
             // implementerer en "alt eller ingenting"-algoritme siden det kan være begrenset
             // mengde topics tilgjengelig og at det kan være flere tråder som konkurrerer om samme ressurs (potensiell deadlock).
             // Eksempel:
@@ -73,11 +72,12 @@ class KafkaContainer(
             //   Begge får én topic hver, og så står begge to og venter på siste — men det er jo ingen igjen!
             // Derfor gjør vi et forsøk på å få 2 stk med en gang, eller så gir vi tilbake det vi fikk. Før eller
             // siden vil en av trådene kunne få to topics hver.
-            while (isActive && claimedTopics.size != antall) {
+            while (isActive) {
+                val claimedTopics = fåTopics(antall)
+                if (claimedTopics.size == antall) return@withTimeoutOrNull claimedTopics
                 droppTopics(claimedTopics)
-                claimedTopics = fåTopics(antall)
             }
-            claimedTopics
+            return@withTimeoutOrNull null
         }
             ?.also {
                 println("> Får topic ${it.joinToString { it.topicnavn} }")
