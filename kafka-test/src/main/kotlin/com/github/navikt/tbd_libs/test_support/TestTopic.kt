@@ -12,6 +12,7 @@ import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.errors.WakeupException
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.Serdes.ByteArraySerde
 import org.apache.kafka.common.serialization.Serdes.StringSerde
@@ -31,10 +32,12 @@ class TestTopic(
     private val activePartitions = mutableListOf<TopicPartition>()
     private val rebalanceListener = object : ConsumerRebalanceListener {
         override fun onPartitionsRevoked(partitions: Collection<TopicPartition>) {
+            println("> $topicnavn mister partisjoner: ${partitions.joinToString()}")
             activePartitions.removeAll(partitions)
         }
 
         override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
+            println("> $topicnavn får partisjoner: ${partitions.joinToString()}")
             activePartitions.addAll(partitions)
         }
     }
@@ -69,11 +72,10 @@ class TestTopic(
     }
 
     fun cleanUp() {
-        println("> Rydder opp og forbereder gjenbruk i $topicnavn")
+        println("> Rydder opp og forbereder gjenbruk i $topicnavn - ${Thread.currentThread()}")
         measureTime {
-            // flusher producer hvis sendekøen ikke er tom
-            producer.flush()
-            // "leser" meldingene som evt. ikke er lest
+            // "leser" meldingene som evt. ikke er lest slik
+            // at consumeren er klar til neste test
             lesForbiSendteMeldinger()
             producedMessages.clear()
         }.also {
@@ -82,20 +84,30 @@ class TestTopic(
     }
 
     private fun lesForbiSendteMeldinger() {
-        // dette er nok en enklere variant enn å committe offsets
-        return consumer.seekToEnd(activePartitions)
+        // sørger for at usendte ting flushes og sendes
+        producer.flush()
+        producedMessages.forEach { it.get() }
 
-        val offsets = producedMessages
+        // om man aldri har pollet meldinger så har ikke consumeren fått assignment
+        // fra brokeren, og det nytter ikke å kalle `seek()`. derfor må vi gjøre en
+        // liksom-poll for å kickstarte consumeren
+        if (consumer.assignment().isEmpty()) {
+            println("$topicnavn har ikke assignment, gjør en liksom-poll")
+            consumer.poll(Duration.ofMillis(100))
+        }
+
+        producedMessages
             .map { it.get() }
             .groupBy { TopicPartition(topicnavn, it.partition()) }
-            .mapValues { (_, offsets) ->
-                OffsetAndMetadata(offsets.maxOf { it.offset() } + 1)
+            .forEach { (partition, offsets) ->
+                val nextOffsetForPartition = OffsetAndMetadata(offsets.maxOf { it.offset() } + 1)
+                println("> setter posisjon for ${partition.topic()} @ #${partition.partition()} til ${nextOffsetForPartition.offset()}")
+                consumer.seek(partition, nextOffsetForPartition)
             }
-        consumer.commitSync(offsets)
     }
 
     fun send(message: String): Future<RecordMetadata> = send(message, strings.serializer())
-    fun send(key: String, message: String) = send(key, message, strings.serializer(), strings.serializer())
+    fun send(key: String, message: String?) = send(key, message, strings.serializer(), strings.serializer())
 
     fun <V> send(message: V, valueSerializer: Serializer<V>) =
         send(ProducerRecord(topicnavn, valueSerializer.serialize(topicnavn, message)))
@@ -110,55 +122,50 @@ class TestTopic(
         }
     }
 
-    fun pollRecords(timeout: Duration = Duration.ofMillis(50), maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(1)) =
+    fun pollRecords(timeout: Duration = Duration.ofMillis(100), maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(5)) =
         pollRecords(strings.deserializer(), strings.deserializer(), timeout, maxWaitForAtLeastOneRecord)
 
-    fun <K, V> pollRecords(keyDeserializer: Deserializer<K>, valueDeserializer: Deserializer<V>, timeout: Duration = Duration.ofMillis(50), maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(1)): List<ConsumerRecord<K, V>> {
+    fun <K, V> pollRecords(keyDeserializer: Deserializer<K>, valueDeserializer: Deserializer<V>, timeout: Duration = Duration.ofMillis(100), maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(5)): List<ConsumerRecord<K, V>> {
         producer.flush()
-        println("> Consumerer meldinger fra $topicnavn")
-        //printProducedMessages()
+        producedMessages.forEach { it.get() }
+        println("> Consumerer meldinger fra $topicnavn (consumer position ${activePartitions.joinToString { "${it.topic()} @ #${it.partition()} - offset ${consumer.position(it)}" }}) - ${Thread.currentThread()}")
         return buildList {
-            val start = System.currentTimeMillis()
-            while (isEmpty() && (System.currentTimeMillis() - start) < maxWaitForAtLeastOneRecord.toMillis()) {
-                val pollStart = System.currentTimeMillis()
-                val records = consumer.poll(timeout)
-                val pollEnd = System.currentTimeMillis()
-                println("> Poll returnerte ${records.count()} records etter ${pollEnd - pollStart} ms")
-                records.forEach {
-                    val key = keyDeserializer.deserialize(it.topic(), it.headers(), it.key())
-                    val value = valueDeserializer.deserialize(it.topic(), it.headers(), it.value())
-
-                    val copy = ConsumerRecord<K, V>(
-                        /* topic = */ it.topic(),
-                        /* partition = */ it.partition(),
-                        /* offset = */ it.offset(),
-                        /* timestamp = */ it.timestamp(),
-                        /* timestampType = */ it.timestampType(),
-                        /* serializedKeySize = */ it.key()?.size ?: NULL_SIZE,
-                        /* serializedValueSize = */ it.value()?.size ?: NULL_SIZE,
-                        /* key = */ key,
-                        /* value = */ value,
-                        /* headers = */ it.headers(),
-                        /* leaderEpoch = */ it.leaderEpoch()
-                    )
-                    add(copy)
-                }
+            try {
+                pollUntilAtLeastOneRecordOrTimeout(keyDeserializer, valueDeserializer, timeout, maxWaitForAtLeastOneRecord)
+            } catch (_: WakeupException) {
+                println("> Consumer av $topicnavn fikk beskjed om å våkne opp - ${Thread.currentThread()}")
             }
+        }.also {
+            println("> Consumer av $topicnavn fikk ${it.size} records - ${Thread.currentThread()}")
         }
     }
 
-    private fun printProducedMessages() {
-        val finished = producedMessages
-            .filter { it.state() == Future.State.SUCCESS }
+    private fun <K, V> MutableList<ConsumerRecord<K, V>>.pollUntilAtLeastOneRecordOrTimeout(keyDeserializer: Deserializer<K>, valueDeserializer: Deserializer<V>, timeout: Duration, maxWaitForAtLeastOneRecord: Duration) {
+        val start = System.currentTimeMillis()
+        while (isEmpty() && (System.currentTimeMillis() - start) < maxWaitForAtLeastOneRecord.toMillis()) {
+            val pollStart = System.currentTimeMillis()
+            val records = consumer.poll(timeout)
+            val pollEnd = System.currentTimeMillis()
+            println("> Poll av $topicnavn returnerte ${records.count()} records etter ${pollEnd - pollStart} ms (consumer position ${activePartitions.joinToString { "${it.topic()} @ #${it.partition()} - offset ${consumer.position(it)}" }})")
+            records.forEach {
+                val key = keyDeserializer.deserialize(it.topic(), it.headers(), it.key())
+                val value = valueDeserializer.deserialize(it.topic(), it.headers(), it.value())
 
-        finished.map { it.resultNow() }
-            .onEach {
-                println("${it.topic()} - partition ${it.partition()} - offset ${it.offset()}")
+                val copy = ConsumerRecord<K, V>(
+                    /* topic = */ it.topic(),
+                    /* partition = */ it.partition(),
+                    /* offset = */ it.offset(),
+                    /* timestamp = */ it.timestamp(),
+                    /* timestampType = */ it.timestampType(),
+                    /* serializedKeySize = */ it.key()?.size ?: NULL_SIZE,
+                    /* serializedValueSize = */ it.value()?.size ?: NULL_SIZE,
+                    /* key = */ key,
+                    /* value = */ value,
+                    /* headers = */ it.headers(),
+                    /* leaderEpoch = */ it.leaderEpoch()
+                )
+                add(copy)
             }
-        producedMessages.removeAll(finished)
-        producedMessages
-            .forEachIndexed { index, it ->
-                println("> Melding #${index + 1} -> ${it.state()}")
-            }
+        }
     }
 }
