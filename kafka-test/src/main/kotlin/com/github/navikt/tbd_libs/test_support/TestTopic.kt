@@ -53,6 +53,7 @@ class TestTopic(
         val consumerProperties = Properties().apply {
             putAll(connectionProperties)
             put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-$topicnavn")
+            //put(ConsumerConfig.GROUP_PROTOCOL_CONFIG, "consumer")
             put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
             put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
         }

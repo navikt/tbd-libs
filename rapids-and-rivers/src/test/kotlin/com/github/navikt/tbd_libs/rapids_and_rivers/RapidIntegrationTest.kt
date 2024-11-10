@@ -27,7 +27,7 @@ import kotlin.random.Random
 
 internal class RapidIntegrationTest {
     private companion object {
-        private val kafkaContainer = KafkaContainers.container("tbd-rapid-and-rivers")
+        private val kafkaContainer = KafkaContainers.container("tbd-rapid-and-rivers", minPoolSize = 2)
     }
     private val objectMapper = jacksonObjectMapper()
         .registerModule(JavaTimeModule())

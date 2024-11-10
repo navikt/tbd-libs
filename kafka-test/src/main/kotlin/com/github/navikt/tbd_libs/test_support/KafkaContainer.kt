@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.test_support
 
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
@@ -56,26 +57,41 @@ class KafkaContainer(
         return nyeTopics(1, timeout).single()
     }
 
-    suspend fun nyeTopics(antall: Int, timeout: Duration = Duration.ofSeconds(20)): List<TestTopic> {
+    suspend fun nyeTopics(antall: Int, timeout: Duration = Duration.ofSeconds(40)): List<TestTopic> {
+        check(antall <= poolSize) { "det er satt opp $poolSize topics, men $antall ønskes. det går ikke!" }
         opprettTopicsHvisIkkeInitialisert()
         return fåTopicsOrThrow(antall, timeout)
     }
     private suspend fun fåTopicsOrThrow(antall: Int, timeout: Duration): List<TestTopic> {
-        val claimedTopics = fåTopics(antall, timeout)
-        if (claimedTopics.size != antall) {
-            droppTopics(claimedTopics)
-            throw RuntimeException("Fikk kun tak i ${claimedTopics.size} av $antall")
+        return withTimeoutOrNull(timeout.toKotlinDuration()) {
+            var claimedTopics: List<TestTopic> = emptyList()
+            // implementerer en "alt eller ingenting"-algoritme siden det kan være begrenset
+            // mengde topics tilgjengelig og at det kan være flere tråder som konkurrerer om samme ressurs (potensiell deadlock).
+            // Eksempel:
+            //   Bassenget består av to topics, og to tester kjører i parallell.
+            //   Begge testene vil ha to topics.
+            //   Begge får én topic hver, og så står begge to og venter på siste — men det er jo ingen igjen!
+            // Derfor gjør vi et forsøk på å få 2 stk med en gang, eller så gir vi tilbake det vi fikk. Før eller
+            // siden vil en av trådene kunne få to topics hver.
+            while (isActive && claimedTopics.size != antall) {
+                droppTopics(claimedTopics)
+                claimedTopics = fåTopics(antall)
+            }
+            claimedTopics
         }
-        println("> Får topic ${claimedTopics.joinToString { it.topicnavn} }")
-        return claimedTopics
+            ?.also {
+                println("> Får topic ${it.joinToString { it.topicnavn} }")
+            }
+            ?: throw RuntimeException("Fikk ikke tak i $antall topics innen ${timeout.toMillis()} millisekunder")
     }
 
-    private suspend fun fåTopics(antall: Int, timeout: Duration): List<TestTopic> {
+    private fun fåTopics(antall: Int): List<TestTopic> {
+        // forsøker å få <antall> topics, ellers returneres det som var tilgjengelig
         return buildList {
             (1..antall).forEach {
-                withTimeoutOrNull(timeout.toKotlinDuration()) {
-                    add(tilgjengeligeTopics.receive())
-                } ?: return@buildList
+                    tilgjengeligeTopics.tryReceive().getOrNull()?.also {
+                        add(it)
+                    } ?: return@buildList
             }
         }
     }
@@ -94,9 +110,13 @@ class KafkaContainer(
     }
 
     suspend fun droppTopics(testTopics: List<TestTopic>) {
+        if (testTopics.isEmpty()) return
         println("Tilgjengeliggjør ${testTopics.joinToString { it.topicnavn }} igjen")
-        testTopics.forEach { it.cleanUp() }
-        withTimeout(20.seconds) { testTopics.forEach { tilgjengeligeTopics.send(it) } }
+        try {
+            testTopics.forEach { it.cleanUp() }
+        } finally {
+            withTimeout(20.seconds) { testTopics.forEach { tilgjengeligeTopics.send(it) } }
+        }
     }
 }
 

@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 
 const val MAX_TOPICS_SIZE = 4
-val kafkaContainer = KafkaContainers.container("tbd-libs-kafka-test", numberOfTopics = MAX_TOPICS_SIZE)
+val kafkaContainer = KafkaContainers.container("tbd-libs-kafka-test", numberOfTopics = MAX_TOPICS_SIZE, minPoolSize = MAX_TOPICS_SIZE)
 
 class KafkaContainersTest {
 
