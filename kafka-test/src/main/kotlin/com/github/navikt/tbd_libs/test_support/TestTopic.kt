@@ -1,12 +1,13 @@
 package com.github.navikt.tbd_libs.test_support
 
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withTimeout
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecord.NULL_SIZE
 import org.apache.kafka.clients.consumer.KafkaConsumer
-import org.apache.kafka.clients.consumer.OffsetAndMetadata
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -29,18 +30,8 @@ class TestTopic(
     private val bytes = ByteArraySerde()
     private val strings = StringSerde()
 
+    private val beginningOffsets = mutableMapOf<TopicPartition, Long>()
     private val activePartitions = mutableListOf<TopicPartition>()
-    private val rebalanceListener = object : ConsumerRebalanceListener {
-        override fun onPartitionsRevoked(partitions: Collection<TopicPartition>) {
-            println("> $topicnavn mister partisjoner: ${partitions.joinToString()}")
-            activePartitions.removeAll(partitions)
-        }
-
-        override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
-            println("> $topicnavn får partisjoner: ${partitions.joinToString()}")
-            activePartitions.addAll(partitions)
-        }
-    }
     val producer by lazy {
         val producerProperties = Properties().apply {
             putAll(connectionProperties)
@@ -53,12 +44,30 @@ class TestTopic(
         val consumerProperties = Properties().apply {
             putAll(connectionProperties)
             put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-$topicnavn")
-            //put(ConsumerConfig.GROUP_PROTOCOL_CONFIG, "consumer")
             put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
             put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
         }
         KafkaConsumer(consumerProperties, bytes.deserializer(), bytes.deserializer()).apply {
-            subscribe(listOf(topicnavn), rebalanceListener)
+            subscribe(listOf(topicnavn), object : ConsumerRebalanceListener {
+                override fun onPartitionsRevoked(partitions: Collection<TopicPartition>) {
+                    println("> $topicnavn mister partisjoner: ${partitions.joinToString()}")
+                    activePartitions.removeAll(partitions)
+                }
+
+                override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
+                    println("> $topicnavn får partisjoner: ${partitions.joinToString()}")
+                    activePartitions.addAll(partitions)
+                    if (beginningOffsets.isEmpty()) return
+                    partitions
+                        .filter { it in beginningOffsets }
+                        .forEach {
+                            val nextOffsetForPartition = beginningOffsets.getValue(it)
+                            println("> setter posisjon for ${it.topic()} @ #${it.partition()} til $nextOffsetForPartition")
+                            seek(it, nextOffsetForPartition)
+                        }
+                    beginningOffsets.clear()
+                }
+            })
         }
     }
 
@@ -89,22 +98,16 @@ class TestTopic(
         producer.flush()
         producedMessages.forEach { it.get() }
 
-        // om man aldri har pollet meldinger så har ikke consumeren fått assignment
-        // fra brokeren, og det nytter ikke å kalle `seek()`. derfor må vi gjøre en
-        // liksom-poll for å kickstarte consumeren
-        if (consumer.assignment().isEmpty()) {
-            println("$topicnavn har ikke assignment, gjør en liksom-poll")
-            consumer.poll(Duration.ofMillis(100))
-        }
-
-        producedMessages
+        val offsetsForNextPoll = producedMessages
             .map { it.get() }
-            .groupBy { TopicPartition(topicnavn, it.partition()) }
-            .forEach { (partition, offsets) ->
-                val nextOffsetForPartition = OffsetAndMetadata(offsets.maxOf { it.offset() } + 1)
-                println("> setter posisjon for ${partition.topic()} @ #${partition.partition()} til ${nextOffsetForPartition.offset()}")
-                consumer.seek(partition, nextOffsetForPartition)
-            }
+            .groupBy ({ TopicPartition(topicnavn, it.partition()) }) { it.offset() }
+            .mapValues { (_, offsets) -> offsets.max() + 1 }
+
+        if (consumer.assignment().isEmpty()) {
+            beginningOffsets.putAll(offsetsForNextPoll)
+        } else {
+            offsetsForNextPoll.forEach { (partition, offset) -> consumer.seek(partition, offset) }
+        }
     }
 
     fun send(message: String): Future<RecordMetadata> = send(message, strings.serializer())
