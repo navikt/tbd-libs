@@ -78,8 +78,9 @@ class KafkaContainer(
             while (isActive) {
                 val claimedTopics = fåTopics(antall)
                 if (claimedTopics.size == antall) return@withTimeoutOrNull claimedTopics
-                println("> Fikk ${antall - claimedTopics.size} topics enn ønsket, gir tilbake og prøver på nytt")
+                println("> Fikk ${claimedTopics.size} topics, men ønsket $antall: gir tilbake og prøver på nytt")
                 droppTopics(claimedTopics)
+                delay(100)
             }
             return@withTimeoutOrNull null
         }
