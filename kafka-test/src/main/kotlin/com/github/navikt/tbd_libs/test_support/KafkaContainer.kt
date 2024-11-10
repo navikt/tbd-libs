@@ -63,6 +63,7 @@ class KafkaContainer(
         return fåTopicsOrThrow(antall, timeout)
     }
     private suspend fun fåTopicsOrThrow(antall: Int, timeout: Duration): List<TestTopic> {
+        println("> Etterspør $antall topics")
         return withTimeoutOrNull(timeout.toKotlinDuration()) {
             // implementerer en "alt eller ingenting"-algoritme siden det kan være begrenset
             // mengde topics tilgjengelig og at det kan være flere tråder som konkurrerer om samme ressurs (potensiell deadlock).
@@ -75,6 +76,7 @@ class KafkaContainer(
             while (isActive) {
                 val claimedTopics = fåTopics(antall)
                 if (claimedTopics.size == antall) return@withTimeoutOrNull claimedTopics
+                println("> Fikk ${antall - claimedTopics.size} topics enn ønsket, gir tilbake og prøver på nytt")
                 droppTopics(claimedTopics)
             }
             return@withTimeoutOrNull null
@@ -82,7 +84,11 @@ class KafkaContainer(
             ?.also {
                 println("> Får topic ${it.joinToString { it.topicnavn} }")
             }
-            ?: throw RuntimeException("Fikk ikke tak i $antall topics innen ${timeout.toMillis()} millisekunder")
+            ?: run {
+                val message = "> Fikk ikke tak i $antall topics innen ${timeout.toMillis()} millisekunder"
+                println(message)
+                throw RuntimeException(message)
+            }
     }
 
     private fun fåTopics(antall: Int): List<TestTopic> {
@@ -111,10 +117,11 @@ class KafkaContainer(
 
     suspend fun droppTopics(testTopics: List<TestTopic>) {
         if (testTopics.isEmpty()) return
-        println("Tilgjengeliggjør ${testTopics.joinToString { it.topicnavn }} igjen")
+        println("> Skal returnere ${testTopics.joinToString { it.topicnavn }} igjen")
         try {
             testTopics.forEach { it.cleanUp() }
         } finally {
+            println("> Tilgjengeliggjør ${testTopics.joinToString { it.topicnavn }} igjen")
             withTimeout(20.seconds) { testTopics.forEach { tilgjengeligeTopics.send(it) } }
         }
     }
