@@ -16,6 +16,7 @@ object KafkaContainers {
     // å spinne opp mange containers
     fun container(appnavn: String, numberOfTopics: Int = DEFAULT_POOL_SIZE, minPoolSize: Int = MIN_POOL_SIZE): KafkaContainer {
         val poolSize = maxOf(numberOfTopics, minPoolSize)
+        println("Pool size: $poolSize\nNumber of topics: $numberOfTopics\nMin pool size: $minPoolSize\nJUnit parallelism: $JUNIT_PARALLELISM\nMax pool size: $MAX_POOL_SIZE")
         return instances.getOrPut(appnavn) {
             KafkaContainer(appnavn, poolSize)
         }
