@@ -1,6 +1,8 @@
 package com.github.navikt.tbd_libs.test_support
 
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -19,10 +21,6 @@ class KafkaContainer(
     private val appnavn: String,
     private val poolSize: Int
 ) {
-    private companion object {
-        private const val IKKE_INITIALISERT = false
-        private const val ER_INITIALISERT = true
-    }
     private val instance by lazy {
         ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.7.1")).apply {
             withCreateContainerCmdModifier { command -> command.withName(appnavn) }
@@ -43,8 +41,13 @@ class KafkaContainer(
         }
     }
 
-    private val topicsInitialized = AtomicBoolean(IKKE_INITIALISERT)
-    private val tilgjengeligeTopics = Channel<TestTopic>(poolSize)
+    private val tilgjengeligeTopics by lazy {
+        Channel<TestTopic>(poolSize).apply {
+            repeat(poolSize) {
+                trySendBlocking(TestTopic("test.topic.$it", connectionProperties))
+            }
+        }
+    }
 
     val connectionProperties by lazy {
         Properties().apply {
@@ -59,7 +62,6 @@ class KafkaContainer(
 
     suspend fun nyeTopics(antall: Int, timeout: Duration = Duration.ofSeconds(40)): List<TestTopic> {
         check(antall <= poolSize) { "det er satt opp $poolSize topics, men $antall ønskes. det går ikke!" }
-        opprettTopicsHvisIkkeInitialisert()
         return fåTopicsOrThrow(antall, timeout)
     }
     private suspend fun fåTopicsOrThrow(antall: Int, timeout: Duration): List<TestTopic> {
@@ -98,15 +100,6 @@ class KafkaContainer(
                     tilgjengeligeTopics.tryReceive().getOrNull()?.also {
                         add(it)
                     } ?: return@buildList
-            }
-        }
-    }
-
-    private suspend fun opprettTopicsHvisIkkeInitialisert() {
-        if (!topicsInitialized.compareAndSet(IKKE_INITIALISERT, ER_INITIALISERT)) return
-        withTimeout(10.seconds) {
-            repeat(poolSize) {
-                tilgjengeligeTopics.send(TestTopic("test.topic.$it", connectionProperties))
             }
         }
     }
