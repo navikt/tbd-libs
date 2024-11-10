@@ -12,7 +12,7 @@ import java.time.Duration
 class TømmeBassengetTest {
     @Test
     fun `får exception om topic ikke er tilgjengelig innen timeout`() = runBlocking {
-        val topics = (1.. MAX_TOPICS_SIZE).map { kafkaContainer.nyTopic(Duration.ofSeconds(1)) }
+        val topics = (1.. MAX_TOPICS_SIZE).map { kafkaContainer.nyTopic() }
         assertThrows<RuntimeException> { kafkaContainer.nyTopic(Duration.ofMillis(10)) }
         topics.forEach { kafkaContainer.droppTopic(it) }
     }
@@ -20,9 +20,15 @@ class TømmeBassengetTest {
     @Test
     fun `returnerer topics hvis gitt antall ikke kan oppnås`() {
         runBlocking {
-            assertThrows<RuntimeException> { kafkaContainer.nyeTopics(MAX_TOPICS_SIZE + 1, Duration.ofSeconds(1)) }
-            val topics = assertDoesNotThrow { kafkaContainer.nyeTopics(MAX_TOPICS_SIZE) }
-            topics.forEach { kafkaContainer.droppTopic(it) }
+            // lar det være 1 ledig topic igjen
+            val topics = kafkaContainer.nyeTopics(MAX_TOPICS_SIZE - 1)
+            // kan umulig gå OK siden det skal kun være én ledig tilkobling
+            // (på grunn av andre tester i samme modul kan i teorien okkupere den siste tilkoblingen må vi ha litt timeout.
+            //      men siden vi vet at timeout vil inntreffe (siden det ikke finnes to ledige tilkoblinger) så unngår vi å sette
+            //       et så høyt tall at testen tar evigheter å fullføre..)
+            assertThrows<RuntimeException> { kafkaContainer.nyeTopics(2, timeout = Duration.ofSeconds(10)) }
+            val sisteTopic = assertDoesNotThrow { kafkaContainer.nyeTopics(1) }
+            kafkaContainer.droppTopics(topics + sisteTopic)
         }
     }
 }
