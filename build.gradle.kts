@@ -73,9 +73,3 @@ subprojects {
         }
     }
 }
-
-tasks {
-    withType<Wrapper> {
-        gradleVersion = gradleversjon
-    }
-}
