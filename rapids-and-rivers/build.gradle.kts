@@ -17,6 +17,6 @@ dependencies {
     testImplementation("org.awaitility:awaitility:$awaitilityVersion")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutinesVersion")
 
-    testImplementation("ch.qos.logback:logback-classic:1.4.14")
-    testImplementation("net.logstash.logback:logstash-logback-encoder:7.4")
+    testImplementation("ch.qos.logback:logback-classic:1.5.12")
+    testImplementation("net.logstash.logback:logstash-logback-encoder:8.0")
 }

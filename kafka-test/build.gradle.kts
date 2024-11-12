@@ -1,10 +1,10 @@
 val testcontainersVersion: String by project
 val kotlinxCoroutinesVersion: String by project
 val jacksonVersion: String by project
-val kafkaVersion = "3.8.0"
+val kafkaVersion = "3.9.0"
 
-val logbackClassicVersion = "1.4.14"
-val logbackEncoderVersion = "7.4"
+val logbackClassicVersion = "1.5.12"
+val logbackEncoderVersion = "8.0"
 
 dependencies {
     api("org.testcontainers:kafka:$testcontainersVersion")
