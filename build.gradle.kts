@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+
 val junitJupiterVersion = "5.11.0"
 val mockkVersion = "1.13.13"
 val jacksonVersion = "2.18.1"
@@ -31,10 +33,13 @@ subprojects {
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     }
 
-    configure<JavaPluginExtension> {
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+    configure<KotlinJvmProjectExtension> {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of("21"))
         }
+    }
+
+    configure<JavaPluginExtension> {
         withSourcesJar()
     }
 
