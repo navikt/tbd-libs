@@ -16,9 +16,12 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import java.net.InetAddress
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.*
 
 // Understands a specific JSON-formatted message
@@ -397,9 +400,26 @@ fun JsonNode.asOptionalLocalDate() =
 
 fun JsonNode.asOptionalLocalDateTime() =
     takeIf(JsonNode::isTextual)
-        ?.asText()
-        ?.takeIf(String::isNotEmpty)
-        ?.let { LocalDateTime.parse(it) }
+        ?.takeUnless { it.asText().isEmpty() }
+        ?.asLocalDateTime()
 
-fun JsonNode.asLocalDateTime(): LocalDateTime =
-    asText().let { LocalDateTime.parse(it) }
+fun JsonNode.asLocalDateTime(): LocalDateTime {
+    return try {
+        LocalDateTime.ofInstant(asInstant(), ZoneId.systemDefault())
+    } catch (_: Exception) {
+        LocalDateTime.parse(asText())
+    }
+}
+
+fun JsonNode.asInstant(): Instant {
+    return try {
+        Instant.parse(asText())
+    } catch (_: Exception) {
+        LocalDateTime.parse(asText()).atZone(ZoneId.systemDefault()).toInstant()
+    }
+}
+fun JsonNode.asOptionalInstant(): Instant? {
+    return takeIf(JsonNode::isTextual)
+        ?.takeUnless { it.asText().isEmpty() }
+        ?.asInstant()
+}
