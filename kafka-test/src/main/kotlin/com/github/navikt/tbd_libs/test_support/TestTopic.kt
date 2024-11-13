@@ -1,7 +1,5 @@
 package com.github.navikt.tbd_libs.test_support
 
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.withTimeout
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener
@@ -21,7 +19,6 @@ import org.apache.kafka.common.serialization.Serializer
 import java.time.Duration
 import java.util.Properties
 import java.util.concurrent.Future
-import kotlin.time.measureTime
 
 class TestTopic(
     val topicnavn: String,
@@ -30,7 +27,6 @@ class TestTopic(
     private val bytes = ByteArraySerde()
     private val strings = StringSerde()
 
-    private val beginningOffsets = mutableMapOf<TopicPartition, Long>()
     private val activePartitions = mutableListOf<TopicPartition>()
     val producer by lazy {
         val producerProperties = Properties().apply {
@@ -57,15 +53,6 @@ class TestTopic(
                 override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
                     println("> $topicnavn får partisjoner: ${partitions.joinToString()}")
                     activePartitions.addAll(partitions)
-                    if (beginningOffsets.isEmpty()) return
-                    partitions
-                        .filter { it in beginningOffsets }
-                        .forEach {
-                            val nextOffsetForPartition = beginningOffsets.getValue(it)
-                            println("> setter posisjon for ${it.topic()} @ #${it.partition()} til $nextOffsetForPartition")
-                            seek(it, nextOffsetForPartition)
-                        }
-                    beginningOffsets.clear()
                 }
             })
         }
@@ -83,31 +70,11 @@ class TestTopic(
 
     fun cleanUp() {
         println("> Rydder opp og forbereder gjenbruk i $topicnavn - ${Thread.currentThread()}")
-        measureTime {
-            // "leser" meldingene som evt. ikke er lest slik
-            // at consumeren er klar til neste test
-            lesForbiSendteMeldinger()
-            producedMessages.clear()
-        }.also {
-            println("> Brukte ${it.inWholeMilliseconds} ms på opprydding")
-        }
-    }
-
-    private fun lesForbiSendteMeldinger() {
-        // sørger for at usendte ting flushes og sendes
-        producer.flush()
-        producedMessages.forEach { it.get() }
-
-        val offsetsForNextPoll = producedMessages
-            .map { it.get() }
-            .groupBy ({ TopicPartition(topicnavn, it.partition()) }) { it.offset() }
-            .mapValues { (_, offsets) -> offsets.max() + 1 }
-
-        if (consumer.assignment().isEmpty()) {
-            beginningOffsets.putAll(offsetsForNextPoll)
-        } else {
-            offsetsForNextPoll.forEach { (partition, offset) -> consumer.seek(partition, offset) }
-        }
+        producedMessages.clear()
+        try { consumer.close() }
+        catch (_: Exception) {}
+        try { producer.close() }
+        catch (_: Exception) {}
     }
 
     fun send(message: String): Future<RecordMetadata> = send(message, strings.serializer())

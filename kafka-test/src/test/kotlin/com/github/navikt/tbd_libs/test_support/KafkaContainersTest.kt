@@ -10,11 +10,8 @@ import org.apache.kafka.common.serialization.Serializer
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 
-const val MAX_TOPICS_SIZE = 4
-val kafkaContainer = KafkaContainers.container("tbd-libs-kafka-test", numberOfTopics = MAX_TOPICS_SIZE, minPoolSize = MAX_TOPICS_SIZE)
+val kafkaContainer = KafkaContainers.container("tbd-libs-kafka-test")
 
 class KafkaContainersTest {
 
@@ -37,30 +34,6 @@ class KafkaContainersTest {
         pollRecords().also {
             assertEquals(1, it.size)
             assertEquals(message, it.single().value())
-        }
-    }
-
-    @Test
-    fun `cleans up after use`() {
-        lateinit var testTopic: TestTopic
-        kafkaTest(kafkaContainer) {
-            testTopic = this
-            @Language("JSON")
-            val message = """{ "name":  "Bar" }"""
-            repeat(1000) { send(message) }
-            pollRecords().also {
-                // pollRecords vil returnere minst én record, men
-                // det viktige for testen er at antallet er mindre enn 1000
-                // (default kafka er at poll returnerer max 500 records)
-                assertTrue(it.isNotEmpty())
-                assertNotEquals(1000, it.size)
-            }
-
-            testTopic.cleanUp()
-
-            testTopic.pollRecords().also {
-                assertEquals(0, it.size) { "det skal ikke ligge rester igjen på topic etter test" }
-            }
         }
     }
 
