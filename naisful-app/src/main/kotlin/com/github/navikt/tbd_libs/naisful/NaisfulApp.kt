@@ -78,8 +78,8 @@ fun naisApp(
     readyCheck: () -> Boolean = { true },
     preStopHook: suspend () -> Unit = { delay(5000) },
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
-    applicationModule: Application.() -> Unit,
-    statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() }
+    statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
+    applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     val config = serverConfig(
         environment = applicationEnvironment {
@@ -190,7 +190,7 @@ fun Application.standardApiModule(
     }
 }
 
-private fun StatusPagesConfig.defaultStatusPagesConfig() {
+fun StatusPagesConfig.defaultStatusPagesConfig() {
     exception<BadRequestException> { call, cause ->
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
         call.respond(HttpStatusCode.BadRequest, FeilResponse(
