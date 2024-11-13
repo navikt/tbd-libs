@@ -24,6 +24,7 @@ import io.ktor.server.plugins.callid.callIdMdc
 import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.statuspages.StatusPages
+import io.ktor.server.plugins.statuspages.StatusPagesConfig
 import io.ktor.server.request.path
 import io.ktor.server.request.uri
 import io.ktor.server.response.header
@@ -77,7 +78,8 @@ fun naisApp(
     readyCheck: () -> Boolean = { true },
     preStopHook: suspend () -> Unit = { delay(5000) },
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
-    applicationModule: Application.() -> Unit
+    applicationModule: Application.() -> Unit,
+    statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() }
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     val config = serverConfig(
         environment = applicationEnvironment {
@@ -95,7 +97,8 @@ fun naisApp(
                 aliveCheck = aliveCheck,
                 readyCheck = readyCheck,
                 timersConfig = timersConfig,
-                mdcEntries = mdcEntries
+                mdcEntries = mdcEntries,
+                statusPagesConfig = statusPagesConfig
             )
         }
         module(applicationModule)
@@ -118,6 +121,7 @@ fun Application.standardApiModule(
     readyCheck: () -> Boolean = { true },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
+    statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() }
 ) {
     val readyToggle = AtomicBoolean(false)
     monitor.subscribe(ApplicationStarted) {
@@ -150,40 +154,7 @@ fun Application.standardApiModule(
         }
     }
     install(StatusPages) {
-        exception<BadRequestException> { call, cause ->
-            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
-            call.respond(HttpStatusCode.BadRequest, FeilResponse(
-                status = HttpStatusCode.BadRequest,
-                type = URI("urn:error:bad_request"),
-                detail = cause.message,
-                instance = URI(call.request.uri),
-                callId = call.callId,
-                stacktrace = cause.stackTraceToString()
-            ))
-        }
-        exception<NotFoundException> { call, cause ->
-            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
-            call.respond(HttpStatusCode.NotFound, FeilResponse(
-                status = HttpStatusCode.NotFound,
-                type = URI("urn:error:not_found"),
-                detail = cause.message,
-                instance = URI(call.request.uri),
-                callId = call.callId,
-                stacktrace = cause.stackTraceToString()
-            ))
-        }
-        exception<Throwable> { call, cause ->
-            call.application.log.info("ukjent feil: ${cause.message}. svarer med InternalServerError og en feilmelding i JSON", cause)
-            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
-            call.respond(HttpStatusCode.InternalServerError, FeilResponse(
-                status = HttpStatusCode.InternalServerError,
-                type = URI("urn:error:internal_error"),
-                detail = "Uventet feil: ${cause.message}",
-                instance = URI(call.request.uri),
-                callId = call.callId,
-                stacktrace = cause.stackTraceToString()
-            ))
-        }
+        statusPagesConfig()
     }
     install(MicrometerMetrics) {
         registry = meterRegistry
@@ -216,6 +187,43 @@ fun Application.standardApiModule(
         get(naisEndpoints.metricsEndpoint) {
             call.respond(meterRegistry.scrape())
         }
+    }
+}
+
+private fun StatusPagesConfig.defaultStatusPagesConfig() {
+    exception<BadRequestException> { call, cause ->
+        call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+        call.respond(HttpStatusCode.BadRequest, FeilResponse(
+            status = HttpStatusCode.BadRequest,
+            type = URI("urn:error:bad_request"),
+            detail = cause.message,
+            instance = URI(call.request.uri),
+            callId = call.callId,
+            stacktrace = cause.stackTraceToString()
+        ))
+    }
+    exception<NotFoundException> { call, cause ->
+        call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+        call.respond(HttpStatusCode.NotFound, FeilResponse(
+            status = HttpStatusCode.NotFound,
+            type = URI("urn:error:not_found"),
+            detail = cause.message,
+            instance = URI(call.request.uri),
+            callId = call.callId,
+            stacktrace = cause.stackTraceToString()
+        ))
+    }
+    exception<Throwable> { call, cause ->
+        call.application.log.info("ukjent feil: ${cause.message}. svarer med InternalServerError og en feilmelding i JSON", cause)
+        call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+        call.respond(HttpStatusCode.InternalServerError, FeilResponse(
+            status = HttpStatusCode.InternalServerError,
+            type = URI("urn:error:internal_error"),
+            detail = "Uventet feil: ${cause.message}",
+            instance = URI(call.request.uri),
+            callId = call.callId,
+            stacktrace = cause.stackTraceToString()
+        ))
     }
 }
 
