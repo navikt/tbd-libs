@@ -13,15 +13,13 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.prometheusmetrics.PrometheusConfig
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import java.net.InetAddress
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.util.*
 
 // Understands a specific JSON-formatted message
@@ -54,7 +52,7 @@ open class JsonMessage(
 
         fun newMessage(
             map: Map<String, Any> = emptyMap(),
-            metrics: MeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
+            metrics: MeterRegistry = SimpleMeterRegistry(),
             randomIdGenerator: RandomIdGenerator? = null
         ) = objectMapper.writeValueAsString(map).let {
             JsonMessage(it, MessageProblems(it), metrics, randomIdGenerator)
@@ -63,14 +61,14 @@ open class JsonMessage(
         fun newMessage(
             eventName: String,
             map: Map<String, Any> = emptyMap(),
-            metrics: MeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
+            metrics: MeterRegistry = SimpleMeterRegistry(),
             randomIdGenerator: RandomIdGenerator? = null
         ) = newMessage(mapOf(EventNameKey to eventName) + map, metrics, randomIdGenerator)
 
         fun newNeed(
             behov: Collection<String>,
             map: Map<String, Any> = emptyMap(),
-            metrics: MeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
+            metrics: MeterRegistry = SimpleMeterRegistry(),
             randomIdGenerator: RandomIdGenerator? = null
         ) = newMessage("behov", mapOf(
             "@behovId" to UUID.randomUUID(),

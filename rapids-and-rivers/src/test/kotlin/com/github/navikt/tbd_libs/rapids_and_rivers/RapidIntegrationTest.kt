@@ -11,8 +11,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.test_support.KafkaContainers
 import com.github.navikt.tbd_libs.test_support.TestTopic
 import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.prometheusmetrics.PrometheusConfig
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.coroutines.*
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -235,7 +234,7 @@ internal class RapidIntegrationTest {
     private fun createTestRapid(consumerGroupId: String, mainTopic: TestTopic, extraTopic: TestTopic): KafkaRapid {
         val localConfig = LocalKafkaConfig(kafkaContainer.connectionProperties)
         val factory: ConsumerProducerFactory = ConsumerProducerFactory(localConfig)
-        return KafkaRapid(factory, consumerGroupId, mainTopic.topicnavn, PrometheusMeterRegistry(PrometheusConfig.DEFAULT), extraTopics = listOf(extraTopic.topicnavn))
+        return KafkaRapid(factory, consumerGroupId, mainTopic.topicnavn, SimpleMeterRegistry(), extraTopics = listOf(extraTopic.topicnavn))
     }
 
     private fun TestContext.testRiver(eventName: String, serviceId: String) {

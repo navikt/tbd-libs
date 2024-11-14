@@ -8,10 +8,9 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.prometheusmetrics.PrometheusConfig
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 
-class TestRapid(private val meterRegistry: MeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)) :
+class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()) :
     RapidsConnection() {
     private companion object {
         private val objectMapper = jacksonObjectMapper()

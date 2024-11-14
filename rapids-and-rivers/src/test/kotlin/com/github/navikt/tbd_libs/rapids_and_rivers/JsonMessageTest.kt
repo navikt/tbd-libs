@@ -7,8 +7,7 @@ import com.fasterxml.jackson.databind.node.*
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
-import io.micrometer.prometheusmetrics.PrometheusConfig
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -28,7 +27,7 @@ internal class JsonMessageTest {
         .registerModule(JavaTimeModule())
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-    private val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    private val meterRegistry = SimpleMeterRegistry()
     private val ValidJson = "{\"foo\": \"bar\"}"
     private val InvalidJson = "foo"
     private val ValidJsonNoObject = "[]"
@@ -1072,7 +1071,7 @@ internal class JsonMessageTest {
     }
 
     private class ExtendedMessage(originalMessage: String, problems: MessageProblems) :
-        JsonMessage(originalMessage, problems, PrometheusMeterRegistry(PrometheusConfig.DEFAULT)) {
+        JsonMessage(originalMessage, problems, SimpleMeterRegistry()) {
         init {
             requireKey("required_key")
         }
