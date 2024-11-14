@@ -907,8 +907,20 @@ internal class JsonMessageTest {
         with("2020-01-01T00:00:00.000000") {
             assertEquals(LocalDateTime.parse(this), TextNode.valueOf(this).asLocalDateTime())
         }
+        assertThrows<DateTimeParseException> { TextNode.valueOf(Instant.now().toString()).asLocalDateTime() }
+    }
+    @Test
+    fun asLocalDateTimeLenient() {
+        assertThrows<DateTimeParseException> { MissingNode.getInstance().asLocalDateTimeLenient() }
+        assertThrows<DateTimeParseException> { NullNode.instance.asLocalDateTimeLenient() }
+        assertThrows<DateTimeParseException> { BooleanNode.TRUE.asLocalDateTimeLenient() }
+        assertThrows<DateTimeParseException> { IntNode(0).asLocalDateTimeLenient() }
+        assertThrows<DateTimeParseException> { TextNode.valueOf("").asLocalDateTimeLenient() }
+        with("2020-01-01T00:00:00.000000") {
+            assertEquals(LocalDateTime.parse(this), TextNode.valueOf(this).asLocalDateTimeLenient())
+        }
         with(Instant.now()) {
-            assertEquals(LocalDateTime.ofInstant(this, ZoneId.systemDefault()), TextNode.valueOf(this.toString()).asLocalDateTime())
+            assertEquals(LocalDateTime.ofInstant(this, ZoneId.systemDefault()), TextNode.valueOf(this.toString()).asLocalDateTimeLenient())
         }
     }
 
@@ -922,41 +934,54 @@ internal class JsonMessageTest {
         with("2020-01-01T00:00:00.000000") {
             assertEquals(LocalDateTime.parse(this), TextNode.valueOf(this).asOptionalLocalDateTime())
         }
-        with(Instant.now()) {
-            assertEquals(LocalDateTime.ofInstant(this, ZoneId.systemDefault()), TextNode.valueOf(this.toString()).asOptionalLocalDateTime())
-        }
+        assertThrows<DateTimeParseException> { TextNode.valueOf(Instant.now().toString()).asOptionalLocalDateTime() }
     }
 
     @Test
-    fun asInstant() {
-        assertThrows<DateTimeParseException> { MissingNode.getInstance().asInstant() }
-        assertThrows<DateTimeParseException> { NullNode.instance.asInstant() }
-        assertThrows<DateTimeParseException> { BooleanNode.TRUE.asInstant() }
-        assertThrows<DateTimeParseException> { IntNode(0).asInstant() }
-        assertThrows<DateTimeParseException> { TextNode.valueOf("").asInstant() }
+    fun asOptionalLocalDateTimeLenient() {
+        assertNull(MissingNode.getInstance().asOptionalLocalDateTimeLenient())
+        assertNull(NullNode.instance.asOptionalLocalDateTimeLenient())
+        assertNull(BooleanNode.TRUE.asOptionalLocalDateTimeLenient())
+        assertNull(IntNode(0).asOptionalLocalDateTimeLenient())
+        assertNull(TextNode.valueOf("").asOptionalLocalDateTimeLenient())
         with("2020-01-01T00:00:00.000000") {
-            assertEquals(LocalDateTime.parse(this).atZone(ZoneId.systemDefault()).toInstant(), TextNode.valueOf(this).asInstant())
-        }
-        with("2020-01-01T00:00:00.000000Z") {
-            assertEquals(Instant.parse(this), TextNode.valueOf(this).asInstant())
+            assertEquals(LocalDateTime.parse(this), TextNode.valueOf(this).asOptionalLocalDateTimeLenient())
         }
         with(Instant.now()) {
-            assertEquals(this, TextNode.valueOf(this.toString()).asInstant())
+            assertEquals(LocalDateTime.ofInstant(this, ZoneId.systemDefault()), TextNode.valueOf(this.toString()).asOptionalLocalDateTimeLenient())
         }
     }
 
     @Test
-    fun asOptionalInstant() {
-        assertNull(MissingNode.getInstance().asOptionalInstant())
-        assertNull(NullNode.instance.asOptionalInstant())
-        assertNull(BooleanNode.TRUE.asOptionalInstant())
-        assertNull(IntNode(0).asOptionalInstant())
-        assertNull(TextNode.valueOf("").asOptionalInstant())
+    fun asInstantLenient() {
+        assertThrows<DateTimeParseException> { MissingNode.getInstance().asInstantLenient() }
+        assertThrows<DateTimeParseException> { NullNode.instance.asInstantLenient() }
+        assertThrows<DateTimeParseException> { BooleanNode.TRUE.asInstantLenient() }
+        assertThrows<DateTimeParseException> { IntNode(0).asInstantLenient() }
+        assertThrows<DateTimeParseException> { TextNode.valueOf("").asInstantLenient() }
+        with("2020-01-01T00:00:00.000000") {
+            assertEquals(LocalDateTime.parse(this).atZone(ZoneId.systemDefault()).toInstant(), TextNode.valueOf(this).asInstantLenient())
+        }
         with("2020-01-01T00:00:00.000000Z") {
-            assertEquals(Instant.parse(this), TextNode.valueOf(this).asOptionalInstant())
+            assertEquals(Instant.parse(this), TextNode.valueOf(this).asInstantLenient())
         }
         with(Instant.now()) {
-            assertEquals(this, TextNode.valueOf(this.toString()).asOptionalInstant())
+            assertEquals(this, TextNode.valueOf(this.toString()).asInstantLenient())
+        }
+    }
+
+    @Test
+    fun asOptionalInstantLenient() {
+        assertNull(MissingNode.getInstance().asOptionalInstantLenient())
+        assertNull(NullNode.instance.asOptionalInstantLenient())
+        assertNull(BooleanNode.TRUE.asOptionalInstantLenient())
+        assertNull(IntNode(0).asOptionalInstantLenient())
+        assertNull(TextNode.valueOf("").asOptionalInstantLenient())
+        with("2020-01-01T00:00:00.000000Z") {
+            assertEquals(Instant.parse(this), TextNode.valueOf(this).asOptionalInstantLenient())
+        }
+        with(Instant.now()) {
+            assertEquals(this, TextNode.valueOf(this.toString()).asOptionalInstantLenient())
         }
     }
 

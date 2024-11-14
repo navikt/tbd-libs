@@ -403,23 +403,39 @@ fun JsonNode.asOptionalLocalDateTime() =
         ?.takeUnless { it.asText().isEmpty() }
         ?.asLocalDateTime()
 
-fun JsonNode.asLocalDateTime(): LocalDateTime {
+fun JsonNode.asLocalDateTime(): LocalDateTime = LocalDateTime.parse(asText())
+
+fun JsonNode.asInstant(): Instant = Instant.parse(asText())
+fun JsonNode.asOptionalInstant(): Instant? {
+    return takeIf(JsonNode::isTextual)
+        ?.takeUnless { it.asText().isEmpty() }
+        ?.asInstant()
+}
+
+/* lenient versions */
+
+fun JsonNode.asOptionalLocalDateTimeLenient() =
+    takeIf(JsonNode::isTextual)
+        ?.takeUnless { it.asText().isEmpty() }
+        ?.asLocalDateTimeLenient()
+
+fun JsonNode.asLocalDateTimeLenient(): LocalDateTime {
     return try {
-        LocalDateTime.ofInstant(asInstant(), ZoneId.systemDefault())
+        LocalDateTime.ofInstant(asInstantLenient(), ZoneId.systemDefault())
     } catch (_: Exception) {
         LocalDateTime.parse(asText())
     }
 }
 
-fun JsonNode.asInstant(): Instant {
+fun JsonNode.asInstantLenient(): Instant {
     return try {
         Instant.parse(asText())
     } catch (_: Exception) {
         LocalDateTime.parse(asText()).atZone(ZoneId.systemDefault()).toInstant()
     }
 }
-fun JsonNode.asOptionalInstant(): Instant? {
+fun JsonNode.asOptionalInstantLenient(): Instant? {
     return takeIf(JsonNode::isTextual)
         ?.takeUnless { it.asText().isEmpty() }
-        ?.asInstant()
+        ?.asInstantLenient()
 }
