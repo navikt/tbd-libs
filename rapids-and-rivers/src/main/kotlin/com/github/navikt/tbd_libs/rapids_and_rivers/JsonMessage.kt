@@ -139,6 +139,36 @@ open class JsonMessage(
             compute("behov") { _, _ -> json.path(NeedKey).map(JsonNode::asText).takeUnless(List<*>::isEmpty) }
         }.toMap()
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun rejectKey(vararg key: String) {
         key.forEach { rejectKey(it) }
     }
@@ -149,24 +179,144 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun rejectValue(key: String, value: String) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isTextual && node.asText() == value) problems.severe("Rejected key $key with value $value")
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun rejectValue(key: String, value: Boolean) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isBoolean && node.asBoolean() == value) problems.severe("Rejected key $key with value $value")
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun rejectValues(key: String, values: List<String>) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.asText() in values) problems.severe("Rejected key $key with value ${node.asText()}")
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandKey(key: String) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -174,6 +324,36 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandValue(key: String, value: String) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -181,6 +361,36 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandValue(key: String, value: Number) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -188,6 +398,36 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandValue(key: String, value: Boolean) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -195,6 +435,36 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandAll(key: String, values: List<String>) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -202,6 +472,36 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandAny(key: String, values: List<String>) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -209,6 +509,36 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandAllOrAny(key: String, values: List<String>) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
@@ -216,10 +546,70 @@ open class JsonMessage(
         accessor(key)
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demandAll(key: String, vararg values: Enum<*>) {
         demandAll(key, values.map(Enum<*>::name))
     }
 
+    /**
+     * kodeeksempel med precondition
+     *
+     * River(rapidsConnection).apply {
+     *     precondition { it.requireValue("@event_name", "my_event") }
+     *     validate { it.requireKey("id", "timestamp") }
+     * }.register(PacketListener())
+     *
+     * class PacketListener : River.PacketListener {
+     *     override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+     *         println("Hello, ${packet["name"].asText()}")
+     *     }
+     *
+     *     override fun onPreconditionError( error: MessageProblems, context: MessageContext, metadata: MessageMetadata ) {
+     *         /* one or more of the River.precondition() validations failed.
+     *          *   usually these errors are NOT logged */
+     *     }
+     *
+     *     override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+     *         /* one or more of the River.validate() validations failed.
+     *          *   usualy you will LOG these as errors so you can fix the problem */
+     *     }
+     * }
+     */
+    @Deprecated(
+        message = """Demand/onSevere er erstattet med River.precondition() og PacketListener.onPreconditionFailed.
+Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/README.md""",
+        replaceWith = ReplaceWith(""),
+        level = DeprecationLevel.WARNING,
+    )
     fun demand(key: String, parser: (JsonNode) -> Any) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")

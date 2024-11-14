@@ -6,6 +6,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,19 +45,34 @@ internal class RiverTest {
     }
 
     @Test
+    internal fun `failed preconditions`() {
+        river.precondition { it.requireValue("@event_name", "tick") }
+        river.validate { error("this should not be called") }
+        river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
+        assertFalse(gotMessage)
+        assertTrue(messageProblems.hasErrors())
+        assertEquals(RiverValidationResult.PRECONDITION_FAILED, validationResult)
+    }
+
+    @Test
     internal fun `failed validations`() {
         river.validate { it.requireKey("key") }
         river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertFalse(gotMessage)
         assertTrue(messageProblems.hasErrors())
+        assertEquals(RiverValidationResult.VALIDATION_FAILED, validationResult)
     }
 
     @Test
     internal fun `passing validations`() {
+        river.precondition { it.requireValue("@event_name", "greeting") }
         river.validate { it.requireValue("hello", "world") }
-        river.onMessage("{\"hello\": \"world\"}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
+        @Language("JSON")
+        val message = """{ "@event_name": "greeting", "hello": "world" }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
         assertTrue(gotMessage)
         assertFalse(messageProblems.hasErrors())
+        assertEquals(RiverValidationResult.PASSED, validationResult)
     }
 
     private val context = object : MessageContext {
@@ -69,6 +85,7 @@ internal class RiverTest {
     private lateinit var gotPacket: JsonMessage
     private lateinit var messageProblems: MessageProblems
     private lateinit var river: River
+    private lateinit var validationResult: RiverValidationResult
     private val rapid = object : RapidsConnection() {
         override fun publish(message: String) {}
 
@@ -88,11 +105,24 @@ internal class RiverTest {
         river = configureRiver(River(rapid))
     }
 
+    private enum class RiverValidationResult {
+        PASSED, PRECONDITION_FAILED, VALIDATION_FAILED
+    }
     private fun configureRiver(river: River): River =
         river.register(object : River.PacketListener {
             override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
                 gotPacket = packet
                 gotMessage = true
+                validationResult = RiverValidationResult.PASSED
+            }
+
+            override fun onPreconditionError(
+                error: MessageProblems,
+                context: MessageContext,
+                metadata: MessageMetadata
+            ) {
+                messageProblems = error
+                validationResult = RiverValidationResult.PRECONDITION_FAILED
             }
 
             override fun onSevere(
@@ -100,10 +130,12 @@ internal class RiverTest {
                 context: MessageContext
             ) {
                 messageProblems = error.problems
+                validationResult = RiverValidationResult.PRECONDITION_FAILED
             }
 
             override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
                 messageProblems = problems
+                validationResult = RiverValidationResult.VALIDATION_FAILED
             }
         })
 }

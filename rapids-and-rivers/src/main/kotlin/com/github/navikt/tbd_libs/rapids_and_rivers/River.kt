@@ -1,11 +1,7 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.River.PacketListener.Companion.Name
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.*
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
@@ -13,12 +9,18 @@ import io.opentelemetry.instrumentation.annotations.SpanAttribute
 import io.opentelemetry.instrumentation.annotations.WithSpan
 
 class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: RandomIdGenerator = RandomIdGenerator.Default) : RapidsConnection.MessageListener {
+    private val preconditions = mutableListOf<PacketValidation>()
     private val validations = mutableListOf<PacketValidation>()
 
     private val listeners = mutableListOf<PacketListener>()
 
     init {
         rapidsConnection.register(this)
+    }
+
+    fun precondition(validation: PacketValidation): River {
+        preconditions.add(validation)
+        return this
     }
 
     fun validate(validation: PacketValidation): River {
@@ -45,10 +47,10 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         val problems = MessageProblems(message)
         try {
             val packet = JsonMessage(message, problems, metrics, randomIdGenerator)
+            preconditions.forEach { it.validate(packet) }
+            if (problems.hasErrors()) return onPreconditionError(metrics, problems, context, metadata)
             validations.forEach { it.validate(packet) }
-            if (problems.hasErrors()) {
-                return onError(metrics, problems, context, metadata)
-            }
+            if (problems.hasErrors()) return onError(metrics, problems, context, metadata)
             onPacket(packet, JsonMessageContext(context, packet), metadata, metrics)
         } catch (err: MessageProblems.MessageException) {
             return onSevere(metrics, err, context)
@@ -82,6 +84,13 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         listeners.forEach {
             onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
             it.onSevere(error, context)
+        }
+    }
+
+    private fun onPreconditionError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+        listeners.forEach {
+            onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
+            it.onPreconditionError(problems, context, metadata)
         }
     }
 
@@ -122,6 +131,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         }
         override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
 
+        fun onPreconditionError(error: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
         fun onSevere(error: MessageProblems.MessageException, context: MessageContext) {}
 
         fun name(): String = Name(this)
