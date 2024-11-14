@@ -847,6 +847,19 @@ internal class JsonMessageTest {
     }
 
     @Test
+    fun `forbidden value`() {
+        message("{\"key\": \"foo\"}").apply { forbidValue("key", "bar") }
+        assertFalse(problems.hasErrors())
+        message("{\"key\": \"foo\"}").apply { forbidValue("key", "foo") }
+        assertTrue(problems.hasErrors())
+
+        message("{\"key\": true}").apply { forbidValue("key", true) }
+        assertTrue(problems.hasErrors())
+        message("{\"key\": true}").apply { forbidValue("key", false) }
+        assertFalse(problems.hasErrors())
+    }
+
+    @Test
     fun `forbidden values`() {
         message("{\"key\": \"foo\"}").apply { forbidValues("key", listOf("bar")) }
         assertFalse(problems.hasErrors())

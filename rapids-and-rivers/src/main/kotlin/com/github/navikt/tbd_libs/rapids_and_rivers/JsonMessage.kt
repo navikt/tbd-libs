@@ -708,6 +708,18 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         key.forEach { forbid(it) }
     }
 
+    fun forbidValue(key: String, value: Boolean) {
+        val node = node(key)
+        if (!node.isMissingOrNull() && node.isBoolean && node.asBoolean() == value) problems.error("Required key $key with value $value")
+        accessor(key)
+    }
+
+    fun forbidValue(key: String, value: String) {
+        val node = node(key)
+        if (!node.isMissingOrNull() && node.isTextual && node.asText() == value) problems.error("Required key $key with value $value")
+        accessor(key)
+    }
+
     fun forbidValues(key: String, values: List<String>) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isTextual && node.asText() in values) return problems.error("Required $key is one of $values")
