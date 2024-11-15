@@ -1,10 +1,7 @@
-val jacksonVersion: String by project
-val mockkVersion: String by project
-
 dependencies {
-    api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+    api("com.fasterxml.jackson.module:jackson-module-kotlin")
     api(project(":result-object"))
 
-    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation("io.mockk:mockk")
     testImplementation(project(":mock-http-client"))
 }

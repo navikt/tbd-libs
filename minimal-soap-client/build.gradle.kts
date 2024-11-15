@@ -1,11 +1,8 @@
-val jacksonVersion: String by project
-val mockkVersion: String by project
-
 dependencies {
     api(project(":minimal-sts-client"))
     api(project(":result-object"))
-    api("com.fasterxml.jackson.dataformat:jackson-dataformat-xml:$jacksonVersion")
+    api("com.fasterxml.jackson.dataformat:jackson-dataformat-xml")
 
-    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation("io.mockk:mockk")
     testImplementation(project(":mock-http-client"))
 }

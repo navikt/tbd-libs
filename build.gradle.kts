@@ -22,13 +22,29 @@ subprojects {
     apply(plugin = "org.gradle.maven-publish")
 
     ext.set("testcontainersVersion", testcontainersVersion)
-    ext.set("jacksonVersion", jacksonVersion)
-    ext.set("mockkVersion", mockkVersion)
-    ext.set("kotlinxCoroutinesVersion", kotlinxCoroutinesVersion)
 
+    val api by configurations
     val testImplementation by configurations
     val testRuntimeOnly by configurations
     dependencies {
+        constraints {
+            api("com.fasterxml.jackson:jackson-bom:$jacksonVersion") {
+                because("Alle moduler skal bruke samme versjon av jackson")
+            }
+            api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion") {
+                because("Alle moduler skal bruke samme versjon av jackson")
+            }
+            api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion") {
+                because("Alle moduler skal bruke samme versjon av jackson")
+            }
+            api("io.mockk:mockk:$mockkVersion") {
+                because("Alle moduler skal bruke samme versjon av mockk")
+            }
+            api("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinxCoroutinesVersion") {
+                because("Alle moduler skal bruke samme versjon av coroutines")
+            }
+        }
+
         testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     }

@@ -1,9 +1,7 @@
-val mockkVersion: String by project
-
 dependencies {
     api(project(":azure-token-client"))
     api(project(":result-object"))
 
-    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation("io.mockk:mockk")
     testImplementation(project(":mock-http-client"))
 }

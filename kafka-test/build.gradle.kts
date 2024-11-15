@@ -1,5 +1,4 @@
 val testcontainersVersion: String by project
-val jacksonVersion: String by project
 val kafkaVersion = "3.9.0"
 
 dependencies {
@@ -11,5 +10,5 @@ dependencies {
         exclude(group = "org.slf4j", module = "slf4j-api")
     }
 
-    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 }
