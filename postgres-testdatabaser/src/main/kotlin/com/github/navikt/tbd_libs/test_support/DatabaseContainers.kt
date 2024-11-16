@@ -13,9 +13,16 @@ object DatabaseContainers {
 
     // gjenbruker containers med samme navn for å unngå
     // å spinne opp mange containers
-    fun container(appnavn: String, cleanUpTables: CleanupStrategy? = null, maxHikariPoolSize: Int = 2, databasePoolSize: Int = POOL_SIZE, walLevelLogical: Boolean = false): DatabaseContainer {
+    fun container(
+        appnavn: String,
+        cleanupStrategy: CleanupStrategy? = null,
+        initStrategy: InitStrategy? = null,
+        maxHikariPoolSize: Int = 2,
+        databasePoolSize: Int = POOL_SIZE,
+        walLevelLogical: Boolean = false
+    ): DatabaseContainer {
         return instances.getOrPut(appnavn) {
-            DatabaseContainer(appnavn, databasePoolSize, cleanUpTables, maxHikariPoolSize, walLevelLogical)
+            DatabaseContainer(appnavn, databasePoolSize, cleanupStrategy, initStrategy, maxHikariPoolSize, walLevelLogical)
         }
     }
 }

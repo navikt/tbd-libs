@@ -14,7 +14,8 @@ import java.util.concurrent.TimeUnit
 class DatabaseContainer(
     private val appnavn: String,
     private val poolSize: Int,
-    private val cleanUpTables: CleanupStrategy? = null,
+    private val cleanupStrategy: CleanupStrategy? = null,
+    private val initStrategy: InitStrategy? = null,
     private val maxHikariPoolSize: Int = 2,
     private val walLevelLogical: Boolean = false
 ) {
@@ -44,7 +45,7 @@ class DatabaseContainer(
 
     private val systemtilkobling by lazy { instance.createConnection("") }
     private val tilgjengeligeTilkoblinger by lazy {
-        ArrayBlockingQueue(poolSize, false, opprettTilkoblinger(cleanUpTables, maxHikariPoolSize))
+        ArrayBlockingQueue(poolSize, false, opprettTilkoblinger(cleanupStrategy, initStrategy, maxHikariPoolSize))
     }
 
     fun nyTilkobling(timeout: Duration = Duration.ofSeconds(20)): TestDataSource {
@@ -55,20 +56,20 @@ class DatabaseContainer(
         throw RuntimeException("Ventet i ${timeout.toMillis()} millisekunder uten å få en ledig database")
     }
 
-    private fun opprettTilkoblinger(cleanUpTables: CleanupStrategy?, maxHikariPoolSize: Int) = runBlocking(Dispatchers.IO) {
+    private fun opprettTilkoblinger(cleanupStrategy: CleanupStrategy?, initStrategy: InitStrategy?, maxHikariPoolSize: Int) = runBlocking(Dispatchers.IO) {
         (1..poolSize)
-            .map { async { opprettTilkobling("testdb_$it", cleanUpTables, maxHikariPoolSize) } }
+            .map { async { opprettTilkobling("testdb_$it", cleanupStrategy, initStrategy, maxHikariPoolSize) } }
             .awaitAll()
     }
 
-    private fun opprettTilkobling(dbnavn: String, cleanUpTables: CleanupStrategy?, maxHikariPoolSize: Int): TestDataSource {
+    private fun opprettTilkobling(dbnavn: String, cleanupStrategy: CleanupStrategy?, initStrategy: InitStrategy?, maxHikariPoolSize: Int): TestDataSource {
         opprettDatabase(dbnavn)
         instance.withDatabaseName(dbnavn)
         return TestDataSource(dbnavn, HikariConfig().apply {
             username = instance.username
             password = instance.password
             jdbcUrl = instance.jdbcUrl
-        }, cleanUpTables, maxHikariPoolSize)
+        }, cleanupStrategy, initStrategy, maxHikariPoolSize)
     }
 
     private fun opprettDatabase(dbnavn: String) {

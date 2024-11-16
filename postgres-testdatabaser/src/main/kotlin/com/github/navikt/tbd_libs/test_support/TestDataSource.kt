@@ -9,7 +9,8 @@ import java.sql.Connection
 class TestDataSource(
     private val dbnavn: String,
     config: HikariConfig,
-    private val cleanUpTables: CleanupStrategy? = null, // komma-separert liste over tabeller som skal tømmes
+    private val cleanupStrategy: CleanupStrategy? = null, // komma-separert liste over tabeller som skal tømmes
+    private val initStrategy: InitStrategy? = null,
     maxHikariPoolSize: Int = 2 // hvor stor hikari-poolen skal være
 ) {
     private val migrationConfig = HikariConfig()
@@ -42,21 +43,27 @@ class TestDataSource(
     }
 
     private fun migrate() {
+        initStrategy?.apply {
+            println("Initialiserer $dbnavn med $this")
+            migrationDataSource.connection.use { connection ->
+                init(connection)
+            }
+        }
         println("Migrerer dbnavn=$dbnavn")
         flyway.migrate()
     }
 
     fun cleanUp() {
         println("Rydder opp og forbereder gjenbruk i $dbnavn")
-        if (cleanUpTables == null) {
+        if (cleanupStrategy == null) {
             println("cleanUpTables er ikke spesifisert, re-migrerer derfor med Flyway")
             flyway.clean()
             flyway.migrate()
             return
         }
-        println("Tømmer tabellene $cleanUpTables")
+        println("Tømmer tabellene $cleanupStrategy")
         migrationDataSource.connection.use {
-            cleanUpTables.cleanup(it)
+            cleanupStrategy.cleanup(it)
         }
     }
     fun teardown(dropDatabase: (String) -> Unit) {
@@ -64,6 +71,10 @@ class TestDataSource(
         dataSource.close()
         dropDatabase(dbnavn)
     }
+}
+
+fun interface InitStrategy {
+    fun init(connection: Connection)
 }
 
 fun interface CleanupStrategy {
