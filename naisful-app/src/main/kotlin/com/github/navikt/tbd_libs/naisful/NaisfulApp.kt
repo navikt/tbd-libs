@@ -7,6 +7,7 @@ import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStarted
+import io.ktor.server.application.ServerConfigBuilder
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.application.serverConfig
@@ -65,6 +66,26 @@ data class NaisEndpoints(
 }
 
 fun naisApp(
+    applicationLogger: Logger,
+    port: Int = 8080,
+    cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
+    serverBuilder: ServerConfigBuilder.() -> Unit
+): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
+    val config = serverConfig(
+        environment = applicationEnvironment {
+            log = applicationLogger
+        }
+    ) {
+       serverBuilder()
+    }
+    val app = EmbeddedServer(config, CIO) {
+        connector { this.port = port }
+        apply(cioConfiguration)
+    }
+    return app
+}
+
+fun naisApp(
     meterRegistry: PrometheusMeterRegistry,
     objectMapper: ObjectMapper,
     applicationLogger: Logger,
@@ -80,12 +101,11 @@ fun naisApp(
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
     applicationModule: Application.() -> Unit
-): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
-    val config = serverConfig(
-        environment = applicationEnvironment {
-            log = applicationLogger
-        }
-    ) {
+) = naisApp(
+    applicationLogger = applicationLogger,
+    port = port,
+    cioConfiguration = cioConfiguration,
+    serverBuilder = {
         module {
             standardApiModule(
                 meterRegistry = meterRegistry,
@@ -103,12 +123,7 @@ fun naisApp(
         }
         module(applicationModule)
     }
-    val app = EmbeddedServer(config, CIO) {
-        connector { this.port = port }
-        apply(cioConfiguration)
-    }
-    return app
-}
+)
 
 fun Application.standardApiModule(
     meterRegistry: PrometheusMeterRegistry,
