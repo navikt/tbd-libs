@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.naisful.test
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.naisful.NaisEndpoints
 import com.github.navikt.tbd_libs.naisful.standardApiModule
 import io.ktor.client.HttpClient
@@ -20,12 +21,9 @@ import java.net.ServerSocket
 
 fun naisfulTestApp(
     testApplicationModule: Application.() -> Unit,
-    objectMapper: ObjectMapper,
-    meterRegistry: PrometheusMeterRegistry,
-    naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
-    callIdHeaderName: String = "callId",
-    preStopHook: suspend () -> Unit = { delay(5000) },
-    testblokk: suspend TestContext.() -> Unit
+    isreadyEndpoint: String = NaisEndpoints.Default.isreadyEndpoint,
+    testClientObjectMapper: ObjectMapper = jacksonObjectMapper(),
+    testblokk: suspend TestContext.() -> Unit,
 ) {
     val randomPort = ServerSocket(0).localPort
     testApplication {
@@ -39,7 +37,6 @@ fun naisfulTestApp(
             }
         }
         application {
-            standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName, preStopHook)
             testApplicationModule()
         }
         startApplication()
@@ -49,17 +46,33 @@ fun naisfulTestApp(
                 port = randomPort
             }
             install(ContentNegotiation) {
-                register(ContentType.Application.Json, JacksonConverter(objectMapper))
+                register(ContentType.Application.Json, JacksonConverter(testClientObjectMapper))
             }
         }
 
         do {
-            val response = testClient.get(naisEndpoints.isreadyEndpoint)
-            println("Venter på at ${naisEndpoints.isreadyEndpoint} svarer OK…:${response.status}")
+            val response = testClient.get(isreadyEndpoint)
+            println("Venter på at $isreadyEndpoint svarer OK…:${response.status}")
         } while (!response.status.isSuccess())
 
         testblokk(TestContext(testClient))
     }
 }
+
+fun naisfulTestApp(
+    testApplicationModule: Application.() -> Unit,
+    objectMapper: ObjectMapper,
+    meterRegistry: PrometheusMeterRegistry,
+    naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
+    callIdHeaderName: String = "callId",
+    preStopHook: suspend () -> Unit = { delay(5000) },
+    testblokk: suspend TestContext.() -> Unit
+) = naisfulTestApp(
+    testApplicationModule = {
+        standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName, preStopHook)
+        testApplicationModule()
+    },
+    isreadyEndpoint = naisEndpoints.isreadyEndpoint
+) { testblokk() }
 
 class TestContext(val client: HttpClient)
