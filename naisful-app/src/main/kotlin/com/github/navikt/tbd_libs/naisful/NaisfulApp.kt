@@ -7,7 +7,6 @@ import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.ApplicationStarted
-import io.ktor.server.application.ServerConfigBuilder
 import io.ktor.server.application.install
 import io.ktor.server.application.log
 import io.ktor.server.application.serverConfig
@@ -69,14 +68,14 @@ fun naisApp(
     applicationLogger: Logger,
     port: Int = 8080,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
-    serverBuilder: ServerConfigBuilder.() -> Unit
+    applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
     val config = serverConfig(
         environment = applicationEnvironment {
             log = applicationLogger
         }
     ) {
-       serverBuilder()
+        module { applicationModule() }
     }
     val app = EmbeddedServer(config, CIO) {
         connector { this.port = port }
@@ -105,23 +104,21 @@ fun naisApp(
     applicationLogger = applicationLogger,
     port = port,
     cioConfiguration = cioConfiguration,
-    serverBuilder = {
-        module {
-            standardApiModule(
-                meterRegistry = meterRegistry,
-                objectMapper = objectMapper,
-                callLogger = callLogger,
-                naisEndpoints = naisEndpoints,
-                callIdHeaderName = callIdHeaderName,
-                preStopHook = preStopHook,
-                aliveCheck = aliveCheck,
-                readyCheck = readyCheck,
-                timersConfig = timersConfig,
-                mdcEntries = mdcEntries,
-                statusPagesConfig = statusPagesConfig
-            )
-        }
-        module(applicationModule)
+    applicationModule = {
+        standardApiModule(
+            meterRegistry = meterRegistry,
+            objectMapper = objectMapper,
+            callLogger = callLogger,
+            naisEndpoints = naisEndpoints,
+            callIdHeaderName = callIdHeaderName,
+            preStopHook = preStopHook,
+            aliveCheck = aliveCheck,
+            readyCheck = readyCheck,
+            timersConfig = timersConfig,
+            mdcEntries = mdcEntries,
+            statusPagesConfig = statusPagesConfig
+        )
+        applicationModule()
     }
 )
 
