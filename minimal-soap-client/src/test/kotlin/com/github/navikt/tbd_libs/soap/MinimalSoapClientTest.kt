@@ -40,7 +40,7 @@ class MinimalSoapClientTest {
         val (httpClient, soapClient) = mockClient(expectedResponseBody)
         val result = soapClient.doSoapAction(action, body, samlStrategy(USERNAME, PASSWORD))
         result as com.github.navikt.tbd_libs.result_object.Result.Ok
-        assertEquals(expectedResponseBody, result.value)
+        assertEquals(expectedResponseBody, result.value.body())
         verifiserSoapRequest(httpClient, action, body)
     }
 
@@ -53,7 +53,7 @@ class MinimalSoapClientTest {
         val (httpClient, soapClient) = mockClient(expectedResponseBody)
         val result = soapClient.doSoapAction(action, body, usernamePasswordStrategy(USERNAME, PASSWORD))
         result as Result.Ok
-        assertEquals(expectedResponseBody, result.value)
+        assertEquals(expectedResponseBody, result.value.body())
         verifiserSoapRequest(httpClient, action, body, UNT_ASSERTION)
     }
 

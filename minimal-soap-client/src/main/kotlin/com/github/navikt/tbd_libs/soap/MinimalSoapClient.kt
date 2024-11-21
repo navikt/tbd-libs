@@ -9,6 +9,7 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
+import java.net.http.HttpResponse
 import java.net.http.HttpResponse.BodyHandlers
 import java.util.*
 
@@ -19,7 +20,7 @@ class MinimalSoapClient(
     private val proxyAuthorization: (() -> Result<String>)? = null,
 ) {
 
-    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): Result<String> {
+    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): Result<HttpResponse<String>> {
         val proxyAuthorizationResult = when (proxyAuthorization) {
             null -> Result.Ok(null)
             else -> proxyAuthorization()
@@ -35,13 +36,7 @@ class MinimalSoapClient(
                         .POST(BodyPublishers.ofString(requestBody))
                         .build()
 
-                    val result = httpClient.send(request, BodyHandlers.ofString())?.ok() ?: "Tom responskropp fra tjenesten".error()
-                    result.map { response ->
-                        when (val status = response.statusCode()) {
-                            200 -> response.body().ok()
-                            else -> "Tjenesten svarte med http $status".error()
-                        }
-                    }
+                    httpClient.send(request, BodyHandlers.ofString())?.ok() ?: "Tom responskropp fra tjenesten".error()
                 }
             }
         } catch (err: Exception) {
