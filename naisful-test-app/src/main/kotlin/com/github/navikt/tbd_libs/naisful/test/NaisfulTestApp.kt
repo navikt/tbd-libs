@@ -72,7 +72,8 @@ fun naisfulTestApp(
         standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName, preStopHook)
         testApplicationModule()
     },
-    isreadyEndpoint = naisEndpoints.isreadyEndpoint
+    isreadyEndpoint = naisEndpoints.isreadyEndpoint,
+    testClientObjectMapper = objectMapper,
 ) { testblokk() }
 
 class TestContext(val client: HttpClient)
