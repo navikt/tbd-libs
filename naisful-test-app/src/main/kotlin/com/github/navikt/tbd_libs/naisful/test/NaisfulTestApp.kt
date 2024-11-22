@@ -19,7 +19,7 @@ import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 
-fun naisfulTestApp(
+fun plainTestApp(
     testApplicationModule: Application.() -> Unit,
     isreadyEndpoint: String = NaisEndpoints.Default.isreadyEndpoint,
     testClientObjectMapper: ObjectMapper = jacksonObjectMapper(),
@@ -67,7 +67,7 @@ fun naisfulTestApp(
     callIdHeaderName: String = "callId",
     preStopHook: suspend () -> Unit = { delay(5000) },
     testblokk: suspend TestContext.() -> Unit
-) = naisfulTestApp(
+) = plainTestApp(
     testApplicationModule = {
         standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName, preStopHook)
         testApplicationModule()

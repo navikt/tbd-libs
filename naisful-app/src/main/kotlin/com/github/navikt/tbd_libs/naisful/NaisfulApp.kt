@@ -64,7 +64,7 @@ data class NaisEndpoints(
     }
 }
 
-fun naisApp(
+fun plainApp(
     applicationLogger: Logger,
     port: Int = 8080,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
@@ -100,7 +100,7 @@ fun naisApp(
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
     applicationModule: Application.() -> Unit
-) = naisApp(
+) = plainApp(
     applicationLogger = applicationLogger,
     port = port,
     cioConfiguration = cioConfiguration,
