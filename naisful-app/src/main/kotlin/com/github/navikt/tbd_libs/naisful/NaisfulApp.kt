@@ -50,6 +50,7 @@ import java.net.URI
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.String
+import kotlin.time.Duration.Companion.seconds
 
 data class NaisEndpoints(
     val isaliveEndpoint: String,
@@ -99,7 +100,7 @@ fun naisApp(
     port: Int = 8080,
     aliveCheck: () -> Boolean = { true },
     readyCheck: () -> Boolean = { true },
-    preStopHook: suspend () -> Unit = { delay(5000) },
+    preStopHook: suspend () -> Unit = ::defaultPreStopHook,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
     applicationModule: Application.() -> Unit
@@ -131,7 +132,7 @@ fun Application.standardApiModule(
     callLogger: Logger,
     naisEndpoints: NaisEndpoints,
     callIdHeaderName: String,
-    preStopHook: suspend () -> Unit = { delay(5000) },
+    preStopHook: suspend () -> Unit = ::defaultPreStopHook,
     aliveCheck: () -> Boolean = { true },
     readyCheck: () -> Boolean = { true },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
@@ -203,6 +204,16 @@ fun Application.standardApiModule(
             call.respond(meterRegistry.scrape())
         }
     }
+}
+
+internal suspend fun defaultPreStopHook() {
+    /* delayet bør være lenge nok til at:
+        a) k8s har prob'et appens isready-endepunkt og stoppet videreformidling av requests
+        b) alle pågående requests er ferdig
+
+        a) vil nok være den treigeste
+     */
+    delay(30.seconds)
 }
 
 fun StatusPagesConfig.defaultStatusPagesConfig() {
