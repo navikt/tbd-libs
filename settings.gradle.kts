@@ -19,5 +19,6 @@ include(
     "spurtedu-client",
     "speed-client",
     "spenn-simulering-client",
+    "spedisjon-client",
     "jackson"
 )
