@@ -54,7 +54,7 @@ class SpedisjonClient(
         return tokenProvider.bearerToken(scope)
             .map { token ->
                 val jsonInputString = objectMapper.writeValueAsString(HentMeldingerRequest(internDokumentIder))
-                request("POST", "/api/meldinger", token, jsonInputString, callId)
+                request("GET", "/api/meldinger", token, jsonInputString, callId)
             }
             .map { response ->
                 håndterRespons(response) { status, body ->

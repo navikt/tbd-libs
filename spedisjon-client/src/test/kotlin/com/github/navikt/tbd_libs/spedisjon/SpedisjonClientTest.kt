@@ -56,7 +56,7 @@ class SpedisjonClientTest {
 
         val response = spedisjonClient.hentMeldinger(listOf(UUID.randomUUID()))
         response as Result.Ok
-        verifiserPOST(httpClient)
+        verifiserGET(httpClient)
         assertEquals(1, response.value.meldinger.size)
 
         response.value.meldinger.single().also { melding ->
@@ -71,7 +71,7 @@ class SpedisjonClientTest {
 
         val response = spedisjonClient.hentMeldinger(listOf(UUID.randomUUID()))
         response as Result.Error
-        verifiserPOST(httpClient)
+        verifiserGET(httpClient)
         assertEquals("Feil fra Spedisjon (http 404): noe gikk galt", response.error)
         assertNull(response.cause)
     }
