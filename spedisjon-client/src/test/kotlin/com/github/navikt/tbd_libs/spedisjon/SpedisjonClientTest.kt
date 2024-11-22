@@ -50,6 +50,32 @@ class SpedisjonClientTest {
         verifiserGET(httpClient)
     }
 
+    @Test
+    fun `hent meldinger`() {
+        val (spedisjonClient, httpClient) = mockClient(okMeldingerResponse)
+
+        val response = spedisjonClient.hentMeldinger(listOf(UUID.randomUUID()))
+        response as Result.Ok
+        verifiserPOST(httpClient)
+        assertEquals(1, response.value.meldinger.size)
+
+        response.value.meldinger.single().also { melding ->
+            assertEquals("ny_søknad", melding.type)
+            assertEquals("fnr", melding.fnr)
+        }
+    }
+
+    @Test
+    fun `hent meldinger - feil`() {
+        val (spedisjonClient, httpClient) = mockClient(errorResponse, 404)
+
+        val response = spedisjonClient.hentMeldinger(listOf(UUID.randomUUID()))
+        response as Result.Error
+        verifiserPOST(httpClient)
+        assertEquals("Feil fra Spedisjon (http 404): noe gikk galt", response.error)
+        assertNull(response.cause)
+    }
+
     private fun mockClient(response: String, statusCode: Int = 200): Pair<SpedisjonClient, HttpClient> {
         val httpClient = mockk<HttpClient> {
             every {
@@ -121,5 +147,20 @@ class SpedisjonClientTest {
   "rapportertDato": "${LocalDateTime.now()}",
   "duplikatkontroll": "unik_nøkkel",
   "jsonBody": "{ \"id\": \"${UUID.randomUUID()}\", \"status\": \"NY\" }"
+}"""
+
+    @Language("JSON")
+    private val okMeldingerResponse = """{
+        "meldinger": [ 
+            {
+              "type": "ny_søknad",
+              "fnr": "fnr",
+              "internDokumentId": "${UUID.randomUUID()}",
+              "eksternDokumentId": "${UUID.randomUUID()}",
+              "rapportertDato": "${LocalDateTime.now()}",
+              "duplikatkontroll": "unik_nøkkel",
+              "jsonBody": "{ \"id\": \"${UUID.randomUUID()}\", \"status\": \"NY\" }"
+            }
+        ]
 }"""
 }

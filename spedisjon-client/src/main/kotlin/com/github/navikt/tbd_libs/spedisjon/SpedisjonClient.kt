@@ -50,6 +50,27 @@ class SpedisjonClient(
             }
     }
 
+    fun hentMeldinger(internDokumentIder: List<UUID>, callId: String = UUID.randomUUID().toString()): Result<HentMeldingerResponse> {
+        return tokenProvider.bearerToken(scope)
+            .map { token ->
+                val jsonInputString = objectMapper.writeValueAsString(HentMeldingerRequest(internDokumentIder))
+                request("POST", "/api/meldinger", token, jsonInputString, callId)
+            }
+            .map { response ->
+                håndterRespons(response) { status, body ->
+                    when (status) {
+                        200 -> convertResponseBody<HentMeldingerResponse>(body)
+                        else -> {
+                            convertResponseBody<Feilresponse>(body).fold(
+                                whenOk = { "Feil fra Spedisjon (http $status): ${it.detail}".error() },
+                                whenError = { msg, cause -> "Klarte ikke tolke feilrespons fra Spedisjon (http $status): $msg".error(cause) }
+                            )
+                        }
+                    }
+                }
+            }
+    }
+
     private fun <T> håndterRespons(response: HttpResponse<String>, mapRespons: (status: Int, body: String) -> Result<T>): Result<T> {
         val body: String? = response.body()
         if (body == null) return "Tom responskropp fra spedisjon".error()
@@ -83,6 +104,10 @@ class SpedisjonClient(
     }
 }
 
+internal data class HentMeldingerRequest(
+    val internDokumentIder: List<UUID>
+)
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Feilresponse(
     val type: URI,
@@ -92,6 +117,10 @@ data class Feilresponse(
     val instance: URI,
     val callId: String?,
     val stacktrace: String? = null
+)
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class HentMeldingerResponse(
+    val meldinger: List<HentMeldingResponse>
 )
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class HentMeldingResponse(
