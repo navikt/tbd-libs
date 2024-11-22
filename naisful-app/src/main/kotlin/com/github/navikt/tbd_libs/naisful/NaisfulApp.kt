@@ -3,6 +3,9 @@ package com.github.navikt.tbd_libs.naisful
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.HttpStatusCode.Companion.allStatusCodes
+import io.ktor.http.content.isEmpty
+import io.ktor.http.isSuccess
 import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -188,11 +191,11 @@ fun Application.standardApiModule(
             call.respond(HttpStatusCode.OK)
         }
         get(naisEndpoints.isaliveEndpoint) {
-            if (!aliveCheck()) return@get call.respondText("DEAD", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
+            if (!aliveCheck()) return@get call.respond(HttpStatusCode.ServiceUnavailable)
             call.respondText("ALIVE", ContentType.Text.Plain)
         }
         get(naisEndpoints.isreadyEndpoint) {
-            if (!readyToggle.get() || !readyCheck()) return@get call.respondText("NOT READY", ContentType.Text.Plain, HttpStatusCode.ServiceUnavailable)
+            if (!readyToggle.get() || !readyCheck()) return@get call.respond(HttpStatusCode.ServiceUnavailable)
             call.respondText("READY", ContentType.Text.Plain)
         }
 
@@ -237,6 +240,29 @@ fun StatusPagesConfig.defaultStatusPagesConfig() {
             stacktrace = cause.stackTraceToString()
         ))
     }
+    status(*allStatusCodes.filterNot { code -> code.isSuccess() }.toTypedArray()) { statusCode ->
+        if (content.contentLength == null) {
+            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+            call.respond(statusCode, FeilResponse(
+                status = statusCode,
+                type = statusCode.toURI(call),
+                detail = statusCode.description,
+                instance = URI(call.request.uri),
+                callId = call.callId,
+                stacktrace = null
+            ))
+        }
+    }
+}
+
+private fun HttpStatusCode.toURI(call: ApplicationCall): URI {
+    val type = try {
+        description.lowercase().replace("\\s+".toRegex(), "_")
+    } catch (_: Exception) {
+        call.application.log.error("klarte ikke lage uri fra httpstatuscode=$this")
+        "unknown_error"
+    }
+    return URI("urn:error:$type")
 }
 
 // implementerer Problem Details for HTTP APIs

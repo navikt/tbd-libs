@@ -6,6 +6,7 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.client.request.get
+import io.ktor.client.request.post
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -14,6 +15,7 @@ import io.ktor.http.isSuccess
 import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.engine.connector
+import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.server.testing.testApplication
@@ -25,6 +27,7 @@ import kotlinx.coroutines.delay
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.slf4j.LoggerFactory
 import java.net.ServerSocket
 import java.net.URI
@@ -48,7 +51,12 @@ class NaisfulAppTest {
         testApp(readyCheck = ready::get) {
             assertEquals("READY", get("/isready").bodyAsText())
             ready.set(false)
-            assertEquals("NOT READY", get("/isready").bodyAsText())
+            val body = get("/isready").body<FeilResponse>()
+            assertEquals(URI("urn:error:service_unavailable"), body.type)
+            assertEquals(HttpStatusCode.ServiceUnavailable.description, body.title)
+            assertEquals(HttpStatusCode.ServiceUnavailable.value, body.status)
+            assertEquals(URI("/isready"), body.instance)
+            assertEquals("Service Unavailable", body.detail)
         }
     }
 
@@ -58,7 +66,12 @@ class NaisfulAppTest {
         testApp(aliveCheck = alive::get) {
             assertEquals("ALIVE", get("/isalive").bodyAsText())
             alive.set(false)
-            assertEquals("DEAD", get("/isalive").bodyAsText())
+            val body = get("/isalive").body<FeilResponse>()
+            assertEquals(URI("urn:error:service_unavailable"), body.type)
+            assertEquals(HttpStatusCode.ServiceUnavailable.description, body.title)
+            assertEquals(HttpStatusCode.ServiceUnavailable.value, body.status)
+            assertEquals(URI("/isalive"), body.instance)
+            assertEquals("Service Unavailable", body.detail)
         }
     }
 
@@ -85,10 +98,39 @@ class NaisfulAppTest {
             }
             val maxWait = Duration.ofSeconds(5)
             assertUntil(maxWait) {
-                assertEquals("NOT READY", get("/isready").bodyAsText())
+                assertDoesNotThrow {
+                    val body = get("/isready").body<FeilResponse>()
+                    assertEquals(URI("urn:error:service_unavailable"), body.type)
+                    assertEquals(HttpStatusCode.ServiceUnavailable.description, body.title)
+                    assertEquals(HttpStatusCode.ServiceUnavailable.value, body.status)
+                    assertEquals(URI("/isready"), body.instance)
+                    assertEquals("Service Unavailable", body.detail)
+                }
             }
             val response = stopRequest.await()
             assertTrue(response.status.isSuccess())
+        }
+    }
+
+    @Test
+    fun `method not allowed`() {
+        testApp(
+            applicationModule = {
+                routing {
+                    get("/test") {
+                        call.respond(HttpStatusCode.OK)
+                    }
+                }
+            }
+        ) {
+            val response = post("/test")
+            val body = response.body<FeilResponse>()
+            assertEquals(ContentType.Application.ProblemJson, response.contentType())
+            assertEquals(URI("urn:error:method_not_allowed"), body.type)
+            assertEquals(HttpStatusCode.MethodNotAllowed.description, body.title)
+            assertEquals(HttpStatusCode.MethodNotAllowed.value, body.status)
+            assertEquals(URI("/test"), body.instance)
+            assertEquals("Method Not Allowed", body.detail)
         }
     }
 
