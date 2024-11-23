@@ -25,13 +25,17 @@ import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.event.Level
 import java.net.URI
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.system.exitProcess
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -350,12 +354,16 @@ private data class ShutdownHook(
     }
 
     override fun run() {
-        app.apply {
-            environment.log.info("Shut down hook called. waiting $gracefulShutdownDelay before disposing application.")
-            monitor.raiseCatching(ApplicationStopPreparing, environment, environment.log)
-            runBlocking { delay(gracefulShutdownDelay) }
-            environment.log.info("Disposing application")
-            application.dispose()
+        app.environment.log.info("Shut down hook called.")
+        runBlocking(Dispatchers.IO) {
+            app.apply {
+                environment.log.info("Raising ApplicationStopPreparing.")
+                monitor.raiseCatching(ApplicationStopPreparing, environment, environment.log)
+                environment.log.info("waiting $gracefulShutdownDelay before disposing application.")
+                delay(gracefulShutdownDelay)
+                environment.log.info("Disposing application")
+                application.dispose()
+            }
         }
     }
 }
