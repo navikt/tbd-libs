@@ -6,6 +6,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.HttpStatusCode.Companion.allStatusCodes
 import io.ktor.http.content.isEmpty
 import io.ktor.http.isSuccess
+import io.ktor.serialization.Configuration
 import io.ktor.serialization.jackson.JacksonConverter
 import io.ktor.server.application.Application
 import io.ktor.server.application.ApplicationCall
@@ -16,8 +17,10 @@ import io.ktor.server.application.serverConfig
 import io.ktor.server.cio.CIO
 import io.ktor.server.cio.CIOApplicationEngine
 import io.ktor.server.engine.EmbeddedServer
+import io.ktor.server.engine.EngineConnectorConfig
 import io.ktor.server.engine.applicationEnvironment
 import io.ktor.server.engine.connector
+import io.ktor.server.engine.withPort
 import io.ktor.server.metrics.micrometer.MicrometerMetrics
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.NotFoundException
@@ -52,6 +55,8 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.String
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit
+import kotlin.time.toJavaDuration
 
 data class NaisEndpoints(
     val isaliveEndpoint: String,
@@ -66,6 +71,14 @@ data class NaisEndpoints(
             metricsEndpoint = "/metrics",
             preStopEndpoint = "/stop"
         )
+    }
+}
+
+private fun defaultCIOConfiguration(port: Int) = CIOApplicationEngine.Configuration().apply {
+    shutdownGracePeriod = 30.seconds.toLong(DurationUnit.MILLISECONDS)
+    shutdownTimeout = 30.seconds.toLong(DurationUnit.MILLISECONDS)
+    connector {
+        this.port = port
     }
 }
 
@@ -84,9 +97,9 @@ fun plainApp(
         this.developmentMode = developmentMode
         module { applicationModule() }
     }
+    val cioConfig = defaultCIOConfiguration(port).apply(cioConfiguration)
     val app = EmbeddedServer(config, CIO) {
-        connector { this.port = port }
-        apply(cioConfiguration)
+        takeFrom(cioConfig)
     }
     return app
 }
