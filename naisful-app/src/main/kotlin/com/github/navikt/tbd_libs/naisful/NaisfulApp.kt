@@ -36,6 +36,7 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.application
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
+import io.ktor.util.PlatformUtils
 import io.micrometer.core.instrument.Timer
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
@@ -71,6 +72,7 @@ data class NaisEndpoints(
 fun plainApp(
     applicationLogger: Logger,
     port: Int = 8080,
+    developmentMode: Boolean = defaultDevelopmentMode(),
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
@@ -79,6 +81,7 @@ fun plainApp(
             log = applicationLogger
         }
     ) {
+        this.developmentMode = developmentMode
         module { applicationModule() }
     }
     val app = EmbeddedServer(config, CIO) {
@@ -103,10 +106,12 @@ fun naisApp(
     preStopHook: suspend () -> Unit = ::defaultPreStopHook,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
+    developmentMode: Boolean = defaultDevelopmentMode(),
     applicationModule: Application.() -> Unit
 ) = plainApp(
     applicationLogger = applicationLogger,
     port = port,
+    developmentMode = developmentMode,
     cioConfiguration = cioConfiguration,
     applicationModule = {
         standardApiModule(
@@ -204,6 +209,13 @@ fun Application.standardApiModule(
             call.respond(meterRegistry.scrape())
         }
     }
+}
+
+internal fun defaultDevelopmentMode(): Boolean {
+    val clusterName: String? = System.getenv("NAIS_CLUSTER_NAME")
+    if (clusterName.isNullOrBlank()) return true
+    if (clusterName == "dev-gcp") return true
+    return PlatformUtils.IS_DEVELOPMENT_MODE
 }
 
 internal suspend fun defaultPreStopHook() {
