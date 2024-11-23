@@ -1,45 +1,23 @@
 package com.github.navikt.tbd_libs.naisful
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
+import io.ktor.events.*
+import io.ktor.http.*
 import io.ktor.http.HttpStatusCode.Companion.allStatusCodes
-import io.ktor.http.content.isEmpty
-import io.ktor.http.isSuccess
-import io.ktor.serialization.Configuration
-import io.ktor.serialization.jackson.JacksonConverter
-import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.application.ApplicationStarted
-import io.ktor.server.application.install
-import io.ktor.server.application.log
-import io.ktor.server.application.serverConfig
-import io.ktor.server.cio.CIO
-import io.ktor.server.cio.CIOApplicationEngine
-import io.ktor.server.engine.EmbeddedServer
-import io.ktor.server.engine.EngineConnectorConfig
-import io.ktor.server.engine.applicationEnvironment
-import io.ktor.server.engine.connector
-import io.ktor.server.engine.withPort
-import io.ktor.server.metrics.micrometer.MicrometerMetrics
-import io.ktor.server.plugins.BadRequestException
-import io.ktor.server.plugins.NotFoundException
-import io.ktor.server.plugins.callid.CallId
-import io.ktor.server.plugins.callid.callId
-import io.ktor.server.plugins.callid.callIdMdc
-import io.ktor.server.plugins.calllogging.CallLogging
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.statuspages.StatusPages
-import io.ktor.server.plugins.statuspages.StatusPagesConfig
-import io.ktor.server.request.path
-import io.ktor.server.request.uri
-import io.ktor.server.response.header
-import io.ktor.server.response.respond
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.application
-import io.ktor.server.routing.get
-import io.ktor.server.routing.routing
-import io.ktor.util.PlatformUtils
+import io.ktor.serialization.jackson.*
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
+import io.ktor.server.metrics.micrometer.*
+import io.ktor.server.plugins.*
+import io.ktor.server.plugins.callid.*
+import io.ktor.server.plugins.calllogging.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.util.*
 import io.micrometer.core.instrument.Timer
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
@@ -48,15 +26,14 @@ import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.event.Level
 import java.net.URI
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.String
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit
-import kotlin.time.toJavaDuration
 
 data class NaisEndpoints(
     val isaliveEndpoint: String,
@@ -75,8 +52,6 @@ data class NaisEndpoints(
 }
 
 private fun defaultCIOConfiguration(port: Int) = CIOApplicationEngine.Configuration().apply {
-    shutdownGracePeriod = 30.seconds.toLong(DurationUnit.MILLISECONDS)
-    shutdownTimeout = 30.seconds.toLong(DurationUnit.MILLISECONDS)
     connector {
         this.port = port
     }
@@ -86,6 +61,7 @@ fun plainApp(
     applicationLogger: Logger,
     port: Int = 8080,
     developmentMode: Boolean = defaultDevelopmentMode(),
+    gracefulShutdownDelay: Duration = 20.seconds,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     applicationModule: Application.() -> Unit
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
@@ -95,11 +71,30 @@ fun plainApp(
         }
     ) {
         this.developmentMode = developmentMode
-        module { applicationModule() }
+        module {
+            monitor.subscribe(ApplicationStarting) { it.log.info("Application starting …") }
+            monitor.subscribe(ApplicationStarted) { it.log.info("Application started …") }
+            monitor.subscribe(ServerReady) { it.log.info("Application ready …") }
+            monitor.subscribe(ApplicationStopPreparing) { it.log.info("Application preparing to stop …") }
+            monitor.subscribe(ApplicationStopping) { it.log.info("Application stopping …") }
+            monitor.subscribe(ApplicationStopped) { it.log.info("Application stopped …") }
+
+            applicationModule()
+        }
     }
     val cioConfig = defaultCIOConfiguration(port).apply(cioConfiguration)
     val app = EmbeddedServer(config, CIO) {
         takeFrom(cioConfig)
+    }
+
+    val hook = ShutdownHook(app, gracefulShutdownDelay)
+    Runtime.getRuntime().addShutdownHook(hook)
+    app.monitor.subscribe(ApplicationStopping) {
+        try {
+            Runtime.getRuntime().removeShutdownHook(hook)
+        } catch (_: IllegalStateException) {
+            // ignore
+        }
     }
     return app
 }
@@ -120,11 +115,13 @@ fun naisApp(
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
     statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
     developmentMode: Boolean = defaultDevelopmentMode(),
+    gracefulShutdownDelay: Duration = 20.seconds,
     applicationModule: Application.() -> Unit
 ) = plainApp(
     applicationLogger = applicationLogger,
     port = port,
     developmentMode = developmentMode,
+    gracefulShutdownDelay = gracefulShutdownDelay,
     cioConfiguration = cioConfiguration,
     applicationModule = {
         standardApiModule(
@@ -157,10 +154,6 @@ fun Application.standardApiModule(
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
     statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() }
 ) {
-    val readyToggle = AtomicBoolean(false)
-    monitor.subscribe(ApplicationStarted) {
-        readyToggle.set(true)
-    }
     install(CallId) {
         header(callIdHeaderName)
         verify { it.isNotEmpty() }
@@ -201,12 +194,41 @@ fun Application.standardApiModule(
             JvmThreadMetrics(),
         )
     }
+
+    val readyToggle = AtomicBoolean(false)
+    monitor.subscribe(ApplicationStarted) {
+        readyToggle.set(true)
+    }
+    monitor.subscribe(ApplicationStopPreparing) {
+        readyToggle.set(false)
+    }
+
     routing {
+        /*
+            https://doc.nais.io/workloads/explanations/good-practices/?h=graceful#handles-termination-gracefully
+
+            termination lifecycle:
+                1. Application (pod) gets status TERMINATING, and grace period starts (default 30s)
+                    (simultaneous with 1) If the pod has a preStop hook defined, this is invoked
+                    (simultaneous with 1) The pod is removed from the list of endpoints i.e. taken out of load balancing
+                    (simultaneous with 1, but after preStop if defined) Container receives SIGTERM, and should prepare for shutdown
+                2. Grace period ends, and container receives SIGKILL
+                3. Pod disappears from the API, and is no longer visible for the client.
+         */
         get(naisEndpoints.preStopEndpoint) {
             application.log.info("Received shutdown signal via preStopHookPath, calling actual stop hook")
-            readyToggle.set(false)
+            application.monitor.raise(ApplicationStopPreparing, environment)
+
+            /**
+             *  fra doccen:
+             *  Be aware that even after your preStop-hook has been triggered,
+             *  your application might still receive new connections for a few seconds.
+             *  This is because step 3 above can take a few seconds to complete.
+             *  Your application should handle those connections before exiting.
+             */
             preStopHook()
-            application.log.info("Stop hook returned, responding to preStopHook request with 200 OK")
+
+            application.log.info("Stop hook returned. Responding to preStopHook request with 200 OK")
             call.respond(HttpStatusCode.OK)
         }
         get(naisEndpoints.isaliveEndpoint) {
@@ -232,13 +254,9 @@ internal fun defaultDevelopmentMode(): Boolean {
 }
 
 internal suspend fun defaultPreStopHook() {
-    /* delayet bør være lenge nok til at:
-        a) k8s har prob'et appens isready-endepunkt og stoppet videreformidling av requests
-        b) alle pågående requests er ferdig
-
-        a) vil nok være den treigeste
-     */
-    delay(30.seconds)
+    // venter by default i 5 sekunder før pre-stop-hook-endepunktet svarer
+    // i praksis betyr det at det går 5 sekunder før appen mottar SIGTERM.
+    delay(5.seconds)
 }
 
 fun StatusPagesConfig.defaultStatusPagesConfig() {
@@ -320,4 +338,24 @@ data class FeilResponse(
         callId: String?,
         stacktrace: String? = null
     ) : this(type, status.description, status.value, detail, instance, callId, stacktrace)
+}
+
+private data class ShutdownHook(
+    val app: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>,
+    val gracefulShutdownDelay: Duration
+) : Thread("naisful-app-shutdown-hook") {
+    init {
+        // deaktiverer ktors egen shutdown hook fordi den ikke er så graceful!
+        System.setProperty("io.ktor.server.engine.ShutdownHook", "false")
+    }
+
+    override fun run() {
+        app.apply {
+            environment.log.info("Shut down hook called. waiting $gracefulShutdownDelay before disposing application.")
+            monitor.raiseCatching(ApplicationStopPreparing, environment, environment.log)
+            runBlocking { delay(gracefulShutdownDelay) }
+            environment.log.info("Disposing application")
+            application.dispose()
+        }
+    }
 }
