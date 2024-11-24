@@ -21,8 +21,10 @@ import io.ktor.util.*
 import io.micrometer.core.instrument.Timer
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
+import io.micrometer.core.instrument.binder.jvm.JvmInfoMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
+import io.micrometer.core.instrument.binder.logging.LogbackMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import kotlinx.coroutines.delay
@@ -186,13 +188,20 @@ fun Application.standardApiModule(
     install(MicrometerMetrics) {
         registry = meterRegistry
         timers(timersConfig)
-        meterBinders = listOf(
+        val defaultBinders = listOf(
             ClassLoaderMetrics(),
+            JvmInfoMetrics(),
             JvmMemoryMetrics(),
-            JvmGcMetrics(),
-            ProcessorMetrics(),
             JvmThreadMetrics(),
+            JvmGcMetrics(),
+            ProcessorMetrics()
         )
+        meterBinders = defaultBinders + buildList {
+            try {
+                Class.forName("ch.qos.logback.classic.LoggerContext")
+                add(LogbackMetrics())
+            } catch (_: ClassNotFoundException) {}
+        }
     }
 
     val readyToggle = AtomicBoolean(false)
