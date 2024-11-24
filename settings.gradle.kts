@@ -9,6 +9,7 @@ include(
     "minimal-soap-client",
     "naisful-app",
     "naisful-test-app",
+    "naisful-postgres",
     "postgres-testdatabaser",
     "retry",
     "rapids-and-rivers-api",
