@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 val junitJupiterVersion = "5.11.3"
 val mockkVersion = "1.13.13"
 val jacksonVersion = "2.18.1"
-val testcontainersVersion = "1.20.3"
+val testcontainersVersion = "1.20.4"
 val kotlinxCoroutinesVersion = "1.9.0"
 
 plugins {
