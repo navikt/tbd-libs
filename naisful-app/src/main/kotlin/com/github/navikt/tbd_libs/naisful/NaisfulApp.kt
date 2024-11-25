@@ -203,7 +203,7 @@ fun Application.standardApiModule(
     }
 
     with(meterRegistry) {
-        val pkg = this.javaClass.`package`
+        val pkg = ::naisApp.javaClass.`package`
         val vendor = pkg?.implementationVendor ?: "unknown"
         val version = pkg?.implementationVersion ?: "unknown"
         MultiGauge.builder("naisful.info")
