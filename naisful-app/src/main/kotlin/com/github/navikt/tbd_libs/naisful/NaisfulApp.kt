@@ -204,11 +204,11 @@ fun Application.standardApiModule(
 
     with(meterRegistry) {
         val pkg = ::naisApp.javaClass.`package`
-        val vendor = pkg?.implementationVendor ?: "unknown"
+        val title = pkg?.implementationTitle ?: "unknown"
         val version = pkg?.implementationVersion ?: "unknown"
         MultiGauge.builder("naisful.info")
             .description("Naisful version info")
-            .tag("vendor", vendor)
+            .tag("title", title)
             .tag("version", version)
             .register(this)
             .register(listOf(MultiGauge.Row.of(Tags.of(emptyList()), 1)))
