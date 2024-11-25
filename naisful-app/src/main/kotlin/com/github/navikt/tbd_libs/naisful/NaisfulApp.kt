@@ -18,12 +18,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
+import io.micrometer.core.instrument.MultiGauge
+import io.micrometer.core.instrument.Tags
 import io.micrometer.core.instrument.Timer
-import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
-import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
-import io.micrometer.core.instrument.binder.jvm.JvmInfoMetrics
-import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
-import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
+import io.micrometer.core.instrument.binder.jvm.*
 import io.micrometer.core.instrument.binder.logging.LogbackMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
@@ -202,6 +200,18 @@ fun Application.standardApiModule(
                 add(LogbackMetrics())
             } catch (_: ClassNotFoundException) {}
         }
+    }
+
+    with(meterRegistry) {
+        val pkg = this.javaClass.`package`
+        val vendor = pkg?.implementationVendor ?: "unknown"
+        val version = pkg?.implementationVersion ?: "unknown"
+        MultiGauge.builder("naisful.info")
+            .description("Naisful version info")
+            .tag("vendor", vendor)
+            .tag("version", version)
+            .register(this)
+            .register(listOf(MultiGauge.Row.of(Tags.of(emptyList()), 1)))
     }
 
     val readyToggle = AtomicBoolean(false)
