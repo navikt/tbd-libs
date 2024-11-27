@@ -75,6 +75,6 @@ class DataSourceConfigEnvTest {
             "DB_JDBC_URL" to "jdbc:postgresql://remote_ip:5432/testdb?user=foo&password=bar",
         )
         val jdbcUrl = jdbcUrlWithGoogleSocketFactory("dbinstance", ConnectionConfigFactory.Env(fakeEnv), gcpTeamProjectId = "project_id")
-        assertEquals("jdbc:postgresql://remote_ip:5432/testdb?user=foo&password=bar", jdbcUrl)
+        assertEquals("jdbc:postgresql://remote_ip:5432/testdb?user=foo&password=bar&socketFactory=com.google.cloud.sql.postgres.SocketFactory&cloudSqlInstance=project_id:europe-north1:dbinstance", jdbcUrl)
     }
 }

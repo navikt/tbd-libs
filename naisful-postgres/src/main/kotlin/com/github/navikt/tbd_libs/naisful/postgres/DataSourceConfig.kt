@@ -53,7 +53,10 @@ sealed class ConnectionConfigFactory {
     private companion object {
         private fun buildJdbcUrl(options: Map<String, String>, strategi: (String) -> String?): String? {
             val jdbcUrlFromPlatform = strategi("_JDBC_URL")
-            if (jdbcUrlFromPlatform != null) return jdbcUrlFromPlatform
+            if (jdbcUrlFromPlatform != null) {
+                val optionsstring = if (options.isEmpty()) "" else "&${optionsString(options)}"
+                return "$jdbcUrlFromPlatform$optionsstring"
+            }
 
             val hostname = strategi("_HOST") ?: return null
             val port = strategi("_PORT")?.toInt() ?: return null

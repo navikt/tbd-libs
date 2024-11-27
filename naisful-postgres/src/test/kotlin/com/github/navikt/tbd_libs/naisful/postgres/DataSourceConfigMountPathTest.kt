@@ -51,6 +51,6 @@ class DataSourceConfigMountPathTest {
         tempDir.resolve("DB_PASSWORD").writeText("secret")
         tempDir.resolve("DB_JDBC_URL").writeText("jdbc:postgresql://remote_ip:5432/testdb?user=foo&password=bar")
         val jdbcUrl = jdbcUrlWithGoogleSocketFactory("dbinstance", ConnectionConfigFactory.MountPath(tempDir.toString()), gcpTeamProjectId = "project_id")
-        assertEquals("jdbc:postgresql://remote_ip:5432/testdb?user=foo&password=bar", jdbcUrl)
+        assertEquals("jdbc:postgresql://remote_ip:5432/testdb?user=foo&password=bar&socketFactory=com.google.cloud.sql.postgres.SocketFactory&cloudSqlInstance=project_id:europe-north1:dbinstance", jdbcUrl)
     }
 }
