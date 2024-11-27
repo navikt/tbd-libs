@@ -108,26 +108,46 @@ class NaisfulAppTest {
     }
 
     @Test
-    fun `method not allowed`() {
+    fun `default error body`() {
         testApp(
             applicationModule = {
                 routing {
-                    get("/test") {
+                    get("/test1") {
                         call.respond(HttpStatusCode.OK)
+                    }
+                    get("/test2") {
+                        call.respond(HttpStatusCode.Conflict, "This is a body")
+                    }
+                    get("/test3") {
+                        call.respond(HttpStatusCode.Forbidden, CustomResponse("Fault"))
                     }
                 }
             }
         ) {
-            val response = post("/test")
-            val body = response.body<FeilResponse>()
-            assertEquals(ContentType.Application.ProblemJson, response.contentType())
-            assertEquals(URI("urn:error:method_not_allowed"), body.type)
-            assertEquals(HttpStatusCode.MethodNotAllowed.description, body.title)
-            assertEquals(HttpStatusCode.MethodNotAllowed.value, body.status)
-            assertEquals(URI("/test"), body.instance)
-            assertEquals("Method Not Allowed", body.detail)
+            post("/test1").also { response ->
+                val body = response.body<FeilResponse>()
+                assertEquals(HttpStatusCode.MethodNotAllowed, response.status)
+                assertEquals(ContentType.Application.ProblemJson, response.contentType())
+                assertEquals(URI("urn:error:method_not_allowed"), body.type)
+                assertEquals(HttpStatusCode.MethodNotAllowed.description, body.title)
+                assertEquals(HttpStatusCode.MethodNotAllowed.value, body.status)
+                assertEquals(URI("/test1"), body.instance)
+                assertEquals("Method Not Allowed", body.detail)
+            }
+            get("/test2").also { response ->
+                assertEquals(HttpStatusCode.Conflict, response.status)
+                assertEquals(ContentType.Text.Plain.withCharset(Charsets.UTF_8), response.contentType())
+                assertEquals("This is a body", response.bodyAsText())
+            }
+            get("/test3").also { response ->
+                assertEquals(HttpStatusCode.Forbidden, response.status)
+                assertEquals(ContentType.Application.Json.withCharset(Charsets.UTF_8), response.contentType())
+                assertEquals("Fault", response.body<CustomResponse>().text)
+            }
         }
     }
+
+    private data class CustomResponse(val text: String)
 
     private suspend fun assertUntil(maxWait: Duration, assertion: suspend () -> Unit) {
         val startTime = System.currentTimeMillis()

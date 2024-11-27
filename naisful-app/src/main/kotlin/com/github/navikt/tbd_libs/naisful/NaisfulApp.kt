@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.events.*
 import io.ktor.http.*
 import io.ktor.http.HttpStatusCode.Companion.allStatusCodes
+import io.ktor.http.content.OutgoingContent
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
@@ -314,16 +315,26 @@ fun StatusPagesConfig.defaultStatusPagesConfig() {
         ))
     }
     status(*allStatusCodes.filterNot { code -> code.isSuccess() }.toTypedArray()) { statusCode ->
-        if (content.contentLength == null) {
-            call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
-            call.respond(statusCode, FeilResponse(
-                status = statusCode,
-                type = statusCode.toURI(call),
-                detail = statusCode.description,
-                instance = URI(call.request.uri),
-                callId = call.callId,
-                stacktrace = null
-            ))
+        /* exhaustive when-block so it will be compiler error if new types are added */
+        when (content) {
+            is OutgoingContent.NoContent -> {
+                call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+                call.respond(statusCode, FeilResponse(
+                    status = statusCode,
+                    type = statusCode.toURI(call),
+                    detail = statusCode.description,
+                    instance = URI(call.request.uri),
+                    callId = call.callId,
+                    stacktrace = null
+                ))
+            }
+            is OutgoingContent.ByteArrayContent,
+            is OutgoingContent.ContentWrapper,
+            is OutgoingContent.ProtocolUpgrade,
+            is OutgoingContent.ReadChannelContent,
+            is OutgoingContent.WriteChannelContent -> {
+                /* do nothing */
+            }
         }
     }
 }
