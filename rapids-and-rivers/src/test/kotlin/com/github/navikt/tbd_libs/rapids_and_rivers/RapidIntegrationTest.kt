@@ -24,6 +24,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
 internal class RapidIntegrationTest {
@@ -82,6 +83,28 @@ internal class RapidIntegrationTest {
         rapid.stop()
         assertFalse(rapid.isRunning())
         assertDoesNotThrow { rapid.stop() }
+    }
+
+    @Test
+    fun `stops while handling messages`() = rapidE2E {
+        val handlingMessages = AtomicBoolean(false)
+        rapid.register { message, context, metadata, metrics ->
+            handlingMessages.set(true)
+            runBlocking { delay(1000) }
+        }
+        repeat(100) { mainTopic.send("{}") }
+        await()
+            .atMost(10, SECONDS)
+            .until { handlingMessages.get() }
+
+        rapid.stop()
+
+        await()
+            .atMost(10, SECONDS)
+            .until {
+                runBlocking {  it.join() }
+                true
+            }
     }
 
     @Test

@@ -108,10 +108,13 @@ class KafkaRapid(
             .mapValues { it.value.minOf { it.offset() } }
             .toMutableMap()
         try {
-            records.onEach { record ->
-                onRecord(record)
-                currentPositions[TopicPartition(record.topic(), record.partition())] = record.offset() + 1
-            }
+            records
+                .onEach { record ->
+                    if (running.get()) {
+                        onRecord(record)
+                        currentPositions[TopicPartition(record.topic(), record.partition())] = record.offset() + 1
+                    }
+                }
         } catch (err: Exception) {
             log.info(
                 "due to an error during processing, positions are reset to each next message (after each record that was processed OK):" +
