@@ -26,19 +26,27 @@ abstract class RapidsConnection : MessageContext {
         listeners.add(listener)
     }
 
-    protected fun notifyMessage(message: String, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
+    protected fun notifyMessage(
+        message: String,
+        context: MessageContext,
+        metadata: MessageMetadata,
+        metrics: MeterRegistry
+    ) {
         listeners.forEach { it.onMessage(message, context, metadata, metrics) }
     }
 
     protected fun notifyStartup() {
         statusListeners.forEach { it.onStartup(this) }
     }
+
     protected fun notifyReady() {
         statusListeners.forEach { it.onReady(this) }
     }
+
     protected fun notifyNotReady() {
         statusListeners.forEach { it.onNotReady(this) }
     }
+
     protected fun notifyShutdownSignal() {
         statusListeners.forEach {
             try {
@@ -59,6 +67,16 @@ abstract class RapidsConnection : MessageContext {
         }
     }
 
+    protected fun notifyShutdownComplete() {
+        statusListeners.forEach {
+            try {
+                it.onShutdownComplete(this)
+            } catch (err: Exception) {
+                log.error("A shutdown callback threw an exception: ${err.message}", err)
+            }
+        }
+    }
+
     abstract fun start()
     abstract fun stop()
 
@@ -68,6 +86,7 @@ abstract class RapidsConnection : MessageContext {
         fun onNotReady(rapidsConnection: RapidsConnection) {}
         fun onShutdownSignal(rapidsConnection: RapidsConnection) {}
         fun onShutdown(rapidsConnection: RapidsConnection) {}
+        fun onShutdownComplete(rapidsConnection: RapidsConnection) {}
     }
 
     fun interface MessageListener {

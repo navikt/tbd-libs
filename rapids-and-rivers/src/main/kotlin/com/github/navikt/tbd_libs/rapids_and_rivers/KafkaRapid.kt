@@ -130,7 +130,8 @@ class KafkaRapid(
 
     private fun onRecord(record: ConsumerRecord<String, String>) {
         withMDC(recordDiganostics(record)) {
-            val recordValue = record.value() ?: return@withMDC log.info("ignoring record with offset ${record.offset()} in partition ${record.partition()} because value is null (tombstone)")
+            val recordValue = record.value()
+                ?: return@withMDC log.info("ignoring record with offset ${record.offset()} in partition ${record.partition()} because value is null (tombstone)")
             val context = KeyMessageContext(this, record.key())
             val metadata = MessageMetadata(
                 topic = record.topic(),
@@ -165,6 +166,7 @@ class KafkaRapid(
         } finally {
             notifyShutdown()
             closeResources(lastException)
+            notifyShutdownComplete()
         }
     }
 
@@ -193,6 +195,7 @@ class KafkaRapid(
 
     private fun offsetMetadata(offset: Long): OffsetAndMetadata {
         val clientId = consumer.groupMetadata().groupInstanceId().map { "\"$it\"" }.orElse("null")
+
         @Language("JSON")
         val metadata = """{"time": "${LocalDateTime.now()}","groupInstanceId": $clientId}"""
         return OffsetAndMetadata(offset, metadata)
@@ -204,9 +207,12 @@ class KafkaRapid(
         } else {
             log.info("stopped consuming messages after receiving stop signal")
         }
+        log.info("closing consumer")
         tryAndLog(consumer::close)
         producerClosed.set(true)
+        log.info("flushing producer")
         tryAndLog(producer::flush)
+        log.info("closing producer")
         tryAndLog(producer::close)
     }
 
@@ -228,6 +234,7 @@ class KafkaRapid(
             is RecordTooLargeException,
             is UnknownServerException,
             is AuthorizationException -> true
+
             else -> false
         }
     }
