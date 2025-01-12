@@ -659,7 +659,7 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
                 val elementJson = element.toString()
                 val elementProblems = MessageProblems(elementJson)
                 JsonMessage(elementJson, elementProblems, metrics).apply(elementsValidation)
-                if (elementProblems.hasErrors()) problems.error("Array element #$index at $key did not pass validation:", elementProblems)
+                if (elementProblems.hasErrors()) problems.error("Array element #$index at $key did not pass validation: %s", elementProblems)
             }
         }
         if (!problems.hasErrors()) accessor(key)
