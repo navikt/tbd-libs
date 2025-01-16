@@ -1,6 +1,6 @@
 val slf4jVersion = "2.0.16"
-val ktorVersion = "3.0.1"
-val micrometerRegistryPrometheusVersion = "1.13.6"
+val ktorVersion = "3.0.3"
+val micrometerRegistryPrometheusVersion = "1.14.3"
 
 dependencies {
     api("org.slf4j:slf4j-api:$slf4jVersion")
