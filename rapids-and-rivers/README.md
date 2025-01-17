@@ -6,7 +6,7 @@ Rapids and rivers
 ```kotlin
 River(rapidsConnection).apply {
     // preconditions will run before any regular validations.
-    // use precondition to filter away completely irrelevant messages.
+    // use precondition to include only relevant messages, and filter away irrelevant messages.
     // any failed checks will result in onPreconditionError() being called
     precondition { it.requireValue("@event_name", "greeting") }
     // every key you want to access in onPacket() must be declared.
