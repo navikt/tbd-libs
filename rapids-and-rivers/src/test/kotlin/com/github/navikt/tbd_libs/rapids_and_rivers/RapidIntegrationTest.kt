@@ -26,6 +26,8 @@ import java.util.*
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.RENDEZVOUS
 
 internal class RapidIntegrationTest {
     private companion object {
@@ -161,6 +163,80 @@ internal class RapidIntegrationTest {
 
         try {
             runBlocking(Dispatchers.IO) { launch { rapid.start() } }
+        } catch (err: RuntimeException) {
+            assertEquals("an unexpected error happened", err.message)
+        } finally {
+            rapid.stop()
+        }
+
+        await("wait until the rapid stops")
+                .atMost(20, SECONDS)
+                .until { !rapid.isRunning() }
+
+        val actualOffset = await().atMost(Duration.ofSeconds(5)).until({
+            val offsets = mainTopic.adminClient
+                .listConsumerGroupOffsets(consumerGroupId)
+                ?.partitionsToOffsetAndMetadata()
+                ?.get()
+                ?: fail { "was not able to fetch committed offset for consumer $consumerGroupId" }
+            offsets[TopicPartition(mainTopic.topicnavn, 0)]
+        }) { it != null }
+
+        val metadata = actualOffset?.metadata() ?: fail { "expected metadata to be present in OffsetAndMetadata" }
+        assertEquals(expectedOffset, actualOffset.offset())
+        assertTrue(objectMapper.readTree(metadata).has("groupInstanceId"))
+        assertDoesNotThrow { LocalDateTime.parse(objectMapper.readTree(metadata).path("time").asText()) }
+    }
+
+    @Test
+    fun `in case of shutdown, the offset committed is the next record to be processed`() = rapidE2E {
+        ensureRapidIsActive()
+
+        // stop rapid so we can queue up records
+        rapid.stop()
+        it.cancelAndJoin()
+
+        val offsets = (0..100).map {
+            val key = UUID.randomUUID().toString()
+            mainTopic.send(key, "{\"test_message_index\": $it}").get()
+        }
+            .also {
+                assertEquals(1, it.distinctBy { it.partition() }.size) { "testen forutsetter én unik partisjon" }
+            }
+            .map { it.offset() }
+
+        val stopProcessingOnMessage = 5
+        val expectedOffset = offsets[stopProcessingOnMessage] + 1
+        val synchronizationBarrier = Channel<Boolean>(RENDEZVOUS)
+        val rapid = createTestRapid(consumerGroupId, mainTopic, extraTopic)
+
+        River(rapid)
+            .validate { it.requireKey("test_message_index") }
+            .onSuccess { packet: JsonMessage, _: MessageContext, _, _ ->
+                val index = packet["test_message_index"].asInt()
+                println("Read test_message_index=$index")
+                if (index == stopProcessingOnMessage) {
+                    // notify test that we are ready to go forward
+                    runBlocking { synchronizationBarrier.send(true) }
+
+                    // wait until test has signalled that shutdown has been started
+                    await("wait until test is ready to go forward")
+                        .atMost(20, SECONDS)
+                        .until { runBlocking { synchronizationBarrier.receive() } }
+                }
+            }
+
+        try {
+            runBlocking {
+                val rapidJob = launch(Dispatchers.IO) { rapid.start() }
+
+                await("wait until test is ready to go forward")
+                    .atMost(20, SECONDS)
+                    .until { runBlocking { synchronizationBarrier.receive() } }
+
+                rapid.stop()
+                synchronizationBarrier.send(true)
+            }
         } catch (err: RuntimeException) {
             assertEquals("an unexpected error happened", err.message)
         } finally {

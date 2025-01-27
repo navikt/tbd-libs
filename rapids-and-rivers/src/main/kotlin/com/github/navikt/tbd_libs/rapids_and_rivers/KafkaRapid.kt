@@ -10,7 +10,6 @@ import org.apache.kafka.clients.consumer.*
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.*
-import org.apache.kafka.common.record.TimestampType
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -97,7 +96,6 @@ class KafkaRapid(
 
     override fun onPartitionsRevoked(partitions: Collection<TopicPartition>) {
         log.info("partitions revoked: $partitions")
-        partitions.forEach { it.commitSync() }
         notifyNotReady()
     }
 
@@ -124,7 +122,9 @@ class KafkaRapid(
             currentPositions.forEach { (partition, offset) -> consumer.seek(partition, offset) }
             throw err
         } finally {
-            consumer.commitSync(currentPositions.mapValues { (_, offset) -> offsetMetadata(offset) })
+            val offsetsToBeCommitted = currentPositions.mapValues<TopicPartition, Long, OffsetAndMetadata> { (_, offset) -> offsetMetadata(offset) }
+            log.info("committing offsets ${offsetsToBeCommitted.entries.joinToString { "topic=${it.key.topic()}, parition=${it.key.partition()} offset=${it.value.offset()}" }}")
+            consumer.commitSync(offsetsToBeCommitted)
         }
     }
 
@@ -185,13 +185,6 @@ class KafkaRapid(
         "rapids_record_partition" to "${record.partition()}",
         "rapids_record_offset" to "${record.offset()}"
     )
-
-    private fun TopicPartition.commitSync() {
-        if (autoCommit) return
-        val offset = consumer.position(this)
-        log.info("committing offset offset=$offset for partition=$this")
-        consumer.commitSync(mapOf(this to offsetMetadata(offset)))
-    }
 
     private fun offsetMetadata(offset: Long): OffsetAndMetadata {
         val clientId = consumer.groupMetadata().groupInstanceId().map { "\"$it\"" }.orElse("null")
