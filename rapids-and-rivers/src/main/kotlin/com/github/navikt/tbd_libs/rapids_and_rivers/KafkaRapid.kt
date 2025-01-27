@@ -119,7 +119,6 @@ class KafkaRapid(
                         currentPositions.map { "\tpartition=${it.key}, offset=${it.value}" }
                             .joinToString(separator = "\n", prefix = "\n", postfix = "\n"), err
             )
-            currentPositions.forEach { (partition, offset) -> consumer.seek(partition, offset) }
             throw err
         } finally {
             val offsetsToBeCommitted = currentPositions.mapValues<TopicPartition, Long, OffsetAndMetadata> { (_, offset) -> offsetMetadata(offset) }
