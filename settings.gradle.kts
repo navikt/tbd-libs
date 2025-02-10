@@ -21,5 +21,6 @@ include(
     "speed-client",
     "spenn-simulering-client",
     "spedisjon-client",
-    "jackson"
+    "jackson",
+    "sql-dsl"
 )
