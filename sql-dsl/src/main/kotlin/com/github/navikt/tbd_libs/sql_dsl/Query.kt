@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.sql_dsl
 
 import java.sql.Connection
+import java.sql.PreparedStatement
 import java.sql.ResultSet
 import javax.sql.DataSource
 
@@ -53,4 +54,46 @@ fun <R> Connection.transaction(block: Connection.() -> R): R {
     } finally {
         autoCommit = true
     }
+}
+
+fun Connection.prepareStatementWithNamedParameters(sql: String, parametersBlock: ParametersBuilder.() -> Unit): PreparedStatement {
+    val (query, orderOfNamedParameters) = extractNamedParametersFromQuery(sql)
+    val parameters = ParametersBuilder().apply(parametersBlock).build()
+    val remainingParameters = orderOfNamedParameters.toSet() - parameters.keys
+    require(remainingParameters.isEmpty()) {
+        "følgende parametre er ikke blitt spesifisert: $remainingParameters"
+    }
+    return buildPreparedStatement(prepareStatement(query), orderOfNamedParameters.map { parameters.getValue(it) })
+}
+
+private fun buildPreparedStatement(stmt: PreparedStatement, orderOfNamedParameters: List<PreparedStatement.(Int) -> Unit>): PreparedStatement {
+    orderOfNamedParameters.forEachIndexed { index, valueSetter ->
+        val col = index + 1
+        valueSetter(stmt, col)
+    }
+
+    require(stmt.parameterMetaData.parameterCount == orderOfNamedParameters.size) {
+        "det er ulikt antall parametre i prepared query vs. navngitte parametre. Har du blandet bruk av ? og :parameternavn i spørringen?"
+    }
+    return stmt
+}
+
+private val namedParameterRegex = Regex(":(\\p{L}+)")
+
+private fun extractNamedParametersFromQuery(sql: String): Pair<String, List<String>> {
+    val query = sql.replace(namedParameterRegex, "?")
+    val orderOfNamedParameters: List<String> = namedParameterRegex.findAll(sql)
+        .map { match -> match.groupValues.last() }
+        .toList()
+    return query to orderOfNamedParameters
+}
+
+data class ParametersBuilder(private val namedValues: MutableMap<String, PreparedStatement.(column: Int) -> Unit> = mutableMapOf()) {
+    fun withParameter(name: String, valueSetter: PreparedStatement.(column: Int) -> Unit) = apply {
+        require(null == namedValues.putIfAbsent(name, valueSetter)) {
+            "<$name> har blitt satt som parameter tidligere"
+        }
+    }
+
+    fun build() = namedValues.toMap()
 }

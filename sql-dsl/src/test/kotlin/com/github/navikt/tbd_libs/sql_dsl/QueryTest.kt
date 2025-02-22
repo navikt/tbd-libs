@@ -1,6 +1,7 @@
 package com.github.navikt.tbd_libs.sql_dsl
 
 import com.github.navikt.tbd_libs.test_support.DatabaseContainers
+import java.lang.IllegalArgumentException
 import java.sql.Connection
 import java.sql.ResultSet
 import javax.sql.DataSource
@@ -90,6 +91,50 @@ class QueryTest {
     fun `transaction committer hvis alt er ok`() = setupTest { connection ->
         connection.transaction { connection.createName("hans") }
         assertEquals(listOf("hans"), connection.names())
+    }
+
+    @Test
+    fun `navngitte parametre`() = setupTest { connection ->
+        val id = connection.createName("hans")
+        val navn = connection.prepareStatementWithNamedParameters("select * from name where name = :navn or id = :id") {
+            withParameter("id") { setLong(it, id) }
+            withParameter("navn") { setString(it, "hans") }
+        }.use {
+            it.executeQuery().single { rs -> rs.getString("name") }
+        }
+        assertEquals("hans", navn)
+    }
+
+    @Test
+    fun `alle navngitte parametre på spesifiseres`() = setupTest { connection ->
+        val err = assertThrows<IllegalArgumentException> {
+            connection.prepareStatementWithNamedParameters("select * from name where name = :navn or id = :id") {
+                withParameter("navn") { setString(it, "hans") }
+            }
+        }
+        assertEquals("følgende parametre er ikke blitt spesifisert: [id]", err.message)
+    }
+
+    @Test
+    fun `navngitte parametre må være unike`() = setupTest { connection ->
+        connection.prepareStatementWithNamedParameters("select id from name where name = :navn") {
+            withParameter("navn") { setString(it, "hans") }
+            val err = assertThrows<IllegalArgumentException> {
+                withParameter("navn") { setString(it, "grete") }
+            }
+            assertEquals("<navn> har blitt satt som parameter tidligere", err.message)
+        }
+    }
+
+    @Test
+    fun `kan ikke blande bruk av spørsmålstegn og navn`() = setupTest { connection ->
+        val err = assertThrows<IllegalArgumentException> {
+            connection.prepareStatementWithNamedParameters("select name from name where name = :navn or id = ?") {
+                withParameter("navn") { setString(it, "hans") }
+                build()
+            }
+        }
+        assertEquals("det er ulikt antall parametre i prepared query vs. navngitte parametre. Har du blandet bruk av ? og :parameternavn i spørringen?", err.message)
     }
 
     private fun Connection.names(): List<String?> {
