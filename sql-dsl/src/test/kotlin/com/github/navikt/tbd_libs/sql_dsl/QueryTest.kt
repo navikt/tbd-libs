@@ -4,6 +4,9 @@ import com.github.navikt.tbd_libs.test_support.DatabaseContainers
 import java.lang.IllegalArgumentException
 import java.sql.Connection
 import java.sql.ResultSet
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import javax.sql.DataSource
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -97,8 +100,8 @@ class QueryTest {
     fun `navngitte parametre`() = setupTest { connection ->
         val id = connection.createName("hans")
         val navn = connection.prepareStatementWithNamedParameters("select * from name where name = :navn or id = :id") {
-            withParameter("id") { setLong(it, id) }
-            withParameter("navn") { setString(it, "hans") }
+            withParameter("id", id)
+            withParameter("navn", "hans")
         }.use {
             it.executeQuery().single { rs -> rs.getString("name") }
         }
@@ -109,7 +112,7 @@ class QueryTest {
     fun `alle navngitte parametre på spesifiseres`() = setupTest { connection ->
         val err = assertThrows<IllegalArgumentException> {
             connection.prepareStatementWithNamedParameters("select * from name where name = :navn or id = :id") {
-                withParameter("navn") { setString(it, "hans") }
+                withParameter("navn", "hans")
             }
         }
         assertEquals("følgende parametre er ikke blitt spesifisert: [id]", err.message)
@@ -118,9 +121,9 @@ class QueryTest {
     @Test
     fun `navngitte parametre må være unike`() = setupTest { connection ->
         connection.prepareStatementWithNamedParameters("select id from name where name = :navn") {
-            withParameter("navn") { setString(it, "hans") }
+            withParameter("navn", "hans")
             val err = assertThrows<IllegalArgumentException> {
-                withParameter("navn") { setString(it, "grete") }
+                withParameter("navn", "grete")
             }
             assertEquals("<navn> har blitt satt som parameter tidligere", err.message)
         }
@@ -130,11 +133,28 @@ class QueryTest {
     fun `kan ikke blande bruk av spørsmålstegn og navn`() = setupTest { connection ->
         val err = assertThrows<IllegalArgumentException> {
             connection.prepareStatementWithNamedParameters("select name from name where name = :navn or id = ?") {
-                withParameter("navn") { setString(it, "hans") }
+                withParameter("navn", "hans")
                 build()
             }
         }
         assertEquals("det er ulikt antall parametre i prepared query vs. navngitte parametre. Har du blandet bruk av ? og :parameternavn i spørringen?", err.message)
+    }
+
+    @Test
+    fun `setter tidspunkt`() = setupTest { connection ->
+        val instant = Instant.now()
+        connection.prepareStatementWithNamedParameters("insert into name (name, created) values (:navn, :tidspunkt)") {
+            withParameter("navn", "trude")
+            withParameter("tidspunkt", instant)
+        }.execute()
+
+        val tidspunkt = connection.prepareStatementWithNamedParameters("select created from name where name = :navn") {
+            withParameter("navn", "trude")
+        }.use {
+            it.executeQuery().single { rs -> rs.getObject("created", OffsetDateTime::class.java) }
+        }.toInstant()
+
+        assertEquals(instant, tidspunkt)
     }
 
     private fun Connection.names(): List<String?> {

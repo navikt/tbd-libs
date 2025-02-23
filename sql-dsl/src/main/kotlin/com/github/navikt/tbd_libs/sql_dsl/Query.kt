@@ -3,6 +3,14 @@ package com.github.navikt.tbd_libs.sql_dsl
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.sql.Timestamp
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.util.TimeZone
 import javax.sql.DataSource
 
 fun <R> DataSource.connection(block: Connection.() -> R): R {
@@ -89,6 +97,86 @@ private fun extractNamedParametersFromQuery(sql: String): Pair<String, List<Stri
 }
 
 data class ParametersBuilder(private val namedValues: MutableMap<String, PreparedStatement.(column: Int) -> Unit> = mutableMapOf()) {
+    fun withNull(name: String) {
+        withParameter(name) { setObject(it, null) }
+    }
+
+    fun withParameter(name: String, value: String) {
+        withParameter(name) { setString(it, value) }
+    }
+
+    fun withParameter(name: String, value: Boolean) {
+        withParameter(name) { setBoolean(it, value) }
+    }
+
+    fun withParameter(name: String, value: Int) {
+        withParameter(name) { setInt(it, value) }
+    }
+
+    fun withParameter(name: String, value: Long) {
+        withParameter(name) { setLong(it, value) }
+    }
+
+    fun withParameter(name: String, value: Double) {
+        withParameter(name) { setDouble(it, value) }
+    }
+
+    /**
+     * passende kolonne-type i postgres: timestamp eller timestamptz.
+     *
+     * siden Instant alltid er UTC-tid så er det ett fett hvilken kolonne som brukes.
+     */
+    fun withParameter(name: String, value: Instant) {
+        // relevant dokumentasjon: https://jdbc.postgresql.org/documentation/query/#using-java-8-date-and-time-classes
+        // > ZonedDateTime , Instant and OffsetTime / TIME WITH TIME ZONE are not supported
+        // derfor lagrer vi via java.sql.Timestamp
+        withParameter(name) { setObject(it, Timestamp.from(value)) }
+    }
+
+    /**
+     * passende kolonne-type i postgres: timestamptz
+     *
+     * Hvordan fungerer TIMESTAMP WITH TIME ZONE i PostgreSQL?
+     *
+     * PostgreSQL lagrer ikke faktisk tidssonen, men normaliserer tidspunktet til UTC.
+     * Når du setter inn en TIMESTAMP WITH TIME ZONE, vil PostgreSQL konvertere verdien til UTC hvis den har en tidssone.
+     * Når du henter verdien, konverteres den tilbake til din klients tidssone (som standard er systemets tidssone).
+     *
+     * TIMESTAMP WITH TIME ZONE lagrer derfor ikke tidssonen, den bruker den kun til å konvertere innkommende verdier til UTC.
+     *
+     *
+     * TL;DR:
+     * - timestamp-kolonnen lagrer tidspunktene rått uten konvertering.
+     *      hvis du kun inserter ting med én tidssone så kan du "late som" at
+     *      kolonnen lagrer tidspunktene dine riktig
+     * - timestamp with time zone konverterer tidspunktet til utc før lagring
+     *
+     * når vi henter frem tidspunktene så vil:
+     * - timestamp-kolonnen vises akkurat slik det ble satt inn
+     * - timestamp with time zone vil vises i den tidssonen klienten har satt
+     */
+    fun withParameter(name: String, value: ZonedDateTime) {
+        withParameter(name, value.toInstant())
+    }
+
+    /**
+     * passende kolonne-type i postgres: timestamptz
+     */
+    fun withParameter(name: String, value: OffsetDateTime) {
+        withParameter(name, value.toInstant())
+    }
+
+    @LocalDateTimeIDatabase(
+        message = "LocalDateTime representerer ikke et forenlig punkt i tid og bør unngås til bruk i databaser. " +
+            "Bruk heller Instant og en timestamptz-kolonne (timestamp with time zone)! " +
+            "Hvis du bruker denne funksjonen så vil verdien antas å være i systemets/maskinens tidssone! " +
+            "Dersom applikasjonen og databasen kjører i samme tidssone så vil det se ut til å fungere, helt til premisset endres."
+    )
+    fun withParameter(name: String, value: LocalDateTime) {
+        val konvertertTid = value.atZone(ZoneId.systemDefault()).toInstant()
+        withParameter(name, konvertertTid)
+    }
+
     fun withParameter(name: String, valueSetter: PreparedStatement.(column: Int) -> Unit) = apply {
         require(null == namedValues.putIfAbsent(name, valueSetter)) {
             "<$name> har blitt satt som parameter tidligere"
@@ -97,3 +185,8 @@ data class ParametersBuilder(private val namedValues: MutableMap<String, Prepare
 
     fun build() = namedValues.toMap()
 }
+
+@RequiresOptIn(level = RequiresOptIn.Level.WARNING)
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.FUNCTION)
+annotation class LocalDateTimeIDatabase(val message: String)
