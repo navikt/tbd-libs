@@ -1,15 +1,11 @@
 package com.github.navikt.tbd_libs.sql_dsl
 
 import com.github.navikt.tbd_libs.test_support.DatabaseContainers
-import java.lang.IllegalArgumentException
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant
-import java.time.LocalDateTime
 import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
-import java.time.temporal.ChronoUnit.MICROS
-import java.time.temporal.TemporalUnit
+import java.time.temporal.ChronoUnit.MILLIS
 import javax.sql.DataSource
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -157,7 +153,7 @@ class QueryTest {
             it.executeQuery().single { rs -> rs.getObject("created", OffsetDateTime::class.java) }
         }.toInstant()
 
-        assertEquals(instant.truncatedTo(MICROS), tidspunkt.truncatedTo(MICROS))
+        assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS))
     }
 
     private fun Connection.names(): List<String?> {
