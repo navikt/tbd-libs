@@ -5,8 +5,6 @@ import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit.MILLIS
 import java.time.temporal.Temporal
@@ -25,7 +23,7 @@ class QueryTest {
         val hansId = connection.createName("hans")
         val nullId = connection.createName(null)
 
-        val mapName = { rs: ResultSet -> rs.getString("name") }
+        val mapName = { rs: ResultSet -> rs.stringOrNull("name") }
         assertEquals("hans", connection.name(hansId).single(mapName))
         assertThrows<IllegalStateException> { assertEquals(null, connection.name(nullId).single(mapName)) }
         assertThrows<NoSuchElementException> { assertEquals(null, connection.name(1000).single(mapName)) }
@@ -36,7 +34,7 @@ class QueryTest {
         val hansId = connection.createName("hans")
         val nullId = connection.createName(null)
 
-        val mapName = { rs: ResultSet -> rs.getString("name") }
+        val mapName = { rs: ResultSet -> rs.stringOrNull("name") }
         assertEquals("hans", connection.name(hansId).singleOrNull(mapName))
         assertEquals(null, connection.name(nullId).singleOrNull(mapName))
         assertThrows<NoSuchElementException> { connection.name(1000).singleOrNull(mapName) }
@@ -47,7 +45,7 @@ class QueryTest {
         val hansId = connection.createName("hans")
         val nullId = connection.createName(null)
 
-        val mapName = { rs: ResultSet -> rs.getString("name") }
+        val mapName = { rs: ResultSet -> rs.stringOrNull("name") }
         assertEquals("hans", connection.name(hansId).firstOrNull(mapName))
         assertEquals(null, connection.name(nullId).firstOrNull(mapName))
         assertEquals(null, connection.name(1000).firstOrNull(mapName))
@@ -58,7 +56,7 @@ class QueryTest {
         connection.createName("hans")
         connection.createName(null)
 
-        val mapName = { rs: ResultSet -> rs.getString("name") }
+        val mapName = { rs: ResultSet -> rs.stringOrNull("name") }
         val names = connection.prepareStatement("select name from name").use {
             it.executeQuery().map(mapName)
         }
@@ -71,7 +69,7 @@ class QueryTest {
         connection.createName("hans")
         connection.createName(null)
 
-        val mapName = { rs: ResultSet -> rs.getString("name") }
+        val mapName = { rs: ResultSet -> rs.stringOrNull("name") }
         val names = connection.prepareStatement("select name from name").use {
             it.executeQuery().mapNotNull(mapName)
         }
@@ -107,7 +105,7 @@ class QueryTest {
             withParameter("id", id)
             withParameter("navn", "hans")
         }.use {
-            it.executeQuery().single { rs -> rs.getString("name") }
+            it.executeQuery().single { rs -> rs.string("name") }
         }
         assertEquals("hans", navn)
     }
@@ -153,7 +151,7 @@ class QueryTest {
         connection.prepareStatementWithNamedParameters("select name from name where name = ANY(:navn)") {
             withParameter("navn", listOf("hans", "trude"))
         }.use {
-            it.executeQuery().mapNotNull { rs -> rs.getString("name") }
+            it.executeQuery().mapNotNull { rs -> rs.string("name") }
         }.also { navn ->
             assertEquals(listOf("hans", "trude"), navn)
         }
@@ -161,7 +159,7 @@ class QueryTest {
         connection.prepareStatementWithNamedParameters("select name from name where id = ANY(:ider)") {
             withParameter("ider", listOf(hansId, trudeId))
         }.use {
-            it.executeQuery().mapNotNull { rs -> rs.getString("name") }
+            it.executeQuery().mapNotNull { rs -> rs.string("name") }
         }.also { navn ->
             assertEquals(listOf("hans", "trude"), navn)
         }
@@ -180,7 +178,7 @@ class QueryTest {
         }.use { it.execute() }
 
         val result = connection.prepareStatement("select id from uuidtest").use {
-            it.executeQuery().single { rs -> rs.getObject("id", UUID::class.java) }
+            it.executeQuery().single { rs -> rs.uuid("id") }
         }
 
         assertEquals(id, result)
@@ -198,7 +196,7 @@ class QueryTest {
         }.use { it.execute() }
 
         val result = connection.prepareStatement("select dato from datotest").use {
-            it.executeQuery().single { rs -> rs.getObject("dato", LocalDate::class.java) }
+            it.executeQuery().single { rs -> rs.localDate("dato") }
         }
 
         assertEquals(dato, result)
@@ -215,7 +213,7 @@ class QueryTest {
         val tidspunkt = connection.prepareStatementWithNamedParameters("select created_tz from name where name = :navn") {
             withParameter("navn", "trude")
         }.use {
-            it.executeQuery().single { rs -> rs.getObject("created_tz", OffsetDateTime::class.java) }
+            it.executeQuery().single { rs -> rs.offsetDateTime("created_tz") }
         }.toInstant()
 
         assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS))
@@ -237,11 +235,11 @@ class QueryTest {
             }
         }
 
-        hentTidspunkt { rs -> rs.getObject("created_ts", OffsetDateTime::class.java) }
+        hentTidspunkt { rs -> rs.offsetDateTime("created_ts") }
             .toInstant()
             .also { tidspunkt -> assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS)) }
 
-        hentTidspunkt { rs -> rs.getObject("created_ts", LocalDateTime::class.java) }
+        hentTidspunkt { rs -> rs.localDateTime("created_ts") }
             .toInstant(ZoneOffset.UTC)
             .also { tidspunkt -> assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS)) }
     }
@@ -256,7 +254,7 @@ class QueryTest {
     }
 
     private fun Connection.names(): List<String?> {
-        val mapName = { rs: ResultSet -> rs.getString("name") }
+        val mapName = { rs: ResultSet -> rs.string("name") }
         return prepareStatement("select name from name").use { it.executeQuery().map(mapName) }
     }
 

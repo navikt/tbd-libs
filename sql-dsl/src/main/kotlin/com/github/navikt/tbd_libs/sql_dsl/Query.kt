@@ -12,6 +12,8 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.*
 import javax.sql.DataSource
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 fun <R> DataSource.connection(block: Connection.() -> R): R {
     return connection.use(block)
@@ -47,6 +49,70 @@ fun <R> ResultSet.map(map: (ResultSet) -> R?): List<R?> {
 }
 
 fun <R> ResultSet.mapNotNull(map: (ResultSet) -> R?): List<R> = map(map).filterNotNull()
+
+@OptIn(ExperimentalContracts::class)
+private fun <T : Any> checkNotNull(columnIdentifier: Any, value: T?): T {
+    contract {
+        returns() implies (value != null)
+    }
+    return checkNotNull(value) { "Column <$columnIdentifier> was null." }
+}
+
+fun ResultSet.stringOrNull(columnName: String): String? = getString(columnName)
+fun ResultSet.string(columnName: String): String = checkNotNull(columnName, stringOrNull(columnName))
+fun ResultSet.stringOrNull(column: Int): String? = getString(column)
+fun ResultSet.string(column: Int): String = checkNotNull(column, stringOrNull(column))
+
+fun ResultSet.longOrNull(columnName: String): Long? = getLong(columnName)
+fun ResultSet.long(columnName: String): Long = checkNotNull(columnName, longOrNull(columnName))
+fun ResultSet.longOrNull(column: Int): Long? = getLong(column)
+fun ResultSet.long(column: Int): Long = checkNotNull(column, longOrNull(column))
+
+fun ResultSet.intOrNull(columnName: String): Int? = getInt(columnName)
+fun ResultSet.int(columnName: String): Int = checkNotNull(columnName, intOrNull(columnName))
+fun ResultSet.intOrNull(column: Int): Int? = getInt(column)
+fun ResultSet.int(column: Int): Int = checkNotNull(column, intOrNull(column))
+
+fun ResultSet.doubleOrNull(columnName: String): Double? = getDouble(columnName)
+fun ResultSet.double(columnName: String): Double = checkNotNull(columnName, doubleOrNull(columnName))
+fun ResultSet.doubleOrNull(column: Int): Double? = getDouble(column)
+fun ResultSet.double(column: Int): Double = checkNotNull(column, doubleOrNull(column))
+
+fun ResultSet.booleanOrNull(columnName: String): Boolean? = getBoolean(columnName)
+fun ResultSet.boolean(columnName: String): Boolean = checkNotNull(columnName, booleanOrNull(columnName))
+fun ResultSet.booleanOrNull(column: Int): Boolean? = getBoolean(column)
+fun ResultSet.boolean(column: Int): Boolean = checkNotNull(column, booleanOrNull(column))
+
+fun ResultSet.uuidOrNull(columnName: String): UUID? = getObject(columnName, UUID::class.java)
+fun ResultSet.uuid(columnName: String): UUID = checkNotNull(columnName, uuidOrNull(columnName))
+fun ResultSet.uuidOrNull(column: Int): UUID? = getObject(column, UUID::class.java)
+fun ResultSet.uuid(column: Int): UUID = checkNotNull(column, uuidOrNull(column))
+
+/*
+    relevant dokumentasjon: https://jdbc.postgresql.org/documentation/query/#using-java-8-date-and-time-classes
+
+    TIMESTAMP bør mappes til/fra LocalDateTime siden postgres ikke gjør noen tolkning av tidssone.
+            hvis du vet at du kun inserter utc så kan du i teorien hente ut en OffsetDateTime fra kolonnen siden fravær av tidssone tolkes som UTC.
+            men dette er en ganske svak antagelse.
+
+            tl;dr: lagre ALT med timestamptz og Instant/OffsetDateTime så slipper du å tenke mer på det!
+
+    TIMESTAMPTZ (TIMESTAMP WITH TIME ZONE) bør mappes til/fra OffsetDateTime (som i tur kan tolkes som Instant osv)
+ */
+fun ResultSet.offsetDateTimeOrNull(columnName: String): OffsetDateTime? = getObject(columnName, OffsetDateTime::class.java)
+fun ResultSet.offsetDateTime(columnName: String): OffsetDateTime = checkNotNull(offsetDateTimeOrNull(columnName))
+fun ResultSet.offsetDateTimeOrNull(column: Int): OffsetDateTime? = getObject(column, OffsetDateTime::class.java)
+fun ResultSet.offsetDateTime(column: Int): OffsetDateTime = checkNotNull(offsetDateTimeOrNull(column))
+
+fun ResultSet.localDateTimeOrNull(columnName: String): LocalDateTime? = getObject(columnName, LocalDateTime::class.java)
+fun ResultSet.localDateTime(columnName: String): LocalDateTime = checkNotNull(localDateTimeOrNull(columnName))
+fun ResultSet.localDateTimeOrNull(column: Int): LocalDateTime? = getObject(column, LocalDateTime::class.java)
+fun ResultSet.localDateTime(column: Int): LocalDateTime = checkNotNull(localDateTimeOrNull(column))
+
+fun ResultSet.localDateOrNull(columnName: String): LocalDate? = getObject(columnName, LocalDate::class.java)
+fun ResultSet.localDate(columnName: String): LocalDate = checkNotNull(localDateOrNull(columnName))
+fun ResultSet.localDateOrNull(column: Int): LocalDate? = getObject(column, LocalDate::class.java)
+fun ResultSet.localDate(column: Int): LocalDate = checkNotNull(localDateOrNull(column))
 
 fun <R> Connection.transaction(block: Connection.() -> R): R {
     return try {
