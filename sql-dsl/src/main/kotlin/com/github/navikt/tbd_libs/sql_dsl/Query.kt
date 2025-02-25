@@ -1,17 +1,16 @@
 package com.github.navikt.tbd_libs.sql_dsl
 
 import java.sql.Connection
-import java.sql.Date
 import java.sql.PreparedStatement
 import java.sql.ResultSet
-import java.sql.Timestamp
+import java.sql.Types
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
-import java.util.UUID
+import java.util.*
 import javax.sql.DataSource
 
 fun <R> DataSource.connection(block: Connection.() -> R): R {
@@ -135,10 +134,7 @@ data class ParametersBuilder(
      * siden Instant alltid er UTC-tid så er det ett fett hvilken kolonne som brukes.
      */
     fun withParameter(name: String, value: Instant) {
-        // relevant dokumentasjon: https://jdbc.postgresql.org/documentation/query/#using-java-8-date-and-time-classes
-        // > ZonedDateTime , Instant and OffsetTime / TIME WITH TIME ZONE are not supported
-        // derfor lagrer vi via java.sql.Timestamp
-        withParameter(name) { setObject(it, Timestamp.from(value)) }
+        withParameter(name) { setObject(it, value, Types.OTHER) }
     }
 
     /**
@@ -175,7 +171,7 @@ data class ParametersBuilder(
     }
 
     fun withParameter(name: String, value: LocalDate) {
-        withParameter(name) { setDate(it, Date.valueOf(value)) }
+        withParameter(name) { setObject(it, value, Types.DATE) }
     }
 
     inline fun <reified T> withParameter(name: String, value: List<T>) {

@@ -4,8 +4,12 @@ import com.github.navikt.tbd_libs.test_support.DatabaseContainers
 import java.sql.Connection
 import java.sql.ResultSet
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit.MILLIS
+import java.time.temporal.Temporal
 import java.util.UUID
 import javax.sql.DataSource
 import org.intellij.lang.annotations.Language
@@ -183,22 +187,64 @@ class QueryTest {
     }
 
     @Test
-    fun `setter tidspunkt`() = setupTest { connection ->
+    fun `parameter - localdate`() = setupTest { connection ->
+        @Language("PostgreSQL")
+        val sql = """create table datotest ( dato date )"""
+        connection.createStatement().execute(sql)
+
+        val dato = LocalDate.now()
+        connection.prepareStatementWithNamedParameters("insert into datotest (dato) values (:dato)") {
+            withParameter("dato", dato)
+        }.use { it.execute() }
+
+        val result = connection.prepareStatement("select dato from datotest").use {
+            it.executeQuery().single { rs -> rs.getObject("dato", LocalDate::class.java) }
+        }
+
+        assertEquals(dato, result)
+    }
+
+    @Test
+    fun `parameter - instant - timestamptz`() = setupTest { connection ->
         val instant = Instant.now()
-        connection.prepareStatementWithNamedParameters("insert into name (name, created) values (:navn, :tidspunkt)") {
+        connection.prepareStatementWithNamedParameters("insert into name (name, created_tz) values (:navn, :tidspunkt)") {
             withParameter("navn", "trude")
             withParameter("tidspunkt", instant)
         }.execute()
 
-        val tidspunkt = connection.prepareStatementWithNamedParameters("select created from name where name = :navn") {
+        val tidspunkt = connection.prepareStatementWithNamedParameters("select created_tz from name where name = :navn") {
             withParameter("navn", "trude")
         }.use {
-            it.executeQuery().single { rs -> rs.getObject("created", OffsetDateTime::class.java) }
+            it.executeQuery().single { rs -> rs.getObject("created_tz", OffsetDateTime::class.java) }
         }.toInstant()
 
         assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS))
     }
 
+    @Test
+    fun `parameter - instant - timestamp`() = setupTest { connection ->
+        val instant = Instant.now()
+        connection.prepareStatementWithNamedParameters("insert into name (name, created_ts) values (:navn, :tidspunkt)") {
+            withParameter("navn", "trude")
+            withParameter("tidspunkt", instant)
+        }.execute()
+
+        fun <T: Temporal> hentTidspunkt(mapper: (ResultSet) -> T): T {
+            return connection.prepareStatementWithNamedParameters("select created_ts from name where name = :navn") {
+                withParameter("navn", "trude")
+            }.use {
+                it.executeQuery().single(mapper)
+            }
+        }
+
+        hentTidspunkt { rs -> rs.getObject("created_ts", OffsetDateTime::class.java) }
+            .toInstant()
+            .also { tidspunkt -> assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS)) }
+
+        hentTidspunkt { rs -> rs.getObject("created_ts", LocalDateTime::class.java) }
+            .toInstant(ZoneOffset.UTC)
+            .also { tidspunkt -> assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS)) }
+    }
 
     @Test
     fun `named parameters`() {
@@ -231,7 +277,8 @@ class QueryTest {
         val sql = """create table name (
             id bigint primary key generated always as identity, 
             name text, 
-            created timestamptz not null default now()
+            created_tz timestamptz not null default now(),
+            created_ts timestamp not null default now()
         )"""
         createStatement().execute(sql)
     }
