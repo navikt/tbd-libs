@@ -11,6 +11,7 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.util.UUID
 import javax.sql.DataSource
 
 fun <R> DataSource.connection(block: Connection.() -> R): R {
@@ -122,6 +123,10 @@ data class ParametersBuilder(
 
     fun withParameter(name: String, value: Double) {
         withParameter(name) { setDouble(it, value) }
+    }
+
+    fun withParameter(name: String, value: UUID) {
+        withParameter(name) { setObject(it, value) }
     }
 
     /**

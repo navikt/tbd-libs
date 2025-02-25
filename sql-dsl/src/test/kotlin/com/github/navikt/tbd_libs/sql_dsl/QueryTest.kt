@@ -6,6 +6,7 @@ import java.sql.ResultSet
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit.MILLIS
+import java.util.UUID
 import javax.sql.DataSource
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -164,6 +165,24 @@ class QueryTest {
     }
 
     @Test
+    fun `parameter - uuid`() = setupTest { connection ->
+        @Language("PostgreSQL")
+        val sql = """create table uuidtest ( id uuid )"""
+        connection.createStatement().execute(sql)
+
+        val id = UUID.randomUUID()
+        connection.prepareStatementWithNamedParameters("insert into uuidtest (id) values (:id)") {
+            withParameter("id", id)
+        }.use { it.execute() }
+
+        val result = connection.prepareStatement("select id from uuidtest").use {
+            it.executeQuery().single { rs -> rs.getObject("id", UUID::class.java) }
+        }
+
+        assertEquals(id, result)
+    }
+
+    @Test
     fun `setter tidspunkt`() = setupTest { connection ->
         val instant = Instant.now()
         connection.prepareStatementWithNamedParameters("insert into name (name, created) values (:navn, :tidspunkt)") {
@@ -179,6 +198,7 @@ class QueryTest {
 
         assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS))
     }
+
 
     @Test
     fun `named parameters`() {
