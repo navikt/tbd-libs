@@ -50,6 +50,15 @@ fun <R> ResultSet.map(map: (ResultSet) -> R?): List<R?> {
 
 fun <R> ResultSet.mapNotNull(map: (ResultSet) -> R?): List<R> = map(map).filterNotNull()
 
+fun <R> PreparedStatement.single(map: (ResultSet) -> R?): R = execute { single(map) }
+fun <R> PreparedStatement.singleOrNull(map: (ResultSet) -> R?): R? = execute { singleOrNull(map) }
+fun <R> PreparedStatement.firstOrNull(map: (ResultSet) -> R?): R? = execute { firstOrNull(map) }
+fun <R> PreparedStatement.map(map: (ResultSet) -> R?): List<R?> = execute { map(map) }
+fun <R> PreparedStatement.mapNotNull(map: (ResultSet) -> R?): List<R> = execute { mapNotNull(map) }
+
+private fun <R> PreparedStatement.execute(map: ResultSet.() -> R) =
+    use { map(it.executeQuery()) }
+
 @OptIn(ExperimentalContracts::class)
 private fun <T : Any> checkNotNull(columnIdentifier: Any, value: T?): T {
     contract {
