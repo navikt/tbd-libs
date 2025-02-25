@@ -1,10 +1,12 @@
 package com.github.navikt.tbd_libs.sql_dsl
 
 import java.sql.Connection
+import java.sql.Date
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Timestamp
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -64,7 +66,7 @@ fun <R> Connection.transaction(block: Connection.() -> R): R {
 
 fun Connection.prepareStatementWithNamedParameters(sql: String, parametersBlock: ParametersBuilder.() -> Unit): PreparedStatement {
     val (query, orderOfNamedParameters) = extractNamedParametersFromQuery(sql)
-    val parameters = ParametersBuilder().apply(parametersBlock).build()
+    val parameters = ParametersBuilder(this).apply(parametersBlock).build()
     val remainingParameters = orderOfNamedParameters.toSet() - parameters.keys
     require(remainingParameters.isEmpty()) {
         "følgende parametre er ikke blitt spesifisert: $remainingParameters"
@@ -94,7 +96,10 @@ internal fun extractNamedParametersFromQuery(sql: String): Pair<String, List<Str
     return query to orderOfNamedParameters
 }
 
-data class ParametersBuilder(private val namedValues: MutableMap<String, PreparedStatement.(column: Int) -> Unit> = mutableMapOf()) {
+data class ParametersBuilder(
+    private val connection: Connection,
+    private val namedValues: MutableMap<String, PreparedStatement.(column: Int) -> Unit> = mutableMapOf()
+) {
     fun withNull(name: String) {
         withParameter(name) { setObject(it, null) }
     }
@@ -162,6 +167,20 @@ data class ParametersBuilder(private val namedValues: MutableMap<String, Prepare
      */
     fun withParameter(name: String, value: OffsetDateTime) {
         withParameter(name, value.toInstant())
+    }
+
+    fun withParameter(name: String, value: LocalDate) {
+        withParameter(name) { setDate(it, Date.valueOf(value)) }
+    }
+
+    inline fun <reified T> withParameter(name: String, value: List<T>) {
+        val sqlType = when (T::class) {
+            String::class -> "TEXT"
+            Long::class -> "BIGINT"
+            Int::class -> "INT"
+            else -> error("støtter kun lister av typen String, Long eller Int")
+        }
+        withParameter(name) { setArray(it, connection.createArrayOf(sqlType, value.toTypedArray())) }
     }
 
     @LocalDateTimeIDatabase(

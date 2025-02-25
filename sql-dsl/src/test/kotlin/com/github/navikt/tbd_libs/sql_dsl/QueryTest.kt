@@ -140,6 +140,30 @@ class QueryTest {
     }
 
     @Test
+    fun `parameter - array av verdier`() = setupTest { connection ->
+        val hansId = connection.createName("hans")
+        val trudeId = connection.createName("trude")
+        connection.createName("egil")
+
+        connection.prepareStatementWithNamedParameters("select name from name where name = ANY(:navn)") {
+            withParameter("navn", listOf("hans", "trude"))
+        }.use {
+            it.executeQuery().mapNotNull { rs -> rs.getString("name") }
+        }.also { navn ->
+            assertEquals(listOf("hans", "trude"), navn)
+        }
+
+        connection.prepareStatementWithNamedParameters("select name from name where id = ANY(:ider)") {
+            withParameter("ider", listOf(hansId, trudeId))
+        }.use {
+            it.executeQuery().mapNotNull { rs -> rs.getString("name") }
+        }.also { navn ->
+            assertEquals(listOf("hans", "trude"), navn)
+        }
+
+    }
+
+    @Test
     fun `setter tidspunkt`() = setupTest { connection ->
         val instant = Instant.now()
         connection.prepareStatementWithNamedParameters("insert into name (name, created) values (:navn, :tidspunkt)") {
