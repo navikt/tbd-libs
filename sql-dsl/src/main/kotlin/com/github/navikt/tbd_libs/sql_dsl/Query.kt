@@ -8,9 +8,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import java.util.TimeZone
 import javax.sql.DataSource
 
 fun <R> DataSource.connection(block: Connection.() -> R): R {
@@ -86,9 +84,9 @@ private fun buildPreparedStatement(stmt: PreparedStatement, orderOfNamedParamete
     return stmt
 }
 
-private val namedParameterRegex = Regex(":(\\p{L}+)")
+private val namedParameterRegex = Regex(":([\\p{L}_-]+)")
 
-private fun extractNamedParametersFromQuery(sql: String): Pair<String, List<String>> {
+internal fun extractNamedParametersFromQuery(sql: String): Pair<String, List<String>> {
     val query = sql.replace(namedParameterRegex, "?")
     val orderOfNamedParameters: List<String> = namedParameterRegex.findAll(sql)
         .map { match -> match.groupValues.last() }

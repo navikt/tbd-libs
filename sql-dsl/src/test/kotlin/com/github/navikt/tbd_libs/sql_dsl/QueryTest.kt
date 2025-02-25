@@ -156,6 +156,15 @@ class QueryTest {
         assertEquals(instant.truncatedTo(MILLIS), tidspunkt.truncatedTo(MILLIS))
     }
 
+    @Test
+    fun `named parameters`() {
+        val given = "insert into foo values(:beløp, :fra_og_med, :tilOgMed, :år, :tilÅr, :frem-til)"
+        val expected = "insert into foo values(?, ?, ?, ?, ?, ?)"
+        val (actual, parameters) = extractNamedParametersFromQuery(given)
+        assertEquals(expected, actual)
+        assertEquals(listOf("beløp", "fra_og_med", "tilOgMed", "år", "tilÅr", "frem-til"), parameters)
+    }
+
     private fun Connection.names(): List<String?> {
         val mapName = { rs: ResultSet -> rs.getString("name") }
         return prepareStatement("select name from name").use { it.executeQuery().map(mapName) }
