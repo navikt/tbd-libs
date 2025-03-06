@@ -5,6 +5,7 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.*
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import io.opentelemetry.api.trace.Span
 import io.opentelemetry.instrumentation.annotations.SpanAttribute
 import io.opentelemetry.instrumentation.annotations.WithSpan
 
@@ -88,6 +89,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     }
 
     private fun onPreconditionError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+        Span.current().setAttribute("nav.rapid_and_rivers.message.onPreconditionError", true)
         listeners.forEach {
             onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
             it.onPreconditionError(problems, context, metadata)
