@@ -67,29 +67,38 @@ private fun <T : Any> checkNotNull(columnIdentifier: Any, value: T?): T {
     return checkNotNull(value) { "Column <$columnIdentifier> was null." }
 }
 
+private fun <T> ResultSet.nullable(columnName: String, notNull: () -> T): T? {
+    if (getBytes(columnName) == null) return null
+    return notNull()
+}
+private fun <T> ResultSet.nullable(column: Int, notNull: () -> T): T? {
+    if (getBytes(column) == null) return null
+    return notNull()
+}
+
 fun ResultSet.stringOrNull(columnName: String): String? = getString(columnName)
 fun ResultSet.string(columnName: String): String = checkNotNull(columnName, stringOrNull(columnName))
 fun ResultSet.stringOrNull(column: Int): String? = getString(column)
 fun ResultSet.string(column: Int): String = checkNotNull(column, stringOrNull(column))
 
-fun ResultSet.longOrNull(columnName: String): Long? = getLong(columnName)
+fun ResultSet.longOrNull(columnName: String): Long? = nullable(columnName) { getLong(columnName) }
 fun ResultSet.long(columnName: String): Long = checkNotNull(columnName, longOrNull(columnName))
-fun ResultSet.longOrNull(column: Int): Long? = getLong(column)
+fun ResultSet.longOrNull(column: Int): Long? = nullable(column) { getLong(column) }
 fun ResultSet.long(column: Int): Long = checkNotNull(column, longOrNull(column))
 
-fun ResultSet.intOrNull(columnName: String): Int? = getInt(columnName)
+fun ResultSet.intOrNull(columnName: String): Int? = nullable(columnName) { getInt(columnName) }
 fun ResultSet.int(columnName: String): Int = checkNotNull(columnName, intOrNull(columnName))
-fun ResultSet.intOrNull(column: Int): Int? = getInt(column)
+fun ResultSet.intOrNull(column: Int): Int? = nullable(column) { getInt(column) }
 fun ResultSet.int(column: Int): Int = checkNotNull(column, intOrNull(column))
 
-fun ResultSet.doubleOrNull(columnName: String): Double? = getDouble(columnName)
+fun ResultSet.doubleOrNull(columnName: String): Double? = nullable(columnName) { getDouble(columnName) }
 fun ResultSet.double(columnName: String): Double = checkNotNull(columnName, doubleOrNull(columnName))
-fun ResultSet.doubleOrNull(column: Int): Double? = getDouble(column)
+fun ResultSet.doubleOrNull(column: Int): Double? = nullable(column) { getDouble(column)}
 fun ResultSet.double(column: Int): Double = checkNotNull(column, doubleOrNull(column))
 
-fun ResultSet.booleanOrNull(columnName: String): Boolean? = getBoolean(columnName)
+fun ResultSet.booleanOrNull(columnName: String): Boolean? = nullable(columnName) { getBoolean(columnName) }
 fun ResultSet.boolean(columnName: String): Boolean = checkNotNull(columnName, booleanOrNull(columnName))
-fun ResultSet.booleanOrNull(column: Int): Boolean? = getBoolean(column)
+fun ResultSet.booleanOrNull(column: Int): Boolean? = nullable(column) { getBoolean(column) }
 fun ResultSet.boolean(column: Int): Boolean = checkNotNull(column, booleanOrNull(column))
 
 fun ResultSet.uuidOrNull(columnName: String): UUID? = getObject(columnName, UUID::class.java)

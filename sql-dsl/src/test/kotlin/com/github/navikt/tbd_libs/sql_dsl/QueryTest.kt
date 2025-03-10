@@ -23,8 +23,8 @@ class QueryTest {
     fun `nullable felter på primitive verdier`() = setupTest { connection ->
         val olaId = connection.createName("ola")
         connection.all(olaId).single {
-            assertEquals(false, it.booleanOrNull("nullableBoolean"))
-            assertEquals(0, it.intOrNull("nullableInt"))
+            assertNull(it.booleanOrNull("nullableBoolean"))
+            assertNull(it.intOrNull("nullableInt"))
         }
     }
 
