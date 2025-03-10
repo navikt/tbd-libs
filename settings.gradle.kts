@@ -17,6 +17,7 @@ include(
     "rapids-and-rivers",
     "result-object",
     "signed-jwt",
+    "signed-jwt-issuer-test",
     "spurtedu-client",
     "speed-client",
     "spenn-simulering-client",
