@@ -1,8 +1,7 @@
-package com.github.navikt.tbd_libs.retry
+package com.github.navikt.tbd_libs.signedjwt
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.github.navikt.tbd_libs.signedjwt.SignedJwt
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
