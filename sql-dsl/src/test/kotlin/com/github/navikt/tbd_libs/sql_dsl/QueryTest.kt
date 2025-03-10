@@ -12,11 +12,21 @@ import java.util.UUID
 import javax.sql.DataSource
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class QueryTest {
+
+    @Test
+    fun `nullable felter på primitive verdier`() = setupTest { connection ->
+        val olaId = connection.createName("ola")
+        connection.all(olaId).single {
+            assertEquals(false, it.booleanOrNull("nullableBoolean"))
+            assertEquals(0, it.intOrNull("nullableInt"))
+        }
+    }
 
     @Test
     fun `single returnerer én ikke-null rad, kaster exception hvis ikke`() = setupTest { connection ->
@@ -253,6 +263,13 @@ class QueryTest {
             stmt.executeQuery()
         }
 
+    private fun Connection.all(id: Long) =
+        prepareStatement("select * from name where id = ? limit 1").let { stmt ->
+            stmt.setLong(1, id)
+            stmt.executeQuery()
+        }
+
+
     private fun Connection.createName(name: String?) =
         prepareStatement("insert into name(name) values (?) returning id").use { stmt ->
             if (name == null) stmt.setObject(1, null) else stmt.setString(1, name)
@@ -265,7 +282,9 @@ class QueryTest {
             id bigint primary key generated always as identity, 
             name text, 
             created_tz timestamptz not null default now(),
-            created_ts timestamp not null default now()
+            created_ts timestamp not null default now(),
+            nullableInt int default null,
+            nullableBoolean boolean default null
         )"""
         createStatement().execute(sql)
     }
