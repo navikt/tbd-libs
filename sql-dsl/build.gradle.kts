@@ -1,5 +1,5 @@
-val postgresqlVersion = "42.7.4"
-val hikariCPVersion = "6.1.0"
+val postgresqlVersion = "42.7.5"
+val hikariCPVersion = "6.3.0"
 
 dependencies {
     // konsumenter av biblioteket må selv vurdere hvilken hikari de vil ha

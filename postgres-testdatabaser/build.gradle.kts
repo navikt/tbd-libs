@@ -1,7 +1,7 @@
 val testcontainersVersion: String by project
-val flywayVersion = "10.21.0"
-val postgresqlVersion = "42.7.4"
-val hikariCPVersion = "6.1.0"
+val flywayVersion = "11.5.0"
+val postgresqlVersion = "42.7.5"
+val hikariCPVersion = "6.3.0"
 
 dependencies {
     api("org.testcontainers:postgresql:$testcontainersVersion")

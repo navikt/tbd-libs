@@ -1,9 +1,9 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
-val junitJupiterVersion = "5.11.3"
-val mockkVersion = "1.13.13"
-val jacksonVersion = "2.18.1"
-val testcontainersVersion = "1.20.4"
+val junitJupiterVersion = "5.12.1"
+val mockkVersion = "1.13.17"
+val jacksonVersion = "2.18.3"
+val testcontainersVersion = "1.20.6"
 val kotlinxCoroutinesVersion = "1.9.0"
 
 plugins {
