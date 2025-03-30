@@ -67,8 +67,10 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     }
 
     @WithSpan
-    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext, metadata: MessageMetadata) {
+    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("nav.rapid_and_rivers.onMessage.eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext, metadata: MessageMetadata) {
         onMessageCounter(metrics, context.rapidName(), packetListener.name(), "ok", eventName)
+        Span.current().setAttribute("nav.rapid_and_rivers.onMessage.rapid", context.rapidName())
+        Span.current().setAttribute("nav.rapid_and_rivers.onMessage.river", packetListener.name())
         val timer = Timer.start(metrics)
         packetListener.onPacket(packet, context, metadata, metrics)
         timer.stop(
@@ -89,7 +91,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     }
 
     private fun onPreconditionError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
-        Span.current().setAttribute("nav.rapid_and_rivers.message.onPreconditionError", true)
+        Span.current().setAttribute("nav.rapid_and_rivers.onMessage.onPreconditionError", true)
         listeners.forEach {
             onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
             it.onPreconditionError(problems, context, metadata)
