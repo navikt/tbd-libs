@@ -174,7 +174,6 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
     private fun rejectKey(key: String) {
         val node = node(key)
         if (!node.isMissingNode && !node.isNull) problems.severe("Rejected key $key exists")
-        accessor(key)
     }
 
     /**
@@ -748,7 +747,6 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
     private fun forbid(key: String) {
         val node = node(key)
         if (!node.isMissingNode && !node.isNull) return problems.error("Forbidden key $key exists")
-        accessor(key)
     }
 
     private fun accessor(key: String) {
