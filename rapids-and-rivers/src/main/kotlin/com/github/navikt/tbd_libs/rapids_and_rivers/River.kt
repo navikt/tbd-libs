@@ -47,7 +47,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     override fun onMessage(message: String, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
         val problems = MessageProblems(message)
         try {
-            val packet = JsonMessage(message, problems, metrics, randomIdGenerator)
+            val packet = JsonMessage(message, problems, randomIdGenerator)
             preconditions.forEach { it.validate(packet) }
             if (problems.hasErrors()) return onPreconditionError(metrics, problems, context, metadata)
             validations.forEach { it.validate(packet) }
@@ -59,16 +59,17 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     }
 
     private fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
-        packet.interestedIn("@event_name")
-        val eventName = packet["@event_name"].textValue() ?: "ukjent"
+        val recognizedKeys = packet.keys
+        val eventName = if ("@event_name" in recognizedKeys) packet["@event_name"].asText() else "ukjent"
         listeners.forEach {
-            notifyPacketListener(metrics, eventName, it, packet, context, metadata)
+            notifyPacketListener(metrics, eventName, it, packet, recognizedKeys, context, metadata)
         }
     }
 
     @WithSpan
-    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, context: MessageContext, metadata: MessageMetadata) {
+    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, recognizedKeys: Set<String>, context: MessageContext, metadata: MessageMetadata) {
         onMessageCounter(metrics, context.rapidName(), packetListener.name(), "ok", eventName)
+        logRecognizedKeys(metrics, context.rapidName(), packetListener.name(), eventName, recognizedKeys)
         val timer = Timer.start(metrics)
         packetListener.onPacket(packet, context, metadata, metrics)
         timer.stop(
@@ -79,6 +80,19 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
             .tag("event_name", eventName)
             .register(metrics)
         )
+    }
+
+    private fun logRecognizedKeys(metrics: MeterRegistry, rapidName: String, riverName: String, eventName: String, keys: Set<String>) {
+        keys.forEach { key ->
+            Counter.builder("message_keys_counter")
+                .description("Hvilke nøkler som er i bruk")
+                .tag("rapid", rapidName)
+                .tag("river", riverName)
+                .tag("event_name", eventName)
+                .tag("accessor_key", key)
+                .register(metrics)
+                .increment()
+        }
     }
 
     private fun onSevere(metrics: MeterRegistry, error: MessageProblems.MessageException, context: MessageContext) {

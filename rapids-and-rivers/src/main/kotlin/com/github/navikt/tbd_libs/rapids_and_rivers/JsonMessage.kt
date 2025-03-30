@@ -11,9 +11,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import java.net.InetAddress
 import java.time.Instant
 import java.time.LocalDate
@@ -26,7 +23,6 @@ import java.util.*
 open class JsonMessage(
     originalMessage: String,
     private val problems: MessageProblems,
-    private val metrics: MeterRegistry,
     randomIdGenerator: RandomIdGenerator? = null
 ) {
     private val idGenerator = randomIdGenerator ?: RandomIdGenerator.Default
@@ -52,28 +48,25 @@ open class JsonMessage(
 
         fun newMessage(
             map: Map<String, Any> = emptyMap(),
-            metrics: MeterRegistry = SimpleMeterRegistry(),
             randomIdGenerator: RandomIdGenerator? = null
         ) = objectMapper.writeValueAsString(map).let {
-            JsonMessage(it, MessageProblems(it), metrics, randomIdGenerator)
+            JsonMessage(it, MessageProblems(it), randomIdGenerator)
         }
 
         fun newMessage(
             eventName: String,
             map: Map<String, Any> = emptyMap(),
-            metrics: MeterRegistry = SimpleMeterRegistry(),
             randomIdGenerator: RandomIdGenerator? = null
-        ) = newMessage(mapOf(EventNameKey to eventName) + map, metrics, randomIdGenerator)
+        ) = newMessage(mapOf(EventNameKey to eventName) + map, randomIdGenerator)
 
         fun newNeed(
             behov: Collection<String>,
             map: Map<String, Any> = emptyMap(),
-            metrics: MeterRegistry = SimpleMeterRegistry(),
             randomIdGenerator: RandomIdGenerator? = null
         ) = newMessage("behov", mapOf(
             "@behovId" to UUID.randomUUID(),
             NeedKey to behov
-        ) + map, metrics, randomIdGenerator)
+        ) + map, randomIdGenerator)
 
         internal fun populateStandardFields(originalMessage: JsonMessage, message: String, randomIdGenerator: RandomIdGenerator = originalMessage.idGenerator): String {
             return (objectMapper.readTree(message) as ObjectNode).also {
@@ -116,6 +109,7 @@ open class JsonMessage(
 
     private val json: ObjectNode
     private val recognizedKeys = mutableMapOf<String, JsonNode>()
+    internal val keys: Set<String> get() = recognizedKeys.keys.toSet()
 
     init {
         json = parseMessageAsJsonObject(originalMessage, problems)
@@ -657,7 +651,7 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
             node.forEachIndexed { index, element ->
                 val elementJson = element.toString()
                 val elementProblems = MessageProblems(elementJson)
-                JsonMessage(elementJson, elementProblems, metrics).apply(elementsValidation)
+                JsonMessage(elementJson, elementProblems).apply(elementsValidation)
                 if (elementProblems.hasErrors()) problems.error("Array element #$index at $key did not pass validation: %s", elementProblems)
             }
         }
@@ -750,14 +744,6 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
     }
 
     private fun accessor(key: String) {
-        val eventName = json.path(EventNameKey).asText().takeUnless { it.isBlank() } ?: "unknown_event"
-        Counter.builder("message_keys_counter")
-            .description("Hvilke nøkler som er i bruk")
-            .tag("event_name", eventName)
-            .tag("accessor_key", key)
-            .register(metrics)
-            .increment()
-
         recognizedKeys.computeIfAbsent(key) { node(key) }
     }
 
