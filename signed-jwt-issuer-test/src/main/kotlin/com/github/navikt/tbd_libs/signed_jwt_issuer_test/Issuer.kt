@@ -47,6 +47,14 @@ class Issuer(val navn: String, val audience: String) {
    }
    """
 
+    @Language("JSON")
+    private fun wellKnown() = """
+    {
+        "jwks_uri": "${jwksUri()}", 
+        "issuer": "$navn"
+    }
+    """
+
     fun accessToken(builder: JWTCreator.Builder.() -> Unit = {}) = JWT.create()
         .withIssuer(navn)
         .withAudience(audience)
@@ -57,9 +65,12 @@ class Issuer(val navn: String, val audience: String) {
         .sign(algorithm)
 
     fun jwksUri() = URI("${wireMockServer.baseUrl()}/jwks")
+    fun wellKnownUri() = URI("${wireMockServer.baseUrl()}/.well-known")
+
     fun start() = apply {
         wireMockServer.start()
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/jwks")).willReturn(WireMock.okJson(jwks())))
+        wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/.well-known")).willReturn(WireMock.okJson(wellKnown())))
     }
     fun stop() = apply {
         wireMockServer.stop()

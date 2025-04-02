@@ -2,6 +2,7 @@ package com.github.navikt.tbd_libs.signed_jwt_issuer_test
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -84,6 +85,19 @@ class IssuerTest {
         val keys = json.path("keys")
         assertEquals(1, keys.size())
         assertEquals("key-1234", keys.single().path("kid").asText())
+    }
+
+    @Test
+    fun `gå mot well-known`() {
+        val response = with(HttpClient.newHttpClient()) {
+            val request = HttpRequest.newBuilder(issuer.wellKnownUri()).GET().build()
+            send(request, HttpResponse.BodyHandlers.ofString())
+        }
+        assertEquals(200, response.statusCode())
+        val json = (ObjectMapper().readTree(response.body()) as ObjectNode)
+        assertEquals(setOf("issuer", "jwks_uri"), json.fieldNames().asSequence().toSet())
+        assertEquals("Min nydlige issuer", json.path("issuer").asText())
+        assertEquals("${issuer.jwksUri()}", json.path("jwks_uri").asText())
     }
 
     private fun String.assertHeaders(assertions: JsonNode.() -> Unit) = ObjectMapper().readTree(Base64.getDecoder().decode(this.split(".")[0])).apply(assertions)
