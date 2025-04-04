@@ -5,7 +5,8 @@ import com.auth0.jwt.JWTCreator
 import com.auth0.jwt.algorithms.Algorithm
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
-import com.github.tomakehurst.wiremock.core.WireMockConfiguration
+import java.net.ServerSocket
+import java.net.Socket
 import java.net.URI
 import org.intellij.lang.annotations.Language
 import java.security.KeyPairGenerator
@@ -18,7 +19,12 @@ class Issuer(val navn: String, val audience: String) {
     private val privateKey: RSAPrivateKey
     private val publicKey: RSAPublicKey
     private val algorithm: Algorithm
-    private val wireMockServer: WireMockServer
+    private val port = ServerSocket(0).use { it.localPort }
+    private val wireMockServer = WireMockServer(port)
+
+    private val baseUrl = "http://localhost:$port"
+    private val jwksUri = URI("$baseUrl/jwks")
+    private val wellKnownUri = URI("$baseUrl/.well-known")
 
     init {
         val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
@@ -28,13 +34,11 @@ class Issuer(val navn: String, val audience: String) {
         privateKey = keyPair.private as RSAPrivateKey
         publicKey = keyPair.public as RSAPublicKey
         algorithm = Algorithm.RSA256(publicKey, privateKey)
-        wireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
-
     }
 
     @Language("JSON")
     private fun jwks() = """
-   {
+    {
        "keys": [
            {
                "kty": "RSA",
@@ -44,13 +48,13 @@ class Issuer(val navn: String, val audience: String) {
                "n": "${Base64.getUrlEncoder().encodeToString(publicKey.modulus.toByteArray())}"
            }
        ]
-   }
-   """
+    }
+    """
 
     @Language("JSON")
     private fun wellKnown() = """
     {
-        "jwks_uri": "${jwksUri()}", 
+        "jwks_uri": "$jwksUri", 
         "issuer": "$navn"
     }
     """
@@ -64,14 +68,18 @@ class Issuer(val navn: String, val audience: String) {
         .apply { builder() }
         .sign(algorithm)
 
-    fun jwksUri() = URI("${wireMockServer.baseUrl()}/jwks")
-    fun wellKnownUri() = URI("${wireMockServer.baseUrl()}/.well-known")
+    fun jwksUri() = jwksUri
+
+    fun wellKnownUri() = wellKnownUri
 
     fun start() = apply {
         wireMockServer.start()
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/jwks")).willReturn(WireMock.okJson(jwks())))
         wireMockServer.stubFor(WireMock.get(WireMock.urlPathEqualTo("/.well-known")).willReturn(WireMock.okJson(wellKnown())))
     }
+
+    fun startet() = kotlin.runCatching { Socket("localhost", port).use { it.isConnected } }.isSuccess
+
     fun stop() = apply {
         wireMockServer.stop()
     }

@@ -9,6 +9,7 @@ import java.net.http.HttpResponse
 import java.util.Base64
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -98,6 +99,15 @@ class IssuerTest {
         assertEquals(setOf("issuer", "jwks_uri"), json.fieldNames().asSequence().toSet())
         assertEquals("Min nydlige issuer", json.path("issuer").asText())
         assertEquals("${issuer.jwksUri()}", json.path("jwks_uri").asText())
+    }
+
+    @Test
+    fun `Kunne hente URL'er før issuer er startet opp`() {
+        with(Issuer("hei", "HEI")) {
+            assertFalse(startet())
+            jwksUri()
+            wellKnownUri()
+        }
     }
 
     private fun String.assertHeaders(assertions: JsonNode.() -> Unit) = ObjectMapper().readTree(Base64.getDecoder().decode(this.split(".")[0])).apply(assertions)
