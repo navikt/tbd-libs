@@ -10,6 +10,8 @@ import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.ok
+import com.github.navikt.tbd_libs.spenn.SimuleringRequest.Oppdrag.Fagområde
+import com.github.navikt.tbd_libs.spenn.SimuleringRequest.Oppdrag.Oppdragslinje.Klassekode
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -36,6 +38,21 @@ class SimuleringClientTest {
         val simulering = simuleringRequest()
         utveksle(simulering) { body ->
             body.hasNonNull("fødselsnummer") && body.hasNonNull("oppdrag") && body.hasNonNull("maksdato") && body.hasNonNull("saksbehandler")
+        }
+    }
+
+    @Test
+    fun `hent simulering for selvstendig næringsdrivende`() {
+        val simulering = simuleringRequest(
+            fagområde = Fagområde.BRUKERUTBETALING,
+            klassekode = Klassekode.SELVSTENDIG_NÆRINGSDRIVENDE
+        )
+        utveksle(simulering) { body ->
+            body.hasNonNull("fødselsnummer") &&
+                body.hasNonNull("oppdrag") &&
+                body.hasNonNull("maksdato") &&
+                body.hasNonNull("saksbehandler") &&
+                body.path("oppdrag").path("linjer").all { it["klassekode"].textValue() == "SELVSTENDIG_NÆRINGSDRIVENDE" }
         }
     }
 
@@ -70,13 +87,14 @@ class SimuleringClientTest {
         verifiserPOST(httpClient)
     }
 
-    private fun simuleringRequest() =
+    private fun simuleringRequest(fagområde: Fagområde = Fagområde.ARBEIDSGIVERREFUSJON,
+                                  klassekode: Klassekode = Klassekode.REFUSJON_IKKE_OPPLYSNINGSPLIKTIG) =
         SimuleringRequest(
             fødselsnummer = "fnr",
             maksdato = LocalDate.of(2018, 12, 28),
             saksbehandler = "SPENN",
             oppdrag = SimuleringRequest.Oppdrag(
-                fagområde = SimuleringRequest.Oppdrag.Fagområde.ARBEIDSGIVERREFUSJON,
+                fagområde = fagområde,
                 fagsystemId = "AQOG5K72HRHPPMNULZKJIOZ5GU",
                 endringskode = SimuleringRequest.Oppdrag.Endringskode.ENDRET,
                 mottakerAvUtbetalingen = "orgnr",
@@ -91,7 +109,7 @@ class SimuleringClientTest {
                         delytelseId = 1,
                         refDelytelseId = null,
                         refFagsystemId = null,
-                        klassekode = SimuleringRequest.Oppdrag.Oppdragslinje.Klassekode.REFUSJON_IKKE_OPPLYSNINGSPLIKTIG,
+                        klassekode = klassekode,
                         opphørerFom = null
                     ),
                     SimuleringRequest.Oppdrag.Oppdragslinje(
@@ -104,7 +122,7 @@ class SimuleringClientTest {
                         delytelseId = 2,
                         refDelytelseId = 1,
                         refFagsystemId = "AQOG5K72HRHPPMNULZKJIOZ5GU",
-                        klassekode = SimuleringRequest.Oppdrag.Oppdragslinje.Klassekode.REFUSJON_IKKE_OPPLYSNINGSPLIKTIG,
+                        klassekode = klassekode,
                         opphørerFom = null
                     )
                 )
