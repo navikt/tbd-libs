@@ -8,6 +8,7 @@ import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.test_support.KafkaContainers
 import com.github.navikt.tbd_libs.test_support.TestTopic
 import io.micrometer.core.instrument.MeterRegistry
@@ -328,6 +329,33 @@ internal class RapidIntegrationTest {
 
         testRiver(eventName, serviceId)
         extraTopic.waitForReply(serviceId, eventName, value)
+    }
+
+    @Test
+    fun `send messages in bulk`() = rapidE2E {
+        val serviceId1 = "my-service-1"
+        val serviceId2 = "my-service-2"
+        val eventName = "heartbeat"
+        val value = "{ \"@event\": \"$eventName\" }"
+
+        River(rapid).apply {
+            validate { it.requireValue("@event", eventName) }
+            validate { it.forbid("service_id") }
+            register(object : River.PacketListener {
+                override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
+                    packet["service_id"] = serviceId1
+                    val message1 = OutgoingMessage(packet.toJson())
+                    packet["service_id"] = serviceId2
+                    val message2 = OutgoingMessage(packet.toJson())
+                    context.publishBulk(listOf(message1, message2))
+                }
+
+                override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
+            })
+        }
+
+        mainTopic.waitForReply(serviceId1, eventName, value)
+        mainTopic.waitForReply(serviceId2, eventName, value)
     }
 
     private fun createTestRapid(consumerGroupId: String, mainTopic: TestTopic, extraTopic: TestTopic): KafkaRapid {
