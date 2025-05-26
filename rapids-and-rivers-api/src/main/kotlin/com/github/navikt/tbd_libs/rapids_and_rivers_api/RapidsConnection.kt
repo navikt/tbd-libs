@@ -6,8 +6,14 @@ import org.slf4j.LoggerFactory
 interface MessageContext {
     fun publish(message: String)
     fun publish(key: String, message: String)
+    fun publishBulk(messages: List<OutgoingMessage>)
     fun rapidName(): String
 }
+
+data class OutgoingMessage(
+    val body: String,
+    val key: String? = null
+)
 
 abstract class RapidsConnection : MessageContext {
     private companion object {

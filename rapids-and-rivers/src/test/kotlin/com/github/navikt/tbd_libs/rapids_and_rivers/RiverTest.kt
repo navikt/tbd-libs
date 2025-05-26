@@ -3,6 +3,7 @@ package com.github.navikt.tbd_libs.rapids_and_rivers
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -78,6 +79,7 @@ internal class RiverTest {
     private val context = object : MessageContext {
         override fun publish(message: String) {}
         override fun publish(key: String, message: String) {}
+        override fun publishBulk(messages: List<OutgoingMessage>) {}
         override fun rapidName(): String {return "test"}
     }
 
@@ -88,8 +90,9 @@ internal class RiverTest {
     private lateinit var validationResult: RiverValidationResult
     private val rapid = object : RapidsConnection() {
         override fun publish(message: String) {}
-
         override fun publish(key: String, message: String) {}
+        override fun publishBulk(messages: List<OutgoingMessage>) {}
+
         override fun rapidName(): String {
             return "test"
         }

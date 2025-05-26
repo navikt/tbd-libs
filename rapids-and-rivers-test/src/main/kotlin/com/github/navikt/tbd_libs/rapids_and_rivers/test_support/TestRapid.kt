@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
@@ -39,6 +40,10 @@ class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()
 
     override fun publish(key: String, message: String) {
         messages.add(key to message)
+    }
+
+    override fun publishBulk(messages: List<OutgoingMessage>) {
+        this.messages.addAll(messages.map { it.key to it.body })
     }
 
     override fun rapidName(): String {

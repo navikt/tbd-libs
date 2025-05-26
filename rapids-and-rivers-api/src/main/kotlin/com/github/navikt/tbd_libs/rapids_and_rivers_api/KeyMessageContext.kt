@@ -13,6 +13,14 @@ class KeyMessageContext(
         rapidsConnection.publish(key, message)
     }
 
+    override fun publishBulk(messages: List<OutgoingMessage>) {
+        rapidsConnection.publishBulk(
+            messages.map {
+                it.copy(key = it.key ?: key)
+            }
+        )
+    }
+
     override fun rapidName(): String {
         return rapidsConnection.rapidName()
     }

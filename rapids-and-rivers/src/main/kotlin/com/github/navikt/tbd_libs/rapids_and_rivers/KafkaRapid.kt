@@ -3,19 +3,24 @@ package com.github.navikt.tbd_libs.rapids_and_rivers
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics
-import org.apache.kafka.clients.consumer.*
-import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.TopicPartition
-import org.apache.kafka.common.errors.*
-import org.intellij.lang.annotations.Language
-import org.slf4j.LoggerFactory
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener
+import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.clients.consumer.ConsumerRecords
+import org.apache.kafka.clients.consumer.OffsetAndMetadata
+import org.apache.kafka.clients.producer.ProducerRecord
+import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.errors.WakeupException
+import org.intellij.lang.annotations.Language
+import org.slf4j.LoggerFactory
 
 class KafkaRapid(
     factory: ConsumerProducerFactory,
@@ -48,24 +53,62 @@ class KafkaRapid(
     fun isReady() = isRunning() && ready.get()
 
     override fun publish(message: String) {
-        publish(ProducerRecord(rapidTopic, message))
+        publishBulk(listOf(OutgoingMessage(message)))
     }
 
     override fun publish(key: String, message: String) {
-        publish(ProducerRecord(rapidTopic, key, message))
+        publishBulk(listOf(OutgoingMessage(message, key)))
+    }
+
+    override fun publishBulk(messages: List<OutgoingMessage>) {
+        publishRecordsInBulk(messages.map {
+            when (it.key) {
+                null -> ProducerRecord(rapidTopic, it.body)
+                else -> ProducerRecord(rapidTopic, it.key, it.body)
+            }
+        })
     }
 
     override fun rapidName(): String {
         return rapidTopic
     }
 
-    private fun publish(producerRecord: ProducerRecord<String, String>) {
+    private fun publishRecordsInBulk(producerRecords: List<ProducerRecord<String, String>>) {
         check(!producerClosed.get()) { "can't publish messages when producer is closed" }
-        producer.send(producerRecord) { _, err ->
-            if (err == null || !isFatalError(err)) return@send
-            log.error("Shutting down rapid due to fatal error: ${err.message}", err)
-            stop()
+
+        val result = producerRecords
+            .map { it to producer.send(it) }
+            .map { (record, future) ->
+                try {
+                    Triple(record, future.get(), null)
+                } catch (err: Exception) {
+                    Triple(record, null, err)
+                }
+            }
+
+        // log outcome
+        val metadataString = result
+            .mapIndexed { index, (_, metadata, err) ->
+                if (err == null)
+                    "#$index: partition=${metadata!!.partition()}, offset=${metadata.offset()}"
+                else
+                    "#$index: FAILED: ${err.message}"
+            }
+            .joinToString(separator = "\n")
+        log.info("produced ${result.size} message(s):\n$metadataString")
+
+        val hasFailedMessages = result.any { (_, _, err) -> err != null }
+
+        if (!hasFailedMessages) return
+
+        /* handle all exceptions like fatal ones */
+        log.error("Fatal error when sending messages: invoking shutdown!")
+        result.forEachIndexed { index, (record, _, err) ->
+            // should ideally log the record as well, so it can be inspected later?
+            // for now, assume the caller has control over the messages and can log them if needed
+            log.error("Message #$index failed: ${err!!.message}", err)
         }
+        stop()
     }
 
     private fun registerMetrics() {
@@ -219,15 +262,5 @@ class KafkaRapid(
     companion object {
         private const val Stopped = false
         private const val Started = true
-
-        private fun isFatalError(err: Exception) = when (err) {
-            is InvalidTopicException,
-            is RecordBatchTooLargeException,
-            is RecordTooLargeException,
-            is UnknownServerException,
-            is AuthorizationException -> true
-
-            else -> false
-        }
     }
 }
