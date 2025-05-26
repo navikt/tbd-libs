@@ -103,10 +103,13 @@ class KafkaRapid(
 
         /* handle all exceptions like fatal ones */
         log.error("Fatal error when sending messages: invoking shutdown!")
+        // loops the list unfiltered to preserve the order of messages (i.e., the index of each item)
         result.forEachIndexed { index, (record, _, err) ->
             // should ideally log the record as well, so it can be inspected later?
             // for now, assume the caller has control over the messages and can log them if needed
-            log.error("Message #$index failed: ${err!!.message}", err)
+            if (err != null) {
+                log.error("Message #$index failed: ${err.message}", err)
+            }
         }
         stop()
     }
