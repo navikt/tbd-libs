@@ -347,7 +347,7 @@ internal class RapidIntegrationTest {
                     val message1 = OutgoingMessage(packet.toJson())
                     packet["service_id"] = serviceId2
                     val message2 = OutgoingMessage(packet.toJson())
-                    context.publishBulk(listOf(message1, message2))
+                    context.publish(listOf(message1, message2))
                 }
 
                 override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}

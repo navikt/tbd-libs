@@ -55,14 +55,14 @@ class KafkaRapid(
     fun isReady() = isRunning() && ready.get()
 
     override fun publish(message: String) {
-        publishBulk(listOf(OutgoingMessage(message)))
+        publish(listOf(OutgoingMessage(message)))
     }
 
     override fun publish(key: String, message: String) {
-        publishBulk(listOf(OutgoingMessage(message, key)))
+        publish(listOf(OutgoingMessage(message, key)))
     }
 
-    override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+    override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
         return publishRecordsInBulk(messages)
     }
 

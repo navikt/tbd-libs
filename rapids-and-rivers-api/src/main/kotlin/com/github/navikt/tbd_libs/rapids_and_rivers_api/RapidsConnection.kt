@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory
 interface MessageContext {
     fun publish(message: String)
     fun publish(key: String, message: String)
-    fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>>
+    fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>>
     fun rapidName(): String
 }
 

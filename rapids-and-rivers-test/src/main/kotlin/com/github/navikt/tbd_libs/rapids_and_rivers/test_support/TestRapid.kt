@@ -44,7 +44,7 @@ class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()
         messages.add(key to message)
     }
 
-    override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+    override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
         this.messages.addAll(messages.map { it.key to it.body })
         return messages.mapIndexed { index, it ->
             SentMessage(
