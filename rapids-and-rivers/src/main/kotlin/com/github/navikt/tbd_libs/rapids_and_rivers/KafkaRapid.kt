@@ -155,7 +155,7 @@ class KafkaRapid(
             throw err
         } finally {
             val offsetsToBeCommitted = currentPositions.mapValues<TopicPartition, Long, OffsetAndMetadata> { (_, offset) -> offsetMetadata(offset) }
-            log.info("committing offsets ${offsetsToBeCommitted.entries.joinToString { "topic=${it.key.topic()}, parition=${it.key.partition()} offset=${it.value.offset()}" }}")
+            log.debug("committing offsets ${offsetsToBeCommitted.entries.joinToString { "topic=${it.key.topic()}, partition=${it.key.partition()}, offset=${it.value.offset()}" }}")
             consumer.commitSync(offsetsToBeCommitted)
         }
     }
