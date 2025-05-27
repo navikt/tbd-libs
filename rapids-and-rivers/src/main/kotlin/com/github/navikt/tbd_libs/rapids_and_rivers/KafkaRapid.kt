@@ -1,10 +1,12 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.kafka.ConsumerProducerFactory
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics
 import java.time.Duration
@@ -60,58 +62,43 @@ class KafkaRapid(
         publishBulk(listOf(OutgoingMessage(message, key)))
     }
 
-    override fun publishBulk(messages: List<OutgoingMessage>) {
-        publishRecordsInBulk(messages.map {
-            when (it.key) {
-                null -> ProducerRecord(rapidTopic, it.body)
-                else -> ProducerRecord(rapidTopic, it.key, it.body)
-            }
-        })
+    override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+        return publishRecordsInBulk(messages)
     }
 
     override fun rapidName(): String {
         return rapidTopic
     }
 
-    private fun publishRecordsInBulk(producerRecords: List<ProducerRecord<String, String>>) {
+    private fun publishRecordsInBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
         check(!producerClosed.get()) { "can't publish messages when producer is closed" }
 
-        val result = producerRecords
-            .map { it to producer.send(it) }
-            .map { (record, future) ->
+        val results = messages
+            .map { it to producer.send(it.producerRecord(rapidTopic)) }
+            .mapIndexed { index, (record, future) ->
                 try {
-                    Triple(record, future.get(), null)
+                    val metadata = future.get()
+                    Pair(SentMessage(index, record, metadata.partition(), metadata.offset()), null)
                 } catch (err: Exception) {
-                    Triple(record, null, err)
+                    Pair(null, FailedMessage(index, record, err))
                 }
             }
 
-        // log outcome
-        val metadataString = result
-            .mapIndexed { index, (_, metadata, err) ->
-                if (err == null)
-                    "#$index: partition=${metadata!!.partition()}, offset=${metadata.offset()}"
-                else
-                    "#$index: FAILED: ${err.message}"
-            }
-            .joinToString(separator = "\n")
-        log.info("produced ${result.size} message(s):\n$metadataString")
+        val ok = results
+            .mapNotNull { it.first }
 
-        val hasFailedMessages = result.any { (_, _, err) -> err != null }
+        val failed = results
+            .mapNotNull { it.second }
 
-        if (!hasFailedMessages) return
+        log.info("produced ${ok.size} message(s)")
 
-        /* handle all exceptions like fatal ones */
-        log.error("Fatal error when sending messages: invoking shutdown!")
-        // loops the list unfiltered to preserve the order of messages (i.e., the index of each item)
-        result.forEachIndexed { index, (record, _, err) ->
-            // should ideally log the record as well, so it can be inspected later?
-            // for now, assume the caller has control over the messages and can log them if needed
-            if (err != null) {
-                log.error("Message #$index failed: ${err.message}", err)
-            }
+        if (failed.isNotEmpty()) {
+            /* handle all failed messages as a fatal error */
+            log.error("Failed to produce ${failed.size} message(s): invoking shutdown!")
+            stop()
         }
-        stop()
+
+        return ok to failed
     }
 
     private fun registerMetrics() {
@@ -266,4 +253,9 @@ class KafkaRapid(
         private const val Stopped = false
         private const val Started = true
     }
+}
+
+private fun OutgoingMessage.producerRecord(rapidTopic: String) = when (this.key) {
+    null -> ProducerRecord(rapidTopic, this.body)
+    else -> ProducerRecord(rapidTopic, this.key, this.body)
 }

@@ -1,10 +1,12 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.intellij.lang.annotations.Language
@@ -79,7 +81,9 @@ internal class RiverTest {
     private val context = object : MessageContext {
         override fun publish(message: String) {}
         override fun publish(key: String, message: String) {}
-        override fun publishBulk(messages: List<OutgoingMessage>) {}
+        override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+            return emptyList<SentMessage>() to emptyList()
+        }
         override fun rapidName(): String {return "test"}
     }
 
@@ -91,7 +95,9 @@ internal class RiverTest {
     private val rapid = object : RapidsConnection() {
         override fun publish(message: String) {}
         override fun publish(key: String, message: String) {}
-        override fun publishBulk(messages: List<OutgoingMessage>) {}
+        override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+            return emptyList<SentMessage>() to emptyList()
+        }
 
         override fun rapidName(): String {
             return "test"

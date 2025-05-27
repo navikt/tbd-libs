@@ -1,7 +1,9 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 
 internal class JsonMessageContext(
     private val rapidsConnection: MessageContext,
@@ -15,8 +17,8 @@ internal class JsonMessageContext(
         rapidsConnection.publish(key, populateStandardFields(message))
     }
 
-    override fun publishBulk(messages: List<OutgoingMessage>) {
-        rapidsConnection.publishBulk(
+    override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+        return rapidsConnection.publishBulk(
             messages.map {
                 it.copy(body = populateStandardFields(it.body))
             }

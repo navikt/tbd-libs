@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.FailedMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.KeyMessageContext
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.OutgoingMessage
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 
@@ -42,8 +44,16 @@ class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()
         messages.add(key to message)
     }
 
-    override fun publishBulk(messages: List<OutgoingMessage>) {
+    override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
         this.messages.addAll(messages.map { it.key to it.body })
+        return messages.mapIndexed { index, it ->
+            SentMessage(
+                index = index,
+                message = it,
+                partition = 0,
+                offset = 0L
+            )
+        } to emptyList()
     }
 
     override fun rapidName(): String {

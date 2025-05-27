@@ -6,13 +6,26 @@ import org.slf4j.LoggerFactory
 interface MessageContext {
     fun publish(message: String)
     fun publish(key: String, message: String)
-    fun publishBulk(messages: List<OutgoingMessage>)
+    fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>>
     fun rapidName(): String
 }
 
 data class OutgoingMessage(
     val body: String,
     val key: String? = null
+)
+
+data class SentMessage(
+    val index: Int,
+    val message: OutgoingMessage,
+    val partition: Int,
+    val offset: Long,
+)
+
+data class FailedMessage(
+    val index: Int,
+    val message: OutgoingMessage,
+    val error: Throwable
 )
 
 abstract class RapidsConnection : MessageContext {

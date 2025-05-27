@@ -13,8 +13,8 @@ class KeyMessageContext(
         rapidsConnection.publish(key, message)
     }
 
-    override fun publishBulk(messages: List<OutgoingMessage>) {
-        rapidsConnection.publishBulk(
+    override fun publishBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
+        return rapidsConnection.publishBulk(
             messages.map {
                 it.copy(key = it.key ?: key)
             }
