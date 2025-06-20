@@ -90,7 +90,7 @@ class KafkaRapid(
         val failed = results
             .mapNotNull { it.second }
 
-        log.info("produced ${ok.size} message(s)")
+        log.info("produced ${ok.size} message(s) of ${messages.size} message(s) in total")
 
         if (failed.isNotEmpty()) {
             /* handle all failed messages as a fatal error */
