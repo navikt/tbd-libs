@@ -261,7 +261,12 @@ fun Application.standardApiModule(
         }
 
         get(naisEndpoints.metricsEndpoint) {
-            call.respond(meterRegistry.scrape())
+             call.request.acceptItems().firstOrNull()?.let {
+                val contentType = ContentType.parse(it.value)
+                val metrics = meterRegistry.scrape(it.value)
+
+                call.respondText(metrics, contentType)
+            } ?: call.respond(HttpStatusCode.NotAcceptable, "Supported types: application/openmetrics-text and text/plain")
         }
     }
 }
