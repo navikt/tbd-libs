@@ -20,23 +20,14 @@ jobs:
           java-version: '21'
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Gradle wrapper validation
-        uses: gradle/actions/wrapper-validation@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
       - name: Genererer versjon
         run: |
           TIME=$(TZ="Europe/Oslo" date +%Y.%m.%d-%H.%M)
           COMMIT=$(git rev-parse --short=8 HEAD)
           VERSION=$TIME-$COMMIT
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-      - name: Setup gradle dependency cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/.*gradle*') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
       - name: upload artifacts
         run: ./gradlew -Pversion="$(echo $VERSION)" publish --parallel
         env:
