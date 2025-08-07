@@ -84,7 +84,7 @@ Da kan vi lage følgende dataklasser for `<soap:Body>`-elementet:
 
 ```kotlin
 data class SoapBody(
-    @JacksonXmlProperty(
+    @param:JacksonXmlProperty(
         localName = "finnMeldekortUtbetalingsgrunnlagListeResponse",
         namespace = "http://example.org/foo/bar"
     )
@@ -108,85 +108,85 @@ data class SoapBody(
 }
 
 data class FinnMeldekortResponse(
-    @JacksonXmlProperty(localName = "response")
+    @param:JacksonXmlProperty(localName = "response")
     private val response: Response
 )
 
 data class Response(
-    @JacksonXmlProperty(localName = "meldekortUtbetalingsgrunnlagListe")
-    @JacksonXmlElementWrapper(useWrapping = false)
+    @param:JacksonXmlProperty(localName = "meldekortUtbetalingsgrunnlagListe")
+    @param:JacksonXmlElementWrapper(useWrapping = false)
     val meldekortUtbetalingsgrunnlagListe: List<Sak>
 )
 
 data class Sak(
-    @JacksonXmlProperty(localName = "fagsystemSakId")
+    @param:JacksonXmlProperty(localName = "fagsystemSakId")
     val fagsystemSakId: String,
 
-    @JacksonXmlProperty(localName = "saksstatus")
+    @param:JacksonXmlProperty(localName = "saksstatus")
     val saksstatus: Saksstatus,
 
-    @JacksonXmlProperty(localName = "tema")
+    @param:JacksonXmlProperty(localName = "tema")
     val tema: Tema,
 
-    @JacksonXmlProperty(localName = "vedtakListe")
-    @JacksonXmlElementWrapper(useWrapping = false)
+    @param:JacksonXmlProperty(localName = "vedtakListe")
+    @param:JacksonXmlElementWrapper(useWrapping = false)
     val vedtaksliste: List<Vedtak>
 )
 
 data class Saksstatus(
-    @JacksonXmlProperty(isAttribute = true, localName = "termnavn")
+    @param:JacksonXmlProperty(isAttribute = true, localName = "termnavn")
     val termnavn: String,
-    @JacksonXmlProperty(localName = "innerText")
+    @param:JacksonXmlProperty(localName = "innerText")
     val verdi: String
 )
 
 data class Tema(
-    @JacksonXmlProperty(isAttribute = true, localName = "termnavn")
+    @param:JacksonXmlProperty(isAttribute = true, localName = "termnavn")
     var termnavn: String,
     // issue: https://github.com/FasterXML/jackson-module-kotlin/issues/138
     // workaround: https://github.com/FasterXML/jackson-module-kotlin/issues/138#issuecomment-576484905
-    @JacksonXmlProperty(localName = "innerText")
+    @param:JacksonXmlProperty(localName = "innerText")
     val verdi: String
 )
 
 data class Vedtak(
-    @JacksonXmlProperty(localName = "meldekortListe")
+    @param:JacksonXmlProperty(localName = "meldekortListe")
     @JacksonXmlElementWrapper(useWrapping = false)
     val meldekortliste: List<Meldekort>,
-    @JacksonXmlProperty(localName = "vedtaksperiode")
+    @param:JacksonXmlProperty(localName = "vedtaksperiode")
     val vedtaksperiode: Periode,
-    @JacksonXmlProperty(localName = "vedtaksstatus")
+    @param:JacksonXmlProperty(localName = "vedtaksstatus")
     val vedtaksstatus: Vedtaksstatus,
-    @JacksonXmlProperty(localName = "vedtaksdato")
+    @param:JacksonXmlProperty(localName = "vedtaksdato")
     val vedtaksdato: LocalDate,
-    @JacksonXmlProperty(localName = "datoKravMottatt")
+    @param:JacksonXmlProperty(localName = "datoKravMottatt")
     val datoKravMottatt: LocalDate,
-    @JacksonXmlProperty(localName = "dagsats")
+    @param:JacksonXmlProperty(localName = "dagsats")
     val dagsats: Double
 )
 
 data class Vedtaksstatus(
-    @JacksonXmlProperty(isAttribute = true, localName = "termnavn")
+    @param:JacksonXmlProperty(isAttribute = true, localName = "termnavn")
     val termnavn: String,
-    @JacksonXmlProperty(localName = "innerText")
+    @param:JacksonXmlProperty(localName = "innerText")
     val verdi: String
 )
 
 data class Meldekort(
-    @JacksonXmlProperty(localName = "meldekortperiode")
+    @param:JacksonXmlProperty(localName = "meldekortperiode")
     val meldekortperiode: Periode,
-    @JacksonXmlProperty(localName = "dagsats")
+    @param:JacksonXmlProperty(localName = "dagsats")
     val dagsats: Double,
-    @JacksonXmlProperty(localName = "beloep")
+    @param:JacksonXmlProperty(localName = "beloep")
     val beløp: Double,
-    @JacksonXmlProperty(localName = "utbetalingsgrad")
+    @param:JacksonXmlProperty(localName = "utbetalingsgrad")
     val utbetalingsgrad: Double
 )
 
 data class Periode(
-    @JacksonXmlProperty(localName = "fom")
+    @param:JacksonXmlProperty(localName = "fom")
     val fom: LocalDate,
-    @JacksonXmlProperty(localName = "tom")
+    @param:JacksonXmlProperty(localName = "tom")
     val tom: LocalDate
 )
 ```

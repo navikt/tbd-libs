@@ -5,8 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 internal data class AzureErrorResponse(
-    @JsonProperty("error")
+    @param:JsonProperty("error")
     val error: String,
-    @JsonProperty("error_description")
+    @param:JsonProperty("error_description")
     val description: String
 )

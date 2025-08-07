@@ -238,25 +238,25 @@ class SoapResponseHandlerTest {
     }
 
     private data class Greeting(
-        @JacksonXmlProperty(localName = "greeting")
+        @param:JacksonXmlProperty(localName = "greeting")
         val greeting: String
     )
 
     private data class Greetings(
-        @JacksonXmlProperty(localName = "greetings")
-        @JacksonXmlElementWrapper(useWrapping = false)
+        @param:JacksonXmlProperty(localName = "greetings")
+        @param:JacksonXmlElementWrapper(useWrapping = false)
         val greetings: List<Greeting>
     )
 
     private data class ResponseLength(
-        @JacksonXmlProperty(localName = "length")
+        @param:JacksonXmlProperty(localName = "length")
         val length: Length
     )
 
     private data class Length(
-        @JacksonXmlProperty(localName = "unit", isAttribute = true)
+        @param:JacksonXmlProperty(localName = "unit", isAttribute = true)
         val unit: String,
-        @JacksonXmlProperty(localName = NAME_FOR_TEXT_ELEMENT)
+        @param:JacksonXmlProperty(localName = NAME_FOR_TEXT_ELEMENT)
         val value: Int
     )
 }

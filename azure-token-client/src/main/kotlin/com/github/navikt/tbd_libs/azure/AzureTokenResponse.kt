@@ -7,13 +7,13 @@ import java.time.LocalDateTime
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 internal data class AzureTokenResponse(
-    @JsonProperty("token_type")
+    @param:JsonProperty("token_type")
     val tokenType: String,
-    @JsonProperty("access_token")
+    @param:JsonProperty("access_token")
     val token: String,
-    @JsonProperty("expires_in")
+    @param:JsonProperty("expires_in")
     val expiresIn: Long,
-    @JacksonInject
+    @param:JacksonInject
     private val utstedtTidspunkt: LocalDateTime
 ) {
     val expirationTime: LocalDateTime = utstedtTidspunkt.plusSeconds(expiresIn)
