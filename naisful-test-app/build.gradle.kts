@@ -1,4 +1,4 @@
-val ktorVersion = "3.1.2"
+val ktorVersion = "3.2.3"
 
 dependencies {
     api(project(":naisful-app"))
