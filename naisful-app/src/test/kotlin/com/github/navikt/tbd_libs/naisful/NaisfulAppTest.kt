@@ -14,20 +14,24 @@ import io.ktor.server.engine.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import io.micrometer.core.instrument.Clock
 import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
-import org.slf4j.LoggerFactory
+import io.prometheus.metrics.model.registry.PrometheusRegistry
+import io.prometheus.metrics.tracer.common.SpanContext
 import java.net.ServerSocket
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.slf4j.LoggerFactory
 
 class NaisfulAppTest {
 
@@ -37,6 +41,39 @@ class NaisfulAppTest {
             assertEquals("ALIVE", get("/isalive").bodyAsText())
             assertEquals("READY", get("/isready").bodyAsText())
             assertTrue(get("/metrics").bodyAsText().contains("jvm_memory_used_bytes"))
+        }
+    }
+
+    @Test
+    fun exemplars() {
+        val exemplarSamler = ExemplarSampler()
+        val meterRegistry = PrometheusMeterRegistry(
+            PrometheusConfig.DEFAULT,
+            PrometheusRegistry.defaultRegistry,
+            Clock.SYSTEM,
+            exemplarSamler
+        )
+        testApp(NaisEndpoints.Default, meterRegistry) {
+            assertEquals("ALIVE", get("/isalive").bodyAsText())
+            assertEquals("READY", get("/isready").bodyAsText())
+
+            get("/metrics") {
+                accept(ContentType.Text.Plain.withCharset(Charsets.UTF_8))
+            }
+                .bodyAsText()
+                .also { body ->
+                    assertTrue(body.contains("jvm_memory_used_bytes"))
+                    assertFalse(body.contains("my_trace_id"))
+                }
+
+            get("/metrics") {
+                accept(ContentType.parse("application/openmetrics-text; version=1.0.0"))
+            }
+                .bodyAsText()
+                .also { body ->
+                    assertTrue(body.contains("jvm_memory_used_bytes"))
+                    assertTrue(body.contains("my_trace_id"))
+                }
         }
     }
 
@@ -186,12 +223,12 @@ class NaisfulAppTest {
 
     private fun testApp(
         naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
+        meterRegistry: PrometheusMeterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
         aliveCheck: () -> Boolean = { true },
         readyCheck: () -> Boolean = { true },
         applicationModule: Application.() -> Unit = {},
         testBlock: suspend HttpClient.() -> Unit
     ) {
-        val meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
         val objectMapper = jacksonObjectMapper()
         val randomPort = ServerSocket(0).localPort
 
@@ -237,4 +274,14 @@ class NaisfulAppTest {
             testBlock(testClient)
         }
     }
+}
+
+private class ExemplarSampler : SpanContext {
+    override fun getCurrentTraceId() = "my_trace_id"
+
+    override fun getCurrentSpanId() = "my_span_id"
+
+    override fun isCurrentSpanSampled() = true
+
+    override fun markCurrentSpanAsExemplar() {}
 }
