@@ -143,7 +143,8 @@ data class SimuleringRequest(
                 REFUSJON_FERIEPENGER_IKKE_OPPLYSNINGSPLIKTIG,
                 SYKEPENGER_ARBEIDSTAKER_ORDINÆR,
                 SYKEPENGER_ARBEIDSTAKER_FERIEPENGER,
-                SELVSTENDIG_NÆRINGSDRIVENDE
+                SELVSTENDIG_NÆRINGSDRIVENDE,
+                BARNEPASSER
             }
         }
     }
