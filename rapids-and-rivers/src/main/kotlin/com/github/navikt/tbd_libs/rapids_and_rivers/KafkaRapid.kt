@@ -38,7 +38,6 @@ class KafkaRapid(
 
     private val running = AtomicBoolean(Stopped)
     private val ready = AtomicBoolean(false)
-    private val producerClosed = AtomicBoolean(false)
 
     private val consumer = factory.createConsumer(groupId, consumerProperties.apply {
         if (!autoCommit) put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
@@ -71,8 +70,6 @@ class KafkaRapid(
     }
 
     private fun publishRecordsInBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
-        check(!producerClosed.get()) { "can't publish messages when producer is closed" }
-
         val results = messages
             .map { it to producer.send(it.producerRecord(rapidTopic)) }
             .mapIndexed { index, (record, future) ->
@@ -199,6 +196,7 @@ class KafkaRapid(
             notifyShutdown()
             closeResources(lastException)
             notifyShutdownComplete()
+            producer.flush()
         }
     }
 
@@ -234,11 +232,8 @@ class KafkaRapid(
         }
         log.info("closing consumer")
         tryAndLog(consumer::close)
-        producerClosed.set(true)
         log.info("flushing producer")
         tryAndLog(producer::flush)
-        log.info("closing producer")
-        tryAndLog(producer::close)
     }
 
     private fun tryAndLog(block: () -> Unit) {
