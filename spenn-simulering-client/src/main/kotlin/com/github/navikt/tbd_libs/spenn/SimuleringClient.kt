@@ -133,6 +133,7 @@ data class SimuleringRequest(
             val refFagsystemId: String?,
 
             val klassekode: Klassekode,
+            val klassekodeFom: LocalDate?,
             val opphørerFom: LocalDate?
         ) {
             enum class Satstype {

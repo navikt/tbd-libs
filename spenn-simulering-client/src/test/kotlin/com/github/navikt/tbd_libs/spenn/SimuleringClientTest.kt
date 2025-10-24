@@ -110,6 +110,7 @@ class SimuleringClientTest {
                         refDelytelseId = null,
                         refFagsystemId = null,
                         klassekode = klassekode,
+                        klassekodeFom = LocalDate.of(2018, 1, 1),
                         opphørerFom = null
                     ),
                     SimuleringRequest.Oppdrag.Oppdragslinje(
@@ -123,6 +124,7 @@ class SimuleringClientTest {
                         refDelytelseId = 1,
                         refFagsystemId = "AQOG5K72HRHPPMNULZKJIOZ5GU",
                         klassekode = klassekode,
+                        klassekodeFom = LocalDate.of(2018, 2, 1),
                         opphørerFom = null
                     )
                 )
