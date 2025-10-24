@@ -145,6 +145,8 @@ data class SimuleringRequest(
                 SYKEPENGER_ARBEIDSTAKER_ORDINÆR,
                 SYKEPENGER_ARBEIDSTAKER_FERIEPENGER,
                 SELVSTENDIG_NÆRINGSDRIVENDE,
+                SELVSTENDIG_NÆRINGSDRIVENDE_FISKER,
+                SELVSTENDIG_NÆRINGSDRIVENDE_JORDBRUK,
                 BARNEPASSER
             }
         }
