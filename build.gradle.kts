@@ -7,7 +7,7 @@ val testcontainersVersion = "1.21.3"
 val kotlinxCoroutinesVersion = "1.9.0"
 
 plugins {
-    kotlin("jvm") version "2.2.10" apply false
+    kotlin("jvm") version "2.2.21" apply false
     `maven-publish`
 }
 
