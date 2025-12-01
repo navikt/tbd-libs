@@ -1,10 +1,15 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.rapids_and_rivers.River.PacketListener.Companion.Name
-import com.github.navikt.tbd_libs.rapids_and_rivers_api.*
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageMetadata
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.Counter
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.instrumentation.annotations.SpanAttribute
 import io.opentelemetry.instrumentation.annotations.WithSpan
@@ -74,11 +79,11 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         packetListener.onPacket(packet, context, metadata, metrics)
         timer.stop(
             Timer.builder("on_packet_seconds")
-            .description("Hvor lang det tar å lese en gjenkjent melding i sekunder")
-            .tag("rapid", context.rapidName())
-            .tag("river", packetListener.name())
-            .tag("event_name", eventName)
-            .register(metrics)
+                .description("Hvor lang det tar å lese en gjenkjent melding i sekunder")
+                .tag("rapid", context.rapidName())
+                .tag("river", packetListener.name())
+                .tag("event_name", eventName)
+                .register(metrics)
         )
     }
 
@@ -118,6 +123,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
     }
 
     private fun onMessageCounter(metrics: MeterRegistry, rapidName: String, riverName: String, validated: String, eventName: String? = null) {
+        addSpanAttributes(rapidName, riverName, validated, eventName)
         Counter.builder("message_counter")
             .description("Hvor mange meldinger som er lest inn")
             .tag("rapid", rapidName)
@@ -128,6 +134,15 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
             .increment()
     }
 
+    private fun addSpanAttributes(rapidName: String, riverName: String, validated: String, eventName: String? = null) {
+        val span = Span.current()
+        if (!span.spanContext.isValid) return
+
+        span.setAttribute(AttributeKey.stringKey("nav.rapid_and_rivers.rapid"), rapidName)
+        span.setAttribute(AttributeKey.stringKey("nav.rapid_and_rivers.river"), riverName)
+        span.setAttribute(AttributeKey.stringKey("nav.rapid_and_rivers.validated"), validated)
+        span.setAttribute(AttributeKey.stringKey("nav.rapid_and_rivers.event_name"), eventName ?: "")
+    }
 
     fun interface PacketValidation {
         fun validate(message: JsonMessage)
@@ -145,6 +160,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         companion object {
             fun Name(obj: Any) = obj::class.simpleName ?: "ukjent"
         }
+
         override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
 
         fun onPreconditionError(error: MessageProblems, context: MessageContext, metadata: MessageMetadata) {}
@@ -170,5 +186,4 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
             packetHandler.onPacket(packet, context, metadata, meterRegistry)
         }
     }
-
 }
