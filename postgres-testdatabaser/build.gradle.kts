@@ -1,5 +1,5 @@
 val testcontainersVersion: String by project
-val flywayVersion = "11.5.0"
+val flywayVersion = "11.19.0"
 val postgresqlVersion = "42.7.7"
 val hikariCPVersion = "6.3.0"
 
