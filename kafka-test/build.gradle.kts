@@ -2,7 +2,7 @@ val testcontainersVersion: String by project
 val kafkaVersion = "4.1.0"
 
 dependencies {
-    api("org.testcontainers:kafka:$testcontainersVersion")
+    api("org.testcontainers:testcontainers-kafka:$testcontainersVersion")
     // konsumenter av biblioteket må selv vurdere hvilken kafkaversjon de vil ha
     // (implementation 'lekker' ikke ut på compile-classpath til konsumentene
     implementation("org.apache.kafka:kafka-clients:$kafkaVersion") {

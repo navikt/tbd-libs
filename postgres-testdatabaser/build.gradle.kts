@@ -4,7 +4,7 @@ val postgresqlVersion = "42.7.7"
 val hikariCPVersion = "6.3.0"
 
 dependencies {
-    api("org.testcontainers:postgresql:$testcontainersVersion")
+    api("org.testcontainers:testcontainers-postgresql:$testcontainersVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm")
     // konsumenter av biblioteket må selv vurdere hvilken flyway og hikari de vil ha
     // (implementation 'lekker' ikke ut på compile-classpath til konsumentene

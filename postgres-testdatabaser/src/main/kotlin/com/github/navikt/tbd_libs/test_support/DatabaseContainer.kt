@@ -6,7 +6,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.testcontainers.DockerClientFactory
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Duration
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -20,7 +20,7 @@ class DatabaseContainer(
     private val walLevelLogical: Boolean = false
 ) {
     private val instance by lazy {
-        PostgreSQLContainer<Nothing>("postgres:15").apply {
+        PostgreSQLContainer("postgres:15").apply {
             withCreateContainerCmdModifier { command -> command.withName(appnavn) }
             if (walLevelLogical) {
                 // Cloud SQL har wal_level = 'logical' på grunn av flagget cloudsql.logical_decoding i
