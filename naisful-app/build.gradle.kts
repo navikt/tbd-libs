@@ -1,5 +1,5 @@
 val slf4jVersion = "2.0.17"
-val ktorVersion = "3.3.1"
+val ktorVersion = "3.3.3"
 val micrometerRegistryPrometheusVersion = "1.15.2"
 
 dependencies {
