@@ -1,4 +1,4 @@
-val awaitilityVersion = "4.2.2"
+val awaitilityVersion = "4.3.0"
 val otelVersion = "2.9.0"
 
 dependencies {
