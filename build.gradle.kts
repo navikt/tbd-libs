@@ -1,6 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
-val junitJupiterVersion = "5.12.1"
+val junitJupiterVersion = "6.0.2"
 val mockkVersion = "1.13.17"
 val jacksonVersion = "2.18.3"
 val testcontainersVersion = "2.0.3"
