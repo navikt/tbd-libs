@@ -390,7 +390,7 @@ private data class ShutdownHook(
             monitor.raiseCatching(ApplicationStopPreparing, environment, environment.log)
             runBlocking { delay(gracefulShutdownDelay) }
             environment.log.info("Disposing application")
-            application.dispose()
+            stop()
         }
     }
 }
