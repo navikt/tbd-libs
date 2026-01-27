@@ -51,3 +51,4 @@ gradle-app.setting
 *.rar
 hs_err_pid*
 replay_pid*
+.idea/copilot.data.migration.agent.xml
