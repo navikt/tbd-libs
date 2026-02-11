@@ -1082,4 +1082,142 @@ internal class JsonMessageTest {
             requireKey("required_key")
         }
     }
+
+
+
+    @Test
+    fun `allParticipatingServices returns empty list when no participating services field`() {
+        @Language("JSON")
+        val json = """{"foo": "bar"}"""
+        val message = message(json)
+        assertEquals(emptyList<String>(), message.participatingServices)
+    }
+
+    @Test
+    fun `allParticipatingServices returns single service from participating services`() {
+        @Language("JSON")
+        val json = """{
+            "system_participating_services": [
+                {"service": "first-service", "id": "123", "time": "2024-01-01T10:00:00"}
+            ]
+        }"""
+        val message = message(json)
+        assertEquals(listOf("first-service"), message.participatingServices)
+    }
+
+    @Test
+    fun `allParticipatingServices returns multiple services from participating services`() {
+        @Language("JSON")
+        val json = """{
+            "system_participating_services": [
+                {"service": "first-service", "id": "123", "time": "2024-01-01T10:00:00"},
+                {"service": "second-service", "id": "456", "time": "2024-01-01T11:00:00"},
+                {"service": "third-service", "id": "789", "time": "2024-01-01T12:00:00"}
+            ]
+        }"""
+        val message = message(json)
+        assertEquals(listOf("first-service", "second-service", "third-service"), message.participatingServices)
+    }
+
+    @Test
+    fun `allParticipatingServices filters out null service entries`() {
+        @Language("JSON")
+        val json = """{
+            "system_participating_services": [
+                {"service": "first-service", "id": "123", "time": "2024-01-01T10:00:00"},
+                {"service": null, "id": "456", "time": "2024-01-01T11:00:00"},
+                {"service": "third-service", "id": "789", "time": "2024-01-01T12:00:00"}
+            ]
+        }"""
+        val message = message(json)
+        assertEquals(listOf("first-service", "third-service"), message.participatingServices)
+    }
+
+    @Test
+    fun `behov property returns behov array`() {
+        @Language("JSON")
+        val json = """{"@behov": ["Sykepengehistorikk", "Inntekt", "Medlemskap"]}"""
+        val message = message(json)
+        assertEquals(listOf("Sykepengehistorikk", "Inntekt", "Medlemskap"), message.behov)
+    }
+
+    @Test
+    fun `behov property returns single behov`() {
+        @Language("JSON")
+        val json = """{"@behov": ["Inntekt"]}"""
+        val message = message(json)
+        assertEquals(listOf("Inntekt"), message.behov)
+    }
+
+    @Test
+    fun `behov property returns null when array is empty`() {
+        @Language("JSON")
+        val json = """{"@behov": []}"""
+        val message = message(json)
+        assertNull(message.behov)
+    }
+
+    @Test
+    fun `behov property returns null when behov key is missing`() {
+        @Language("JSON")
+        val json = """{"foo": "bar"}"""
+        val message = message(json)
+        assertNull(message.behov)
+    }
+
+    @Test
+    fun `behov property returns list in original order`() {
+        @Language("JSON")
+        val json = """{"@behov": ["Zebra", "Apple", "Banana"]}"""
+        val message = message(json)
+        assertEquals(listOf("Zebra", "Apple", "Banana"), message.behov)
+    }
+
+    @Test
+    fun `losninger returns keys from losning object`() {
+        @Language("JSON")
+        val json = """{"@løsning": {"Løsning 1": {"all_the_Datas": "foo"}, "Løsning 2": {"all_the_Datas": "foo"}}}"""
+        val message = message(json)
+        assertEquals(listOf("Løsning 1", "Løsning 2"), message.løsninger)
+    }
+
+    @Test
+    fun `losninger returns single key`() {
+        @Language("JSON")
+        val json = """{"@løsning": {"Inntekt": {"beløp": 50000}}}"""
+        val message = message(json)
+        assertEquals(listOf("Inntekt"), message.løsninger)
+    }
+
+    @Test
+    fun `losninger returns null when losning is missing`() {
+        @Language("JSON")
+        val json = """{"foo": "bar"}"""
+        val message = message(json)
+        assertNull(message.løsninger)
+    }
+
+    @Test
+    fun `losninger returns null when losning is null`() {
+        @Language("JSON")
+        val json = """{"@løsning": null}"""
+        val message = message(json)
+        assertNull(message.løsninger)
+    }
+
+    @Test
+    fun `losninger returns null when losning is not an object`() {
+        @Language("JSON")
+        val json = """{"@løsning": "some string"}"""
+        val message = message(json)
+        assertNull(message.løsninger)
+    }
+
+    @Test
+    fun `losninger returns empty list when losning is an empty object`() {
+        @Language("JSON")
+        val json = """{"@løsning": {}}"""
+        val message = message(json)
+        assertEquals(emptyList<String>(), message.løsninger)
+    }
 }
