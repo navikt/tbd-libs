@@ -1082,4 +1082,117 @@ internal class JsonMessageTest {
             requireKey("required_key")
         }
     }
+
+    @Test
+    fun `avsender property returns first service from participating services`() {
+        @Language("JSON")
+        val json = """{
+            "system_participating_services": [
+                {"service": "first-service", "id": "123", "time": "2024-01-01T10:00:00"},
+                {"service": "second-service", "id": "456", "time": "2024-01-01T11:00:00"}
+            ]
+        }"""
+        val message = message(json)
+        assertEquals("first-service", message.avsender)
+    }
+
+    @Test
+    fun `avsender property returns null when no participating services`() {
+        @Language("JSON")
+        val json = """{"foo": "bar"}"""
+        val message = message(json)
+        assertNull(message.avsender)
+    }
+
+    @Test
+    fun `avsender property returns null when participating services is empty array`() {
+        @Language("JSON")
+        val json = """{"system_participating_services": []}"""
+        val message = message(json)
+        assertNull(message.avsender)
+    }
+
+    @Test
+    fun `avsender property returns null when service is null in first entry`() {
+        @Language("JSON")
+        val json = """{
+            "system_participating_services": [
+                {"service": null, "id": "123", "time": "2024-01-01T10:00:00"}
+            ]
+        }"""
+        val message = message(json)
+        assertNull(message.avsender)
+    }
+
+    @Test
+    fun `behov property returns sorted and joined behov array`() {
+        @Language("JSON")
+        val json = """{"@behov": ["Sykepengehistorikk", "Inntekt", "Medlemskap"]}"""
+        val message = message(json)
+        assertEquals("Inntekt-Medlemskap-Sykepengehistorikk", message.behov)
+    }
+
+    @Test
+    fun `behov property returns single behov`() {
+        @Language("JSON")
+        val json = """{"@behov": ["Inntekt"]}"""
+        val message = message(json)
+        assertEquals("Inntekt", message.behov)
+    }
+
+    @Test
+    fun `behov property returns null when array is empty`() {
+        @Language("JSON")
+        val json = """{"@behov": []}"""
+        val message = message(json)
+        assertNull(message.behov)
+    }
+
+    @Test
+    fun `behov property returns null when behov key is missing`() {
+        @Language("JSON")
+        val json = """{"foo": "bar"}"""
+        val message = message(json)
+        assertNull(message.behov)
+    }
+
+    @Test
+    fun `behov property sorts alphabetically before joining`() {
+        @Language("JSON")
+        val json = """{"@behov": ["Zebra", "Apple", "Banana"]}"""
+        val message = message(json)
+        assertEquals("Apple-Banana-Zebra", message.behov)
+    }
+
+    @Test
+    fun `harLosning property returns true when losning key exists`() {
+        @Language("JSON")
+        val json = """{"@løsning": {"Inntekt": {"beløp": 50000}}}"""
+        val message = message(json)
+        assertTrue(message.harLosning)
+    }
+
+    @Test
+    fun `harLosning property returns true when losning key exists with any value`() {
+        @Language("JSON")
+        val json = """{"@løsning": "some value"}"""
+        val message = message(json)
+        assertTrue(message.harLosning)
+    }
+
+    @Test
+    fun `harLosning property returns false when losning key is missing`() {
+        @Language("JSON")
+        val json = """{"foo": "bar"}"""
+        val message = message(json)
+        assertFalse(message.harLosning)
+    }
+
+    @Test
+    fun `harLosning property returns false when losning key is null`() {
+        @Language("JSON")
+        val json = """{"@løsning": null}"""
+        val message = message(json)
+        assertFalse(message.harLosning)
+    }
 }

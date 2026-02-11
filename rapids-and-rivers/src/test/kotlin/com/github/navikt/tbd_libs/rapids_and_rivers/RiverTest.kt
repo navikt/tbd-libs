@@ -78,6 +78,60 @@ internal class RiverTest {
         assertEquals(RiverValidationResult.PASSED, validationResult)
     }
 
+    @Test
+    internal fun `avsender tag on message_counter with participating services`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """{
+            "@event_name": "test_event",
+            "system_participating_services": [
+                {"service": "original-app", "id": "123", "time": "2024-01-01T10:00:00"},
+                {"service": "other-app", "id": "456", "time": "2024-01-01T11:00:00"}
+            ]
+        }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("original-app", counter!!.id.getTag("avsender"))
+    }
+
+    @Test
+    internal fun `avsender tag null on message_counter without participating services`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """{ "@event_name": "test_event" }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        // Since NAIS_APP_NAME is null in tests, the first participating service will have null service name
+        assertNull(counter!!.id.getTag("avsender"))
+    }
+
+    @Test
+    internal fun `avsender tag on message_counter with validation error`() {
+        val metrics = SimpleMeterRegistry()
+        river.validate { it.requireKey("missing_key") }
+        @Language("JSON")
+        val message = """{
+            "@event_name": "test_event",
+            "system_participating_services": [
+                {"service": "failing-app", "id": "789", "time": "2024-01-01T12:00:00"}
+            ]
+        }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertFalse(gotMessage)
+        assertEquals(RiverValidationResult.VALIDATION_FAILED, validationResult)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("failing-app", counter!!.id.getTag("avsender"))
+    }
+
+
     private val context = object : MessageContext {
         override fun publish(message: String) {}
         override fun publish(key: String, message: String) {}
@@ -147,4 +201,108 @@ internal class RiverTest {
                 validationResult = RiverValidationResult.VALIDATION_FAILED
             }
         })
+
+    @Test
+    internal fun `behov tag on message_counter with behov array`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """{
+            "@event_name": "test_event",
+            "@behov": ["Sykepengehistorikk", "Inntekt"]
+        }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("Inntekt-Sykepengehistorikk", counter!!.id.getTag("behov"))
+    }
+
+    @Test
+    internal fun `no behov tag on message_counter when behov is missing`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """{ "@event_name": "test_event" }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertNull(counter!!.id.getTag("behov"))
+    }
+
+    @Test
+    internal fun `losning tag true when losning key exists`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """{
+            "@event_name": "test_event",
+            "@behov": ["Sykepengehistorikk", "Inntekt"],
+            "@løsning": {"Inntekt": {"beløp": 50000}}
+        }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("true", counter!!.id.getTag("losning"))
+    }
+
+    @Test
+    internal fun `losning tag behov when losning key is missing`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """
+            { "@event_name": "test_event",
+              "@behov": ["Sykepengehistorikk", "Inntekt"]
+            }""".trimIndent()
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("false", counter!!.id.getTag("losning"))
+    }
+
+    @Test
+    internal fun `all tags together - avsender, behov, and losning`() {
+        val metrics = SimpleMeterRegistry()
+        @Language("JSON")
+        val message = """{
+            "@event_name": "behov_event",
+            "@behov": ["Inntekt", "Medlemskap"],
+            "@løsning": {"Inntekt": {"beløp": 50000}},
+            "system_participating_services": [
+                {"service": "test-app", "id": "123", "time": "2024-01-01T10:00:00"}
+            ]
+        }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertTrue(gotMessage)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("test-app", counter!!.id.getTag("avsender"))
+        assertEquals("Inntekt-Medlemskap", counter.id.getTag("behov"))
+        assertEquals("true", counter.id.getTag("losning"))
+        assertEquals("behov_event", counter.id.getTag("event_name"))
+    }
+
+    @Test
+    internal fun `behov tag on message_counter with validation error`() {
+        val metrics = SimpleMeterRegistry()
+        river.validate { it.requireKey("missing_key") }
+        @Language("JSON")
+        val message = """{
+            "@event_name": "test_event",
+            "@behov": ["Inntekt"]
+        }"""
+        river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
+        assertFalse(gotMessage)
+        assertEquals(RiverValidationResult.VALIDATION_FAILED, validationResult)
+        
+        val counter = metrics.find("message_counter").counter()
+        assertNotNull(counter)
+        assertEquals("Inntekt", counter!!.id.getTag("behov"))
+        assertEquals("false", counter.id.getTag("losning"))
+    }
 }

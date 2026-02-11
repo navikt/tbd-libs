@@ -110,6 +110,16 @@ open class JsonMessage(
     private val json: ObjectNode
     private val recognizedKeys = mutableMapOf<String, JsonNode>()
     internal val keys: Set<String> get() = recognizedKeys.keys.toSet()
+    val eventName: String get() = json.path(EventNameKey).takeUnless { it.isMissingOrNull() }?.asText() ?: "ukjent"
+    val avsender: String? get() = json.path(ParticipatingServicesKey)
+        .takeIf { it.isArray && it.size() > 0 }
+        ?.get(0)?.path("service")?.takeUnless { it.isMissingOrNull() }?.asText()
+    val behov: String? get() = json.path(NeedKey)
+        .takeIf { it.isArray && it.size() > 0 }
+        ?.map { it.asText() }
+        ?.sorted()
+        ?.joinToString("-")
+    val harLosning: Boolean get() = !json.path("@løsning").isMissingOrNull()
 
     init {
         json = parseMessageAsJsonObject(originalMessage, problems)

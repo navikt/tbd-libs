@@ -53,28 +53,28 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         val problems = MessageProblems(message)
         try {
             val packet = JsonMessage(message, problems, randomIdGenerator)
+            val tags = MessageCounterTags.from(packet)
             preconditions.forEach { it.validate(packet) }
-            if (problems.hasErrors()) return onPreconditionError(metrics, problems, context, metadata)
+            if (problems.hasErrors()) return onPreconditionError(metrics, problems, context, metadata, tags)
             validations.forEach { it.validate(packet) }
-            if (problems.hasErrors()) return onError(metrics, problems, context, metadata)
-            onPacket(packet, JsonMessageContext(context, packet), metadata, metrics)
+            if (problems.hasErrors()) return onError(metrics, problems, context, metadata, tags)
+            onPacket(packet, JsonMessageContext(context, packet), metadata, metrics, tags)
         } catch (err: MessageProblems.MessageException) {
-            return onSevere(metrics, err, context)
+            return onSevere(metrics, err, context, MessageCounterTags.unparseable())
         }
     }
 
-    private fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry) {
+    private fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry, tags: MessageCounterTags) {
         val recognizedKeys = packet.keys
-        val eventName = if ("@event_name" in recognizedKeys) packet["@event_name"].asText() else "ukjent"
         listeners.forEach {
-            notifyPacketListener(metrics, eventName, it, packet, recognizedKeys, context, metadata)
+            notifyPacketListener(metrics, it, packet, recognizedKeys, context, metadata, tags)
         }
     }
 
     @WithSpan
-    private fun notifyPacketListener(metrics: MeterRegistry, @SpanAttribute("eventName") eventName: String, packetListener: PacketListener, packet: JsonMessage, recognizedKeys: Set<String>, context: MessageContext, metadata: MessageMetadata) {
-        onMessageCounter(metrics, context.rapidName(), packetListener.name(), "ok", eventName)
-        logRecognizedKeys(metrics, context.rapidName(), packetListener.name(), eventName, recognizedKeys)
+    private fun notifyPacketListener(metrics: MeterRegistry, packetListener: PacketListener, packet: JsonMessage, recognizedKeys: Set<String>, context: MessageContext, metadata: MessageMetadata, @SpanAttribute("eventName") tags: MessageCounterTags) {
+        onMessageCounter(metrics, context.rapidName(), packetListener.name(), "ok", tags)
+        logRecognizedKeys(metrics, context.rapidName(), packetListener.name(), tags.eventName, recognizedKeys)
         val timer = Timer.start(metrics)
         packetListener.onPacket(packet, context, metadata, metrics)
         timer.stop(
@@ -82,7 +82,7 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
                 .description("Hvor lang det tar å lese en gjenkjent melding i sekunder")
                 .tag("rapid", context.rapidName())
                 .tag("river", packetListener.name())
-                .tag("event_name", eventName)
+                .tag("event_name", tags.eventName)
                 .register(metrics)
         )
     }
@@ -100,38 +100,46 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         }
     }
 
-    private fun onSevere(metrics: MeterRegistry, error: MessageProblems.MessageException, context: MessageContext) {
+    private fun onSevere(metrics: MeterRegistry, error: MessageProblems.MessageException, context: MessageContext, tags: MessageCounterTags) {
         listeners.forEach {
-            onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
+            onMessageCounter(metrics, context.rapidName(), it.name(), "severe", tags)
             it.onSevere(error, context)
         }
     }
 
-    private fun onPreconditionError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+    private fun onPreconditionError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata, tags: MessageCounterTags) {
         Span.current().setAttribute("nav.rapid_and_rivers.message.onPreconditionError", true)
         listeners.forEach {
-            onMessageCounter(metrics, context.rapidName(), it.name(), "severe")
+            onMessageCounter(metrics, context.rapidName(), it.name(), "severe", tags)
             it.onPreconditionError(problems, context, metadata)
         }
     }
 
-    private fun onError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
+    private fun onError(metrics: MeterRegistry, problems: MessageProblems, context: MessageContext, metadata: MessageMetadata, tags: MessageCounterTags) {
         listeners.forEach {
-            onMessageCounter(metrics, context.rapidName(), it.name(), "error")
+            onMessageCounter(metrics, context.rapidName(), it.name(), "error", tags)
             it.onError(problems, context, metadata)
         }
     }
 
-    private fun onMessageCounter(metrics: MeterRegistry, rapidName: String, riverName: String, validated: String, eventName: String? = null) {
-        addSpanAttributes(rapidName, riverName, validated, eventName)
-        Counter.builder("message_counter")
+    private fun onMessageCounter(metrics: MeterRegistry, rapidName: String, riverName: String, validated: String, tags: MessageCounterTags) {
+        addSpanAttributes(rapidName, riverName, validated, tags.eventName)
+        val builder = Counter.builder("message_counter")
             .description("Hvor mange meldinger som er lest inn")
             .tag("rapid", rapidName)
             .tag("river", riverName)
             .tag("validated", validated)
-            .tag("event_name", eventName ?: "")
-            .register(metrics)
-            .increment()
+            .tag("event_name", tags.eventName)
+
+        tags.behov?.let {
+            builder.tag("behov", it)
+            builder.tag("losning", tags.harLosning.toString())
+        }
+        tags.avsender?.let {
+            builder.tag("avsender", it)
+        }
+
+        builder.register(metrics).increment()
     }
 
     private fun addSpanAttributes(rapidName: String, riverName: String, validated: String, eventName: String? = null) {
@@ -184,6 +192,31 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
 
         override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
             packetHandler.onPacket(packet, context, metadata, meterRegistry)
+        }
+    }
+
+    private data class MessageCounterTags(
+        val eventName: String,
+        val avsender: String?,
+        val behov: String?,
+        val harLosning: Boolean
+    ) {
+        companion object {
+            fun from(packet: JsonMessage): MessageCounterTags {
+                return MessageCounterTags(
+                    eventName = packet.eventName,
+                    avsender = packet.avsender,
+                    behov = packet.behov,
+                    harLosning = packet.harLosning
+                )
+            }
+
+            fun unparseable() = MessageCounterTags(
+                eventName = "ukjent",
+                avsender = null,
+                behov = null,
+                harLosning = false
+            )
         }
     }
 }
