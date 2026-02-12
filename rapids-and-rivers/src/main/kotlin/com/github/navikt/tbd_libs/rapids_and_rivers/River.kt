@@ -198,17 +198,17 @@ class River(rapidsConnection: RapidsConnection, private val randomIdGenerator: R
         val participatingServices: List<String>?
     ) {
         fun behovTagValue(): String {
-            if(behov.isNullOrEmpty()) return "none"
+            if (behov.isNullOrEmpty()) return "none"
             return behov.sorted().joinToString(",")
         }
 
         fun losningerTagValue(): String {
-            if(losninger.isNullOrEmpty()) return "none"
+            if (losninger.isNullOrEmpty()) return "none"
             return losninger.sorted().joinToString(",")
         }
 
         fun participatingServicesTagValue(): String {
-            if(participatingServices.isNullOrEmpty()) return "none"
+            if (participatingServices.isNullOrEmpty()) return "none"
             return participatingServices.joinToString(",")
         }
 
