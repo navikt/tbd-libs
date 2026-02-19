@@ -1,4 +1,4 @@
-val postgresqlVersion = "42.7.8"
+val postgresqlVersion = "42.7.9"
 val hikariCPVersion = "6.3.0"
 
 dependencies {
