@@ -17,10 +17,11 @@ class DatabaseContainer(
     private val cleanupStrategy: CleanupStrategy? = null,
     private val initStrategy: InitStrategy? = null,
     private val maxHikariPoolSize: Int = 2,
-    private val walLevelLogical: Boolean = false
+    private val walLevelLogical: Boolean = false,
+    private val postgresVersjon: Int
 ) {
     private val instance by lazy {
-        PostgreSQLContainer("postgres:15").apply {
+        PostgreSQLContainer("postgres:$postgresVersjon").apply {
             withCreateContainerCmdModifier { command -> command.withName(appnavn) }
             if (walLevelLogical) {
                 // Cloud SQL har wal_level = 'logical' på grunn av flagget cloudsql.logical_decoding i
