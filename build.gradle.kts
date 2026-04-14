@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 val junitJupiterVersion = "6.0.2"
 val mockkVersion = "1.13.17"
-val jacksonVersion = "2.18.3"
 val testcontainersVersion = "2.0.3"
 val kotlinxCoroutinesVersion = "1.9.0"
 
@@ -28,14 +27,11 @@ subprojects {
     val testRuntimeOnly by configurations
     dependencies {
         constraints {
-            api("com.fasterxml.jackson:jackson-bom:$jacksonVersion") {
-                because("Alle moduler skal bruke samme versjon av jackson")
+            api("tools.jackson:jackson-bom:3.1.2") {
+                because("Alle moduler skal bruke samme versjon av Jackson 3")
             }
-            api("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion") {
-                because("Alle moduler skal bruke samme versjon av jackson")
-            }
-            api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion") {
-                because("Alle moduler skal bruke samme versjon av jackson")
+            api("com.fasterxml.jackson:jackson-bom:2.21.2") {
+                because("Alle moduler skal bruke samme versjon av Jackson 2")
             }
             api("io.mockk:mockk:$mockkVersion") {
                 because("Alle moduler skal bruke samme versjon av mockk")
