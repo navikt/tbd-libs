@@ -1,5 +1,5 @@
 dependencies {
-    api(platform("com.fasterxml.jackson:jackson-bom"))
+    api(platform(libs.jackson2.bom))
     api("com.fasterxml.jackson.module:jackson-module-kotlin")
     api(project(":result-object"))
 

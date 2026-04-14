@@ -5,7 +5,7 @@ dependencies {
     api(project(":kafka"))
     api(project(":rapids-and-rivers-api"))
 
-    api(platform("com.fasterxml.jackson:jackson-bom"))
+    api(platform(libs.jackson2.bom))
     api("com.fasterxml.jackson.module:jackson-module-kotlin")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 

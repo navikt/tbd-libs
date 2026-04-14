@@ -1,0 +1,2 @@
+[libraries]
+jackson2-bom = "com.fasterxml.jackson:jackson-bom:2.21.2"

@@ -28,10 +28,7 @@ subprojects {
     dependencies {
         constraints {
             api("tools.jackson:jackson-bom:3.1.2") {
-                because("Alle moduler skal bruke samme versjon av Jackson 3")
-            }
-            api("com.fasterxml.jackson:jackson-bom:2.21.2") {
-                because("Alle moduler skal bruke samme versjon av Jackson 2")
+                because("Jackson 3 < 3.1.0 har sikkerhetshull")
             }
             api("io.mockk:mockk:$mockkVersion") {
                 because("Alle moduler skal bruke samme versjon av mockk")
