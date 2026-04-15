@@ -1,9 +1,7 @@
-val ktorVersion = "3.3.3"
-
 dependencies {
     api(project(":naisful-app"))
-    api("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    api("io.ktor:ktor-server-test-host:$ktorVersion") {
+    api(libs.ktor.client.content.negotiation)
+    api(libs.ktor.server.test.host) {
         exclude(group = "org.junit.jupiter", module = "junit-jupiter")
     }
 }

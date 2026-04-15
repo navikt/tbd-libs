@@ -1,3 +1,3 @@
 dependencies {
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm")
+    implementation(libs.kotlinx.coroutines)
 }

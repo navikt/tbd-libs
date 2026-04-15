@@ -1,2 +1,50 @@
+[versions]
+awaitility = "4.3.0"
+flyway = "11.20.2"
+hikariCP = "6.3.0"
+jackson2 = "2.21.2"
+java-jwt = "4.5.0"
+kafka = "4.2.0"
+kotlin = "2.3.0"
+kotlinx-coroutines = "1.9.0"
+ktor = "3.3.3"
+logback = "1.5.18"
+logstash-logback-encoder = "8.0"
+micrometer = "1.15.2"
+mockk = "1.13.17"
+opentelemetry-instrumentation = "2.9.0"
+postgresql = "42.7.8"
+slf4j = "2.0.17"
+testcontainers = "2.0.3"
+wiremock = "3.12.1"
+
 [libraries]
-jackson2-bom = "com.fasterxml.jackson:jackson-bom:2.21.2"
+awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
+flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+hikariCP = { module = "com.zaxxer:HikariCP", version.ref = "hikariCP" }
+jackson2-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson2" }
+java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
+kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-jackson = { module = "io.ktor:ktor-serialization-jackson", version.ref = "ktor" }
+ktor-server-call-id = { module = "io.ktor:ktor-server-call-id", version.ref = "ktor" }
+ktor-server-cio = { module = "io.ktor:ktor-server-cio", version.ref = "ktor" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation", version.ref = "ktor" }
+ktor-server-metrics-micrometer = { module = "io.ktor:ktor-server-metrics-micrometer", version.ref = "ktor" }
+ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
+ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
+micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+opentelemetry-instrumentation-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "opentelemetry-instrumentation" }
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

@@ -1,12 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
-val junitJupiterVersion = "6.0.2"
-val mockkVersion = "1.13.17"
-val testcontainersVersion = "2.0.3"
-val kotlinxCoroutinesVersion = "1.9.0"
-
 plugins {
-    kotlin("jvm") version "2.3.0" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
     `maven-publish`
 }
 
@@ -20,7 +15,6 @@ subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.gradle.maven-publish")
 
-    ext.set("testcontainersVersion", testcontainersVersion)
 
     val api by configurations
     val testImplementation by configurations
@@ -30,15 +24,9 @@ subprojects {
             api("tools.jackson:jackson-bom:3.1.2") {
                 because("Jackson 3 < 3.1.0 har sikkerhetshull")
             }
-            api("io.mockk:mockk:$mockkVersion") {
-                because("Alle moduler skal bruke samme versjon av mockk")
-            }
-            api("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:$kotlinxCoroutinesVersion") {
-                because("Alle moduler skal bruke samme versjon av coroutines")
-            }
         }
 
-        testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+        testImplementation("org.junit.jupiter:junit-jupiter:6.0.2")
         testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     }
 

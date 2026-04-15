@@ -5,6 +5,6 @@ dependencies {
     api(project(":signed-jwt"))
     api(project(":result-object"))
 
-    testImplementation("io.mockk:mockk")
+    testImplementation(libs.mockk)
     testImplementation(project(":mock-http-client"))
 }

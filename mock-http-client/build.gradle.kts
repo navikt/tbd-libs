@@ -1,3 +1,3 @@
 dependencies {
-    testImplementation("io.mockk:mockk")
+    testImplementation(libs.mockk)
 }
