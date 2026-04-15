@@ -16,7 +16,7 @@ opentelemetry-instrumentation = "2.9.0"
 postgresql = "42.7.8"
 slf4j = "2.0.17"
 testcontainers = "2.0.3"
-wiremock = "3.12.1"
+wiremock = "3.13.2"
 
 [libraries]
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
