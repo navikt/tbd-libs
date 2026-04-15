@@ -24,9 +24,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v5
       - name: Genererer versjon
         run: |
-          TIME=$(TZ="Europe/Oslo" date +%Y.%m.%d-%H.%M)
+          TIME=$(TZ="Europe/Oslo" date +%Y%m%d.%H%M)
           COMMIT=$(git rev-parse --short=8 HEAD)
-          VERSION=$TIME-$COMMIT
+          VERSION="$TIME+$COMMIT"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: upload artifacts
         run: ./gradlew -Pversion="$(echo $VERSION)" publish --parallel
