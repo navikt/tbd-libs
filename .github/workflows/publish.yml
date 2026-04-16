@@ -25,8 +25,7 @@ jobs:
       - name: Genererer versjon
         run: |
           TIME=$(TZ="Europe/Oslo" date +%Y%m%d.%H%M)
-          COMMIT=$(git rev-parse --short=8 HEAD)
-          VERSION="$TIME+$COMMIT"
+          VERSION="$TIME"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
       - name: upload artifacts
         run: ./gradlew -Pversion="$(echo $VERSION)" publish --parallel
