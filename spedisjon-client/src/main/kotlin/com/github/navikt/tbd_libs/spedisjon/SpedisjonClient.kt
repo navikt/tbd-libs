@@ -16,8 +16,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse
 import java.time.Duration
-import java.time.LocalDate
-import java.time.LocalDateTime
 import java.util.*
 
 class SpedisjonClient(
@@ -128,7 +126,6 @@ data class HentMeldingResponse(
     val fnr: String,
     val internDokumentId: UUID,
     val eksternDokumentId: UUID,
-    val rapportertDato: LocalDateTime,
     val duplikatkontroll: String,
     val jsonBody: String
 )

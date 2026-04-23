@@ -144,7 +144,6 @@ class SpedisjonClientTest {
   "fnr": "fnr",
   "internDokumentId": "${UUID.randomUUID()}",
   "eksternDokumentId": "${UUID.randomUUID()}",
-  "rapportertDato": "${LocalDateTime.now()}",
   "duplikatkontroll": "unik_nøkkel",
   "jsonBody": "{ \"id\": \"${UUID.randomUUID()}\", \"status\": \"NY\" }"
 }"""
@@ -157,7 +156,6 @@ class SpedisjonClientTest {
               "fnr": "fnr",
               "internDokumentId": "${UUID.randomUUID()}",
               "eksternDokumentId": "${UUID.randomUUID()}",
-              "rapportertDato": "${LocalDateTime.now()}",
               "duplikatkontroll": "unik_nøkkel",
               "jsonBody": "{ \"id\": \"${UUID.randomUUID()}\", \"status\": \"NY\" }"
             }
