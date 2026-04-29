@@ -1,0 +1,10 @@
+# Personpseudoid
+
+Biblioteket er en wrapper på en valkey-klient, og kan brukes eksplisitt til å lage nye [personpseudoider](https://navno.sharepoint.com/:fl:/g/contentstorage/CSP_c3df47f1-28b0-4ae6-b3dc-911b92f214e3/IQCFF8IRx7GCSI5ahTzHMbxMAXk9GYiPnxyt6Eu23EL3ahU?e=D4eSwx&nav=cz0lMkZjb250ZW50c3RvcmFnZSUyRkNTUF9jM2RmNDdmMS0yOGIwLTRhZTYtYjNkYy05MTFiOTJmMjE0ZTMmZD1iJTIxOFVmZnc3QW81a3F6M0pFYmt2SVU0NTlQSThmaXRUSkFxQklWTzIzSVltLV9iakw1cGVtTFFxUnJvNnd4djNGWCZmPTAxSlhHVkU1NEZDN0JCRFI1UlFKRUk0V1VGSFREVERQQ00mYz0lMkYmYT1Mb29wQXBwJnA9JTQwZmx1aWR4JTJGbG9vcC1wYWdlLWNvbnRhaW5lciZ4PSU3QiUyMnclMjIlM0ElMjJUMFJUVUh4dVlYWnVieTV6YUdGeVpYQnZhVzUwTG1OdmJYeGlJVGhWWm1aM04wRnZOV3R4ZWpOS1JXSnJka2xWTkRVNVVFazRabWwwVkVwQmNVSkpWazh5TTBsWmJTMWZZbXBNTlhCbGJVeFJjVkp5YnpaM2VIWXpSbGg4TURGS1dFZFdSVFZaVmtnME1rSlVRMVEwVms1Q1dVWkVOa28zV0UxUlMwWkZOZyUzRCUzRCUyMiUyQyUyMmklMjIlM0ElMjI4MmY5ZjI5ZC1mZTdiLTRjNjQtOTQ4NC1lYTYwMGU4Y2U5NWElMjIlN0Q%3D) for et gitt 
+[identitetsnummer](https://www.skatteetaten.no/person/folkeregister/identitetsnummer-og-elektronisk-id/), og for å hente ut identitetsnummeret for en gitt personpseudoid.
+
+Intensjonen med biblioteket er at det bør brukes av alle backend-tjenester til Speil som ønsker en måte å identifisere
+en person på. 
+
+Biblioteket belager seg på at det finnes en Valkey-instans ment for personpseudoider, som er felles for alle
+tjenestene som trenger en personpseudoid eller å identifisere en person vha. en personpseudoid.

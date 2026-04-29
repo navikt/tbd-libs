@@ -23,5 +23,6 @@ include(
     "spenn-simulering-client",
     "spedisjon-client",
     "jackson",
-    "sql-dsl"
+    "sql-dsl",
+    "person-pseudo-id"
 )

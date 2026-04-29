@@ -17,6 +17,7 @@ postgresql = "42.7.8"
 slf4j = "2.0.17"
 testcontainers = "2.0.3"
 wiremock = "3.12.1"
+testcontainers-valkey = "1.0.0"
 
 [libraries]
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
@@ -44,7 +45,9 @@ postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" 
 slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
 testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
+testcontainers-valkey = { module = "io.github.ss-bhatt:testcontainers-valkey", version.ref = "testcontainers-valkey" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+valkey-java = "io.valkey:valkey-java:5.5.0"
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
