@@ -2,11 +2,11 @@ package com.github.navikt.tbd_libs.personpseudoid
 
 import io.github.ss_bhatt.testcontainers.valkey.ValkeyContainer
 import io.valkey.JedisPooled
+import java.time.Duration
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import java.time.Duration
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PersonPseudoIdClientTest {
@@ -39,8 +39,8 @@ class PersonPseudoIdClientTest {
         val nyId2 = client.nyPersonPseudoId(identitetsnummer2)
         val funnet1 = client.finnIdentitetsnummer(nyId1)
         val funnet2 = client.finnIdentitetsnummer(nyId2)
-        Assertions.assertEquals(identitetsnummer1, funnet1)
-        Assertions.assertEquals(identitetsnummer2, funnet2)
+        assertEquals(identitetsnummer1, funnet1)
+        assertEquals(identitetsnummer2, funnet2)
     }
 
     @Test
@@ -48,7 +48,7 @@ class PersonPseudoIdClientTest {
         println(valkeyInstance.connectionString)
         val identitetsnummer = "12345678912"
         val nyId = client.nyPersonPseudoId(identitetsnummer)
-        val ttl = jedisPooled.ttl(nyId.value.toString())
-        Assertions.assertEquals(ttl, Duration.ofDays(7).seconds)
+        val ttl = jedisPooled.ttl(nyId.toString())
+        assertEquals(ttl, Duration.ofDays(7).seconds)
     }
 }

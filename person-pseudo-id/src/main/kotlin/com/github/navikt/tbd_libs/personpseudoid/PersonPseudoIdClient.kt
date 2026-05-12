@@ -21,17 +21,13 @@ class PersonPseudoIdClient(
     private val jedisPooled =
         JedisPooled(valkeyConfig.connectionStringMedBrukernavnOgPassord())
 
-    fun nyPersonPseudoId(identitetsnummer: String): PersonPseudoId {
+    fun nyPersonPseudoId(identitetsnummer: String): UUID {
         val nyId = UUID.randomUUID()
         jedisPooled.setex(nyId.toString(), Duration.ofDays(7).seconds, identitetsnummer)
-        return PersonPseudoId(nyId)
+        return nyId
     }
 
-    fun finnIdentitetsnummer(personPseudoId: PersonPseudoId): String? {
-        return jedisPooled.get(personPseudoId.value.toString())
+    fun finnIdentitetsnummer(personPseudoId: UUID): String? {
+        return jedisPooled.get(personPseudoId.toString())
     }
 }
-
-
-@JvmInline
-value class PersonPseudoId(val value: UUID)
