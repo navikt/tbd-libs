@@ -114,7 +114,7 @@ fun naisApp(
     readyCheck: () -> Boolean = { true },
     preStopHook: suspend () -> Unit = ::defaultPreStopHook,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
-    statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() },
+    statusPagesConfig: StatusPagesConfig.(String) -> Unit = { defaultStatusPagesConfig(callIdHeaderName) },
     developmentMode: Boolean = defaultDevelopmentMode(),
     gracefulShutdownDelay: Duration = 20.seconds,
     applicationModule: Application.() -> Unit
@@ -153,7 +153,7 @@ fun Application.standardApiModule(
     readyCheck: () -> Boolean = { true },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
-    statusPagesConfig: StatusPagesConfig.() -> Unit = { defaultStatusPagesConfig() }
+    statusPagesConfig: StatusPagesConfig.(String) -> Unit = { callIdHeaderName -> defaultStatusPagesConfig(callIdHeaderName) }
 ) {
     install(CallId) {
         header(callIdHeaderName)
@@ -182,7 +182,7 @@ fun Application.standardApiModule(
         }
     }
     install(StatusPages) {
-        statusPagesConfig()
+        statusPagesConfig(callIdHeaderName)
     }
     install(MicrometerMetrics) {
         registry = meterRegistry
@@ -284,9 +284,10 @@ internal suspend fun defaultPreStopHook() {
     delay(5.seconds)
 }
 
-fun StatusPagesConfig.defaultStatusPagesConfig() {
+fun StatusPagesConfig.defaultStatusPagesConfig(callIdHeaderName: String) {
     exception<BadRequestException> { call, cause ->
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+        call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
         call.respond(HttpStatusCode.BadRequest, FeilResponse(
             status = HttpStatusCode.BadRequest,
             type = URI("urn:error:bad_request"),
@@ -298,6 +299,7 @@ fun StatusPagesConfig.defaultStatusPagesConfig() {
     }
     exception<NotFoundException> { call, cause ->
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+        call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
         call.respond(HttpStatusCode.NotFound, FeilResponse(
             status = HttpStatusCode.NotFound,
             type = URI("urn:error:not_found"),
@@ -310,6 +312,7 @@ fun StatusPagesConfig.defaultStatusPagesConfig() {
     exception<Throwable> { call, cause ->
         call.application.log.info("ukjent feil: ${cause.message}. svarer med InternalServerError og en feilmelding i JSON", cause)
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+        call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
         call.respond(HttpStatusCode.InternalServerError, FeilResponse(
             status = HttpStatusCode.InternalServerError,
             type = URI("urn:error:internal_error"),
@@ -324,6 +327,7 @@ fun StatusPagesConfig.defaultStatusPagesConfig() {
         when (content) {
             is OutgoingContent.NoContent -> {
                 call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
+                call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
                 call.respond(statusCode, FeilResponse(
                     status = statusCode,
                     type = statusCode.toURI(call),
