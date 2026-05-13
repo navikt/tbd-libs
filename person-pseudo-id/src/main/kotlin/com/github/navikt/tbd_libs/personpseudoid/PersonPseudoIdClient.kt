@@ -1,10 +1,12 @@
 package com.github.navikt.tbd_libs.personpseudoid
 
+import io.valkey.Connection
 import io.valkey.DefaultJedisClientConfig
 import io.valkey.HostAndPort
 import io.valkey.JedisPooled
 import java.time.Duration
 import java.util.*
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 
 data class ValkeyConfig(
     val username: String,
@@ -29,6 +31,12 @@ class PersonPseudoIdClient(
                 .user(valkeyConfig.username)
                 .password(valkeyConfig.password)
                 .build(),
+            GenericObjectPoolConfig<Connection>().apply {
+                testOnBorrow = true
+                testWhileIdle = true
+                timeBetweenEvictionRuns = Duration.ofSeconds(30)
+                minEvictableIdleDuration = Duration.ofMinutes(1)
+            }
         )
 
     fun nyPersonPseudoId(identitetsnummer: String): UUID {
