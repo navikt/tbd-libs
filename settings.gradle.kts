@@ -27,4 +27,6 @@ include(
     "person-pseudo-id",
     "access-token-provider-api",
     "access-token-provider-texas",
+    "populasjonstilgangskontroll-provider-api",
+    "populasjonstilgangskontroll-provider-tilgangsmaskinen",
 )
