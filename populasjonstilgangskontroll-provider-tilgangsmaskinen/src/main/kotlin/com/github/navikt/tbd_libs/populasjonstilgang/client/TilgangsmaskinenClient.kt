@@ -26,7 +26,7 @@ class TilgangsmaskinenClient(
 ): PopulasjonstilgangskontrollProvider {
     private val objectMapper = jacksonObjectMapper()
     override fun kontrollerTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
-        val oboToken = tokenProvider.oboToken(scope, accessToken)
+        val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
 
         val request = HttpRequest.newBuilder()
             .uri(URI("$baseUrl/komplett"))
