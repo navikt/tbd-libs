@@ -29,7 +29,7 @@ class TilgangsmaskinenClient(
         val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
 
         val request = HttpRequest.newBuilder()
-            .uri(URI("$baseUrl/komplett"))
+            .uri(URI("$baseUrl/api/v1/komplett"))
             .timeout(Duration.ofSeconds(10))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
@@ -70,8 +70,8 @@ class TilgangsmaskinenClient(
         ): TilgangsmaskinenClient {
             val tokenProvider = TexasClient.fromEnv()
             val prod = env["NAIS_CLUSTER_NAME"]?.startsWith("prod") ?: false
-            val scope = if (prod) "api://prod-gcp.tilgangsmaskin.populasjonskontroll/.default" else "api://dev-gcp.tilgangsmaskin.populasjonskontroll/.default"
-            val baseUrl = (if (prod) "https://tilgangsmaskin.intern.nav.no" else "https://tilgangsmaskin.intern.dev.nav.no") + "/api/v1"
+            val scope = if (prod) "api://prod-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default" else "api://dev-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default"
+            val baseUrl = "http://populasjonstilgangskontroll.tilgangsmaskin"
             return TilgangsmaskinenClient(scope, baseUrl, tokenProvider)
         }
     }
