@@ -70,8 +70,8 @@ class TilgangsmaskinenClient(
     companion object {
         fun fromEnv(
             env: Map<String, String> = System.getenv(),
+            tokenProvider: AccessTokenProvider = TexasClient.fromEnv()
         ): TilgangsmaskinenClient {
-            val tokenProvider = TexasClient.fromEnv()
             val prod = env["NAIS_CLUSTER_NAME"]?.startsWith("prod") ?: false
             val scope = if (prod) "api://prod-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default" else "api://dev-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default"
             val baseUrl = "http://populasjonstilgangskontroll.tilgangsmaskin"
