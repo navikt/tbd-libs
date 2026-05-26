@@ -1,12 +1,13 @@
 package com.github.navikt.tbd_libs.populasjonstilgang.client
 
+import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.access_token.AccessTokenProvider
 import com.github.navikt.tbd_libs.access_token.TexasClient
-import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangSomMangler
+import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -25,6 +26,8 @@ class TilgangsmaskinenClient(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
 ): PopulasjonstilgangskontrollProvider {
     private val objectMapper = jacksonObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+
     override fun kontrollerTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
         val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
 
