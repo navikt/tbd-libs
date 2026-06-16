@@ -6,7 +6,7 @@ package com.github.navikt.tbd_libs.populasjonstilgang.api
 interface PopulasjonstilgangskontrollProvider {
     /**
      * Kontrollerer om saksbehandleren som er autentisert via [accessToken] har tilgang til personen
-     * identifisert av [fødselsnummer].
+     * identifisert av [fødselsnummer]. Evaluerer et komplett regelsett.
      *
      * @param accessToken JWT-accesstoken for den innloggede saksbehandleren.
      * @param fødselsnummer Fødselsnummeret til personen det skal sjekkes tilgang for.
@@ -15,5 +15,18 @@ interface PopulasjonstilgangskontrollProvider {
      *   [TilgangskontrollResultat.IdentIkkeFunnet] dersom personen ikke ble funnet,
      *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
      */
-    fun kontrollerTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat
+    fun kontrollerKomplettTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat
+
+    /**
+     * Kontrollerer om saksbehandleren som er autentisert via [accessToken] har tilgang til personen
+     * identifisert av [fødselsnummer]. Evaluerer mot kjerneregelsett.
+     *
+     * @param accessToken JWT-accesstoken for den innloggede saksbehandleren.
+     * @param fødselsnummer Fødselsnummeret til personen det skal sjekkes tilgang for.
+     * @return [TilgangskontrollResultat.Ok] dersom tilgang er innvilget,
+     *   [TilgangskontrollResultat.ManglerTilgang] dersom saksbehandleren mangler nødvendig tilgang,
+     *   [TilgangskontrollResultat.IdentIkkeFunnet] dersom personen ikke ble funnet,
+     *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
+     */
+    fun kontrollerKjerneTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat
 }

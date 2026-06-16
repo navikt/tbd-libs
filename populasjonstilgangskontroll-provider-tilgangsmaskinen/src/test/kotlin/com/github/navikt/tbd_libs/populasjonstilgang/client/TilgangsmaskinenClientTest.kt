@@ -20,7 +20,7 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `tilgang ok - 204`() {
         val (client, httpClient) = mockClient("", 204)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.Ok, result)
         verifiserPOST(httpClient)
     }
@@ -28,7 +28,7 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `ident ikke funnet - 404`() {
         val (client, httpClient) = mockClient("", 404)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.IdentIkkeFunnet, result)
         verifiserPOST(httpClient)
     }
@@ -36,7 +36,7 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `mangler tilgang - strengt fortrolig adresse`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_STRENGT_FORTROLIG_ADRESSE"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse),
             result
@@ -46,7 +46,7 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `mangler tilgang - strengt fortrolig adresse utland`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_STRENGT_FORTROLIG_UTLAND"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland),
             result
@@ -56,35 +56,35 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `mangler tilgang - fortrolig adresse`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_FORTROLIG_ADRESSE"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.FortroligAdresse), result)
     }
 
     @Test
     fun `mangler tilgang - skjerming (egen ansatt)`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_SKJERMING"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.EgenAnsatt), result)
     }
 
     @Test
     fun `mangler tilgang - habilitet`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_HABILITET"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Habilitet), result)
     }
 
     @Test
     fun `mangler tilgang - verge`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_VERGE"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Verge), result)
     }
 
     @Test
     fun `mangler tilgang - geografisk tilhørighet`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_GEOGRAFISK"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet),
             result
@@ -94,14 +94,14 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `mangler tilgang - person død`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_AVDØD"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.PersonDød), result)
     }
 
     @Test
     fun `mangler tilgang - ukjent tilgangSomMangler`() {
         val (client, _) = mockClient(avvistResponse("AVVIST_UKJENT_GRUNN"), 403)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         result as TilgangskontrollResultat.UventetFeil
         Assertions.assertTrue(result.menneskeligLesbarForklaring.contains("AVVIST_UKJENT_GRUNN"))
     }
@@ -109,7 +109,7 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `uventet statuskode`() {
         val (client, _) = mockClient("", 500)
-        val result = client.kontrollerTilgang("access_token", "12345678901")
+        val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         result as TilgangskontrollResultat.UventetFeil
         Assertions.assertTrue(result.menneskeligLesbarForklaring.contains("500"))
     }
@@ -118,7 +118,7 @@ class TilgangsmaskinenClientTest {
     fun `sender fødselsnummer i request body`() {
         val fødselsnummer = "12345678901"
         val (client, httpClient) = mockClient("", 204)
-        client.kontrollerTilgang("access_token", fødselsnummer)
+        client.kontrollerKomplettTilgang("access_token", fødselsnummer)
         verify {
             httpClient.send<String>(match { request ->
                 request.bodyAsString() == fødselsnummer
@@ -129,7 +129,123 @@ class TilgangsmaskinenClientTest {
     @Test
     fun `sender obo-token i authorization header`() {
         val (client, httpClient) = mockClient("", 204)
-        client.kontrollerTilgang("access_token", "12345678901")
+        client.kontrollerKomplettTilgang("access_token", "12345678901")
+        verifiserRequestHeader(httpClient, "Authorization") { it == "Bearer on_behalf_of_token" }
+    }
+
+    @Test
+    fun `kjerne - tilgang ok - 204`() {
+        val (client, httpClient) = mockClient("", 204)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.Ok, result)
+        verifiserPOST(httpClient)
+    }
+
+    @Test
+    fun `kjerne - ident ikke funnet - 404`() {
+        val (client, httpClient) = mockClient("", 404)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.IdentIkkeFunnet, result)
+        verifiserPOST(httpClient)
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - strengt fortrolig adresse`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_STRENGT_FORTROLIG_ADRESSE"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(
+            TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse),
+            result
+        )
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - strengt fortrolig adresse utland`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_STRENGT_FORTROLIG_UTLAND"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(
+            TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland),
+            result
+        )
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - fortrolig adresse`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_FORTROLIG_ADRESSE"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.FortroligAdresse), result)
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - skjerming (egen ansatt)`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_SKJERMING"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.EgenAnsatt), result)
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - habilitet`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_HABILITET"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Habilitet), result)
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - verge`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_VERGE"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Verge), result)
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - geografisk tilhørighet`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_GEOGRAFISK"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(
+            TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet),
+            result
+        )
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - person død`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_AVDØD"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        assertEquals(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.PersonDød), result)
+    }
+
+    @Test
+    fun `kjerne - mangler tilgang - ukjent tilgangSomMangler`() {
+        val (client, _) = mockClient(avvistResponse("AVVIST_UKJENT_GRUNN"), 403)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        result as TilgangskontrollResultat.UventetFeil
+        Assertions.assertTrue(result.menneskeligLesbarForklaring.contains("AVVIST_UKJENT_GRUNN"))
+    }
+
+    @Test
+    fun `kjerne - uventet statuskode`() {
+        val (client, _) = mockClient("", 500)
+        val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
+        result as TilgangskontrollResultat.UventetFeil
+        Assertions.assertTrue(result.menneskeligLesbarForklaring.contains("500"))
+    }
+
+    @Test
+    fun `kjerne - sender fødselsnummer i request body`() {
+        val fødselsnummer = "12345678901"
+        val (client, httpClient) = mockClient("", 204)
+        client.kontrollerKjerneTilgang("access_token", fødselsnummer)
+        verify {
+            httpClient.send<String>(match { request ->
+                request.bodyAsString() == fødselsnummer
+            }, any())
+        }
+    }
+
+    @Test
+    fun `kjerne - sender obo-token i authorization header`() {
+        val (client, httpClient) = mockClient("", 204)
+        client.kontrollerKjerneTilgang("access_token", "12345678901")
         verifiserRequestHeader(httpClient, "Authorization") { it == "Bearer on_behalf_of_token" }
     }
 

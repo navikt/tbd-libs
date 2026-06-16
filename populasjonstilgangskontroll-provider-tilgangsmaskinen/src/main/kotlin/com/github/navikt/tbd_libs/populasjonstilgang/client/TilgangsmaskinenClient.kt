@@ -28,11 +28,50 @@ class TilgangsmaskinenClient(
     private val objectMapper = jacksonObjectMapper()
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-    override fun kontrollerTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
+    override fun kontrollerKomplettTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
         val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
 
         val request = HttpRequest.newBuilder()
             .uri(URI("$baseUrl/api/v1/komplett"))
+            .timeout(Duration.ofSeconds(10))
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer $oboToken")
+            .header("callId", UUID.randomUUID().toString())
+            .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        val statusCode = response.statusCode()
+        if (statusCode == 204) {
+            return TilgangskontrollResultat.Ok
+        }
+        if (statusCode == 403) {
+            val tilgangsmaskinenResponse = objectMapper.readValue<MinimalTilgangsmaskinenResponse>(response.body())
+            return when (tilgangsmaskinenResponse.title) {
+                "AVVIST_STRENGT_FORTROLIG_ADRESSE" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse)
+                "AVVIST_STRENGT_FORTROLIG_UTLAND" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland)
+                "AVVIST_FORTROLIG_ADRESSE" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.FortroligAdresse)
+                "AVVIST_SKJERMING" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.EgenAnsatt)
+                "AVVIST_HABILITET" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Habilitet)
+                "AVVIST_VERGE" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Verge)
+                "AVVIST_GEOGRAFISK" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet)
+                "AVVIST_AVDØD" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.PersonDød)
+                else -> TilgangskontrollResultat.UventetFeil("Uventet feilkode fra tilgangsmaskinen: $tilgangsmaskinenResponse")
+            }
+        }
+        if (statusCode == 404) {
+            return TilgangskontrollResultat.IdentIkkeFunnet
+        }
+        return TilgangskontrollResultat.UventetFeil("Uventet status fra tilgangsmaskinen: $statusCode")
+    }
+
+    override fun kontrollerKjerneTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
+        val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI("$baseUrl/api/v1/kjerne"))
             .timeout(Duration.ofSeconds(10))
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
