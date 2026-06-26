@@ -170,7 +170,7 @@ private fun buildPreparedStatement(stmt: PreparedStatement, orderOfNamedParamete
     return stmt
 }
 
-private val namedParameterRegex = Regex(":([\\p{L}_-]+)")
+private val namedParameterRegex = Regex("(?<!:):([\\p{L}_-]+)")
 
 internal fun extractNamedParametersFromQuery(sql: String): Pair<String, List<String>> {
     val query = sql.replace(namedParameterRegex, "?")

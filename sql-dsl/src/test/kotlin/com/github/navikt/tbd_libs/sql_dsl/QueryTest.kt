@@ -272,6 +272,15 @@ class QueryTest {
         assertEquals(listOf("beløp", "fra_og_med", "tilOgMed", "år", "tilÅr", "frem-til"), parameters)
     }
 
+    @Test
+    fun `named parameters - cast`() {
+        val given = "select a::jsonb from foo where id=:id and mjau=:mjau"
+        val expected = "select a::jsonb from foo where id=? and mjau=?"
+        val (actual, parameters) = extractNamedParametersFromQuery(given)
+        assertEquals(expected, actual)
+        assertEquals(listOf("id", "mjau"), parameters)
+    }
+
     private fun Connection.names(): List<String?> {
         val mapName = { rs: ResultSet -> rs.string("name") }
         return prepareStatement("select name from name").map(mapName)
