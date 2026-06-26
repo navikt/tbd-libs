@@ -166,7 +166,27 @@ class QueryTest {
             .also { navn ->
                 assertEquals(listOf("hans", "trude"), navn)
             }
+    }
 
+    @Test
+    fun `parameter - array av uuid`() = setupTest { connection ->
+        @Language("PostgreSQL")
+        val sql = """create table uuidtest ( id uuid not null )"""
+        connection.createStatement().execute(sql)
+        val førsteId = UUID.randomUUID()
+        val andreId = UUID.randomUUID()
+        connection.prepareStatementWithNamedParameters("insert into uuidtest (id) values (:id)") {
+            withParameter("id", førsteId)
+        }.execute()
+        connection.prepareStatementWithNamedParameters("insert into uuidtest (id) values (:id)") {
+            withParameter("id", andreId)
+        }.execute()
+
+        val hentedeIder = connection.prepareStatementWithNamedParameters("select id from uuidtest where id = ANY(:ider)") {
+            withParameter("ider", listOf(førsteId, andreId))
+        }.mapNotNull { it.uuid("id") }.toSet()
+
+        assertEquals(setOf(førsteId, andreId), hentedeIder)
     }
 
     @Test

@@ -263,7 +263,8 @@ data class ParametersBuilder(
             String::class -> "TEXT"
             Long::class -> "BIGINT"
             Int::class -> "INT"
-            else -> error("støtter kun lister av typen String, Long eller Int")
+            UUID::class -> "UUID"
+            else -> error("støtter kun lister av typen String, Long, Int eller UUID")
         }
         withParameter(name) { setArray(it, connection.createArrayOf(sqlType, value.toTypedArray())) }
     }
