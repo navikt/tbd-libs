@@ -1,0 +1,12 @@
+name: Build and test pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    permissions:
+      packages: read
+    uses: ./.github/workflows/build.yml
