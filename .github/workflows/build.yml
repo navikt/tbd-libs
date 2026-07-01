@@ -14,14 +14,14 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7.0.0
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
       - name: build and test
         run: ./gradlew build
       - name: Store reports
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: reports-${{ github.ref_name }}-${{ github.run_number }}
           path: |
