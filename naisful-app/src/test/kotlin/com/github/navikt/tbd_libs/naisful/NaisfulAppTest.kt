@@ -23,6 +23,7 @@ import java.net.ServerSocket
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -178,7 +179,7 @@ class NaisfulAppTest {
             }
             get("/test3").also { response ->
                 assertEquals(HttpStatusCode.Forbidden, response.status)
-                assertEquals(ContentType.Application.Json.withCharset(Charsets.UTF_8), response.contentType())
+                assertEquals(ContentType.Application.Json, response.contentType())
                 assertEquals("Fault", response.body<CustomResponse>().text)
             }
         }
@@ -249,7 +250,7 @@ class NaisfulAppTest {
                     callLogger = environment.log,
                     naisEndpoints = naisEndpoints,
                     callIdHeaderName = "callId",
-                    preStopHook = { delay(250) },
+                    preStopHook = { delay(250.milliseconds) },
                     aliveCheck = aliveCheck,
                     readyCheck = readyCheck
                 )
