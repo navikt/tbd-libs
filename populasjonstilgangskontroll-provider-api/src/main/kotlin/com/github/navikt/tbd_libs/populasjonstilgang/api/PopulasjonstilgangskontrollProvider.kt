@@ -29,4 +29,19 @@ interface PopulasjonstilgangskontrollProvider {
      *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
      */
     fun kontrollerKjerneTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat
+
+    /**
+     * Kontrollerer om NAV-ansatt identifisert av [ansattId] har tilgang til personen identifisert av
+     * [fødselsnummer]. Evaluerer mot kjerneregelsett. Kalles med maskin-til-maskin-token (client
+     * credentials flow), siden det ikke finnes en innlogget saksbehandler med et accessToken i denne
+     * flyten.
+     *
+     * @param ansattId NAV-identen (ansatt-ID) til saksbehandleren det skal sjekkes tilgang for.
+     * @param fødselsnummer Fødselsnummeret til personen det skal sjekkes tilgang for.
+     * @return [TilgangskontrollResultat.Ok] dersom tilgang er innvilget,
+     *   [TilgangskontrollResultat.ManglerTilgang] dersom saksbehandleren mangler nødvendig tilgang,
+     *   [TilgangskontrollResultat.IdentIkkeFunnet] dersom personen ikke ble funnet,
+     *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
+     */
+    fun kontrollerKjerneTilgangForAnsatt(ansattId: String, fødselsnummer: String): TilgangskontrollResultat
 }

@@ -43,28 +43,7 @@ class TilgangsmaskinenClient(
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
-        val statusCode = response.statusCode()
-        if (statusCode == 204) {
-            return TilgangskontrollResultat.Ok
-        }
-        if (statusCode == 403) {
-            val tilgangsmaskinenResponse = objectMapper.readValue<MinimalTilgangsmaskinenResponse>(response.body())
-            return when (tilgangsmaskinenResponse.title) {
-                "AVVIST_STRENGT_FORTROLIG_ADRESSE" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse)
-                "AVVIST_STRENGT_FORTROLIG_UTLAND" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland)
-                "AVVIST_FORTROLIG_ADRESSE" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.FortroligAdresse)
-                "AVVIST_SKJERMING" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.EgenAnsatt)
-                "AVVIST_HABILITET" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Habilitet)
-                "AVVIST_VERGE" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Verge)
-                "AVVIST_GEOGRAFISK" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet)
-                "AVVIST_AVDØD" -> TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.PersonDød)
-                else -> TilgangskontrollResultat.UventetFeil("Uventet feilkode fra tilgangsmaskinen: $tilgangsmaskinenResponse")
-            }
-        }
-        if (statusCode == 404) {
-            return TilgangskontrollResultat.IdentIkkeFunnet
-        }
-        return TilgangskontrollResultat.UventetFeil("Uventet status fra tilgangsmaskinen: $statusCode")
+        return håndterResponse(response)
     }
 
     override fun kontrollerKjerneTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
@@ -82,6 +61,28 @@ class TilgangsmaskinenClient(
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
+        return håndterResponse(response)
+    }
+
+    override fun kontrollerKjerneTilgangForAnsatt(ansattId: String, fødselsnummer: String): TilgangskontrollResultat {
+        val machineToken = tokenProvider.machineToken(scope = scope)
+
+        val request = HttpRequest.newBuilder()
+            .uri(URI("$baseUrl/api/v1/ccf/kjerne/$ansattId"))
+            .timeout(Duration.ofSeconds(10))
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer $machineToken")
+            .header("callId", UUID.randomUUID().toString())
+            .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
+            .build()
+
+        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+
+        return håndterResponse(response)
+    }
+
+    private fun håndterResponse(response: HttpResponse<String>): TilgangskontrollResultat {
         val statusCode = response.statusCode()
         if (statusCode == 204) {
             return TilgangskontrollResultat.Ok
