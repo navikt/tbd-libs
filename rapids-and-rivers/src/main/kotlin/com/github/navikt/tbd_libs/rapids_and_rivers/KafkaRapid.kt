@@ -9,6 +9,8 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.SentMessage
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.instrumentation.annotations.WithSpan
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
@@ -69,6 +71,7 @@ class KafkaRapid(
         return rapidTopic
     }
 
+    @WithSpan
     private fun publishRecordsInBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
         val results = messages
             .map { it to producer.send(it.producerRecord(rapidTopic)) }
@@ -77,6 +80,12 @@ class KafkaRapid(
                     val metadata = future.get()
                     Pair(SentMessage(index, record, metadata.partition(), metadata.offset()), null)
                 } catch (err: Exception) {
+                    Span.current().recordException(err)
+                    log.error(
+                        "failed to produce message index=$index of ${messages.size}, key=${record.key}: {}",
+                        err.message,
+                        err
+                    )
                     Pair(null, FailedMessage(index, record, err))
                 }
             }
@@ -91,7 +100,7 @@ class KafkaRapid(
 
         if (failed.isNotEmpty()) {
             /* handle all failed messages as a fatal error */
-            log.error("Failed to produce ${failed.size} message(s): invoking shutdown!")
+            log.error("Failed to produce ${failed.size} of ${messages.size} message(s): invoking shutdown!")
             stop()
         }
 
