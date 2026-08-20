@@ -8,6 +8,19 @@ plugins {
 allprojects {
     repositories {
         mavenCentral()
+        // for "com.github.navikt:rapids-and-rivers"-biblioteket som speil-backend-app bruker.
+        // repo.adeo.no er Navs interne Nexus-speil (kun tilgjengelig på Navs nett), mens GitHub Actions-runnere
+        // må gå via GitHub sin egen package registry-proxy for navikt-organisasjonen.
+        if (providers.environmentVariable("GITHUB_ACTIONS").orNull == "true") {
+            maven("https://maven.pkg.github.com/navikt/maven-release") {
+                credentials {
+                    username = "token"
+                    password = providers.environmentVariable("GITHUB_TOKEN").orNull
+                }
+            }
+        } else {
+            maven("https://repo.adeo.no/repository/github-package-registry-navikt/")
+        }
     }
 }
 

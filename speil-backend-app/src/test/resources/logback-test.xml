@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>callId</includeMdcKeyName>
+        </encoder>
+    </appender>
+
+    <appender name="team-logs" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="no.nav.helse.speil.backend.app.logging.SkipTeamLogsMarkerFilter"/>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeContext>false</includeContext>
+        </encoder>
+    </appender>
+
+    <logger name="tjenestekall" level="DEBUG" additivity="false">
+        <appender-ref ref="team-logs"/>
+    </logger>
+    <logger name="no.nav.helse" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT_JSON"/>
+    </root>
+</configuration>

@@ -29,4 +29,5 @@ include(
     "access-token-provider-texas",
     "populasjonstilgangskontroll-provider-api",
     "populasjonstilgangskontroll-provider-tilgangsmaskinen",
+    "speil-backend-app",
 )
