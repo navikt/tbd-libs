@@ -1,57 +1,72 @@
 package no.nav.helse.speil.backend.app.openapi
 
 import io.github.smiley4.ktoropenapi.OpenApi
+import io.github.smiley4.ktoropenapi.config.AuthScheme
+import io.github.smiley4.ktoropenapi.config.AuthType
 import io.github.smiley4.ktoropenapi.config.SchemaGenerator
+import io.github.smiley4.ktoropenapi.config.SchemaOverwriteModule
 import io.github.smiley4.ktoropenapi.openApi
 import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.github.smiley4.schemakenerator.swagger.data.RefType
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
+import io.swagger.v3.oas.models.media.Schema
+import java.math.BigDecimal
 import no.nav.helse.speil.backend.app.logging.loggInfo
 import no.nav.helse.speil.backend.app.serialization.customSerializersModule
 
-/**
- * OpenAPI-spec autogenereres fra ktor `Resources`-rutene via `SchemaGenerator.kotlinx`, akkurat
- * som i (jf. : "sjekk at speccen blir generert på samme måte som i
- * ") — `customSerializersModule` deles med [no.nav.helse.speil.backend.app.plugins.configureResources]
- * slik at runtime-(de)serialisering og dokumentert schema er konsistente (bl.a. for `UUID`).
- *
- * Eksponeres KUN dersom [OpenApiConfig.eksponerOpenApi] er satt (jf. ,
- * 2) — default `false`, altså ingen uautentisert `/api/openapi.json` i prod med
- * mindre det eksplisitt slås på.
- *
- * NB: må installeres FØR rutene den skal dokumentere registreres (se rekkefølgen i `StartApp.kt`),
- * siden auto-dokumentasjonen henger seg på ruteregistreringen.
- */
 fun Application.configureOpenApiPlugin(config: OpenApiConfig) {
-  if (!config.eksponerOpenApi) {
-    loggInfo("OpenAPI/Swagger er ikke eksponert (EKSPONER_OPENAPI=false)")
-    return
-  }
-  install(OpenApi) {
-    info {
-      title = config.tittel
-      version = config.versjon
+    if (!config.eksponerOpenApi) {
+        loggInfo("OpenAPI/Swagger er ikke eksponert (EKSPONER_OPENAPI=false)")
+        return
     }
-    pathFilter = { _, url -> url.firstOrNull() == "api" }
-    autoDocumentResourcesRoutes = true
-    schemas {
-      generator =
-        SchemaGenerator.kotlinx {
-          serializersModule = customSerializersModule
-          overwrite(SchemaGenerator.TypeOverwrites.JavaUuid())
+    install(OpenApi) {
+        info {
+            title = config.tittel
+            version = config.versjon
+        }
+        pathFilter = { _, url -> url.firstOrNull() == "api" }
+        autoDocumentResourcesRoutes = true
+        schemas {
+            generator = SchemaGenerator.kotlinx {
+                referencePath = RefType.OPENAPI_SIMPLE
+                serializersModule = customSerializersModule
+                overwrite(SchemaGenerator.TypeOverwrites.JavaUuid())
+                overwrite(SchemaGenerator.TypeOverwrites.Instant())
+                overwrite(SchemaGenerator.TypeOverwrites.LocalDateTime())
+                overwrite(SchemaGenerator.TypeOverwrites.LocalDate())
+                overwrite(
+                    object : SchemaOverwriteModule(
+                        identifier = BigDecimal::class.qualifiedName!!,
+                        schema = {
+                            Schema<Any>().also {
+                                it.types = setOf("string")
+                                it.format = "bigdecimal"
+                            }
+                        },
+                    ) {},
+                )
+            }
+        }
+        security {
+            securityScheme("JWT") {
+                type = AuthType.HTTP
+                scheme = AuthScheme.BEARER
+                bearerFormat = "JWT"
+            }
+            defaultSecuritySchemeNames("JWT")
         }
     }
-  }
-  routing {
-    route("/api") {
-      route("openapi.json") {
-        openApi()
-      }
-      route("swagger") {
-        swaggerUI("/api/openapi.json")
-      }
+    routing {
+        route("/api") {
+            route("openapi.json") {
+                openApi()
+            }
+            route("swagger") {
+                swaggerUI("/api/openapi.json")
+            }
+        }
     }
-  }
 }
