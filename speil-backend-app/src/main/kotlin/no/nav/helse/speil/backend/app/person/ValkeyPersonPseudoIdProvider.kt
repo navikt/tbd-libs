@@ -18,12 +18,11 @@ class ValkeyPersonPseudoIdProvider(
             instansNavn: String = "personpseudoid",
             env: Map<String, String> = System.getenv(),
         ): ValkeyPersonPseudoIdProvider {
-            val prefix = "VALKEY_${instansNavn.uppercase()}"
             val config =
                 ValkeyConfig(
-                    username = env.getValue("${prefix}_USERNAME"),
-                    password = env.getValue("${prefix}_PASSWORD"),
-                    connectionString = env.getValue("${prefix}_URI"),
+                    username = env.getValue("VALKEY_USERNAME_${instansNavn.uppercase()}"),
+                    password = env.getValue("VALKEY_PASSWORD_${instansNavn.uppercase()}"),
+                    connectionString = env.getValue("VALKEY_URI_${instansNavn.uppercase()}"),
                 )
             return ValkeyPersonPseudoIdProvider(config)
         }
