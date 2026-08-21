@@ -9,8 +9,8 @@ data class AzureAdConfig(
         fun fraEnv(env: Map<String, String> = System.getenv()) =
             AzureAdConfig(
                 clientId = env.getValue("AZURE_APP_CLIENT_ID"),
-                issuerUrl = env.getValue("AZURE_APP_ISSUER_URL"),
-                jwkProviderUri = env.getValue("AZURE_APP_JWK_PROVIDER_URI"),
+                issuerUrl = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
+                jwkProviderUri = env.getValue("AZURE_OPENID_CONFIG_JWKS_URI"),
             )
     }
 }

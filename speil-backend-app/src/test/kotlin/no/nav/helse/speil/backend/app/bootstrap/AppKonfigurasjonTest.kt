@@ -7,8 +7,8 @@ class AppKonfigurasjonTest {
     private val fullEnv =
         mapOf(
             "AZURE_APP_CLIENT_ID" to "client-id",
-            "AZURE_APP_ISSUER_URL" to "https://issuer.example",
-            "AZURE_APP_JWK_PROVIDER_URI" to "https://issuer.example/jwks",
+            "AZURE_OPENID_CONFIG_ISSUER" to "https://issuer.example",
+            "AZURE_OPENID_CONFIG_JWKS_URI" to "https://issuer.example/jwks",
             "DATABASE_JDBC_URL" to "jdbc:postgresql://localhost:5432/mydb",
             "TILGANGSMASKINEN_SCOPE" to "api://cluster.tilgangsmaskin.populasjonstilgangskontroll/.default",
             "TILGANGSMASKINEN_BASE_URL" to "http://populasjonstilgangskontroll.tilgangsmaskin",
