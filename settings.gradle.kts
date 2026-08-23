@@ -24,6 +24,7 @@ include(
     "spedisjon-client",
     "jackson",
     "sql-dsl",
+    "test",
     "person-pseudo-id",
     "access-token-provider-api",
     "access-token-provider-texas",
