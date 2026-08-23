@@ -15,11 +15,19 @@ import tools.jackson.module.kotlin.jacksonMapperBuilder
 class TestRapid(
     private val meterRegistry: MeterRegistry = SimpleMeterRegistry(),
 ) : RapidsConnection() {
-    private companion object {
+    companion object {
         private val objectMapper =
             jacksonMapperBuilder()
                 .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
                 .build()
+
+        /** Stier til feltene rapids-and-rivers selv legger på meldingene, som kan være vanskelige å asserte på. */
+        val GENERERTE_JSONSTIER =
+            setOf(
+                "@opprettet",
+                "system_read_count",
+                "system_participating_services",
+            )
     }
 
     private val messages = mutableListOf<Pair<String?, String>>()
