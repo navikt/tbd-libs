@@ -12,22 +12,23 @@ import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class NaisfulTestAppTest {
-
     @Test
     fun `nais endpoints`() {
-        val endpoints = NaisEndpoints(
-            isaliveEndpoint = "/erILive",
-            isreadyEndpoint = "/erKlar",
-            metricsEndpoint = "/metrikker",
-            preStopEndpoint = "/stopp",
-        )
+        val endpoints =
+            NaisEndpoints(
+                isaliveEndpoint = "/erILive",
+                isreadyEndpoint = "/erKlar",
+                metricsEndpoint = "/metrikker",
+                preStopEndpoint = "/stopp",
+            )
         naisfulTestApp(
             testApplicationModule = {},
-            objectMapper = jacksonMapperBuilder()
-                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-                .build(),
+            objectMapper =
+                jacksonMapperBuilder()
+                    .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                    .build(),
             meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT),
-            naisEndpoints = endpoints
+            naisEndpoints = endpoints,
         ) {
             assertEquals("ALIVE", client.get(endpoints.isaliveEndpoint).bodyAsText())
             assertEquals("READY", client.get(endpoints.isreadyEndpoint).bodyAsText())

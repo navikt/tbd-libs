@@ -5,12 +5,11 @@ import java.time.LocalDateTime
 
 class SamlToken(
     val token: String,
-    val expirationTime: LocalDateTime
+    val expirationTime: LocalDateTime,
 ) {
     private companion object {
         private val EXPIRATION_MARGIN = Duration.ofSeconds(10)
     }
+
     val isExpired get() = expirationTime <= LocalDateTime.now().plus(EXPIRATION_MARGIN)
 }
-
-

@@ -11,10 +11,6 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.binder.kafka.KafkaClientMetrics
 import io.opentelemetry.api.trace.Span
 import io.opentelemetry.instrumentation.annotations.WithSpan
-import java.time.Duration
-import java.time.LocalDateTime
-import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -25,6 +21,10 @@ import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.errors.WakeupException
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
+import java.time.Duration
+import java.time.LocalDateTime
+import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
 
 class KafkaRapid(
     factory: ConsumerProducerFactory,
@@ -35,15 +35,21 @@ class KafkaRapid(
     producerProperties: Properties = Properties(),
     private val autoCommit: Boolean = false,
     extraTopics: List<String> = emptyList(),
-) : RapidsConnection(), ConsumerRebalanceListener {
+) : RapidsConnection(),
+    ConsumerRebalanceListener {
     private val log = LoggerFactory.getLogger(this::class.java)
 
     private val running = AtomicBoolean(Stopped)
     private val ready = AtomicBoolean(false)
 
-    private val consumer = factory.createConsumer(groupId, consumerProperties.apply {
-        if (!autoCommit) put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
-    }, withShutdownHook = false)
+    private val consumer =
+        factory.createConsumer(
+            groupId,
+            consumerProperties.apply {
+                if (!autoCommit) put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
+            },
+            withShutdownHook = false,
+        )
     private val producer = factory.createProducer(producerProperties, withShutdownHook = false)
 
     private val topics = listOf(rapidTopic) + extraTopics
@@ -53,53 +59,56 @@ class KafkaRapid(
     }
 
     fun isRunning() = running.get()
+
     fun isReady() = isRunning() && ready.get()
 
     override fun publish(message: String) {
         publish(listOf(OutgoingMessage(message)))
     }
 
-    override fun publish(key: String, message: String) {
+    override fun publish(
+        key: String,
+        message: String,
+    ) {
         publish(listOf(OutgoingMessage(message, key)))
     }
 
-    override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
-        return publishRecordsInBulk(messages)
-    }
+    override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> = publishRecordsInBulk(messages)
 
-    override fun rapidName(): String {
-        return rapidTopic
-    }
+    override fun rapidName(): String = rapidTopic
 
     @WithSpan
     private fun publishRecordsInBulk(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
-        val results = messages
-            .map { it to producer.send(it.producerRecord(rapidTopic)) }
-            .mapIndexed { index, (record, future) ->
-                try {
-                    val metadata = future.get()
-                    Pair(SentMessage(index, record, metadata.partition(), metadata.offset()), null)
-                } catch (err: Exception) {
-                    Span.current().recordException(err)
-                    log.error(
-                        "failed to produce message index=$index of ${messages.size}, key=${record.key}: {}",
-                        err.message,
-                        err
-                    )
-                    Pair(null, FailedMessage(index, record, err))
+        val results =
+            messages
+                .map { it to producer.send(it.producerRecord(rapidTopic)) }
+                .mapIndexed { index, (record, future) ->
+                    try {
+                        val metadata = future.get()
+                        Pair(SentMessage(index, record, metadata.partition(), metadata.offset()), null)
+                    } catch (err: Exception) {
+                        Span.current().recordException(err)
+                        log.error(
+                            "failed to produce message index=$index of ${messages.size}, key=${record.key}: {}",
+                            err.message,
+                            err,
+                        )
+                        Pair(null, FailedMessage(index, record, err))
+                    }
                 }
-            }
 
-        val ok = results
-            .mapNotNull { it.first }
+        val ok =
+            results
+                .mapNotNull { it.first }
 
-        val failed = results
-            .mapNotNull { it.second }
+        val failed =
+            results
+                .mapNotNull { it.second }
 
         log.info("produced ${ok.size} message(s) of ${messages.size} message(s) in total")
 
         if (failed.isNotEmpty()) {
-            /* handle all failed messages as a fatal error */
+            // handle all failed messages as a fatal error
             log.error("Failed to produce ${failed.size} of ${messages.size} message(s): invoking shutdown!")
             stop()
         }
@@ -140,10 +149,11 @@ class KafkaRapid(
 
     private fun onRecords(records: ConsumerRecords<String, String>) {
         if (records.isEmpty) return // poll returns an empty collection in case of rebalancing
-        val currentPositions = records
-            .groupBy { TopicPartition(it.topic(), it.partition()) }
-            .mapValues { it.value.minOf { it.offset() } }
-            .toMutableMap()
+        val currentPositions =
+            records
+                .groupBy { TopicPartition(it.topic(), it.partition()) }
+                .mapValues { it.value.minOf { it.offset() } }
+                .toMutableMap()
         try {
             records
                 .onEach { record ->
@@ -155,8 +165,10 @@ class KafkaRapid(
         } catch (err: Exception) {
             log.info(
                 "due to an error during processing, positions are reset to each next message (after each record that was processed OK):" +
-                        currentPositions.map { "\tpartition=${it.key}, offset=${it.value}" }
-                            .joinToString(separator = "\n", prefix = "\n", postfix = "\n"), err
+                    currentPositions
+                        .map { "\tpartition=${it.key}, offset=${it.value}" }
+                        .joinToString(separator = "\n", prefix = "\n", postfix = "\n"),
+                err,
             )
             throw err
         } finally {
@@ -168,16 +180,18 @@ class KafkaRapid(
 
     private fun onRecord(record: ConsumerRecord<String, String>) {
         withMDC(recordDiganostics(record)) {
-            val recordValue = record.value()
-                ?: return@withMDC log.info("ignoring record with offset ${record.offset()} in partition ${record.partition()} because value is null (tombstone)")
+            val recordValue =
+                record.value()
+                    ?: return@withMDC log.info("ignoring record with offset ${record.offset()} in partition ${record.partition()} because value is null (tombstone)")
             val context = KeyMessageContext(this, record.key())
-            val metadata = MessageMetadata(
-                topic = record.topic(),
-                partition = record.partition(),
-                offset = record.offset(),
-                key = record.key(),
-                headers = record.headers().associate { it.key() to it.value() }
-            )
+            val metadata =
+                MessageMetadata(
+                    topic = record.topic(),
+                    partition = record.partition(),
+                    offset = record.offset(),
+                    key = record.key(),
+                    headers = record.headers().associate { it.key() to it.value() },
+                )
             notifyMessage(recordValue, context, metadata, meterRegistry)
         }
     }
@@ -209,24 +223,31 @@ class KafkaRapid(
         }
     }
 
-    private fun pollDiganostics(records: ConsumerRecords<String, String>) = mapOf(
-        "rapids_poll_id" to "${UUID.randomUUID()}",
-        "rapids_poll_time" to "${LocalDateTime.now()}",
-        "rapids_poll_count" to "${records.count()}"
-    )
+    private fun pollDiganostics(records: ConsumerRecords<String, String>) =
+        mapOf(
+            "rapids_poll_id" to "${UUID.randomUUID()}",
+            "rapids_poll_time" to "${LocalDateTime.now()}",
+            "rapids_poll_count" to "${records.count()}",
+        )
 
-    private fun recordDiganostics(record: ConsumerRecord<String, String>) = mapOf(
-        "rapids_record_id" to "${UUID.randomUUID()}",
-        "rapids_record_before_notify_time" to "${LocalDateTime.now()}",
-        "rapids_record_produced_time" to "${record.timestamp()}",
-        "rapids_record_produced_time_type" to "${record.timestampType()}",
-        "rapids_record_topic" to record.topic(),
-        "rapids_record_partition" to "${record.partition()}",
-        "rapids_record_offset" to "${record.offset()}"
-    )
+    private fun recordDiganostics(record: ConsumerRecord<String, String>) =
+        mapOf(
+            "rapids_record_id" to "${UUID.randomUUID()}",
+            "rapids_record_before_notify_time" to "${LocalDateTime.now()}",
+            "rapids_record_produced_time" to "${record.timestamp()}",
+            "rapids_record_produced_time_type" to "${record.timestampType()}",
+            "rapids_record_topic" to record.topic(),
+            "rapids_record_partition" to "${record.partition()}",
+            "rapids_record_offset" to "${record.offset()}",
+        )
 
     private fun offsetMetadata(offset: Long): OffsetAndMetadata {
-        val clientId = consumer.groupMetadata().groupInstanceId().map { "\"$it\"" }.orElse("null")
+        val clientId =
+            consumer
+                .groupMetadata()
+                .groupInstanceId()
+                .map { "\"$it\"" }
+                .orElse("null")
 
         @Language("JSON")
         val metadata = """{"time": "${LocalDateTime.now()}","groupInstanceId": $clientId}"""
@@ -259,7 +280,8 @@ class KafkaRapid(
     }
 }
 
-private fun OutgoingMessage.producerRecord(rapidTopic: String) = when (this.key) {
-    null -> ProducerRecord(rapidTopic, this.body)
-    else -> ProducerRecord(rapidTopic, this.key, this.body)
-}
+private fun OutgoingMessage.producerRecord(rapidTopic: String) =
+    when (this.key) {
+        null -> ProducerRecord(rapidTopic, this.body)
+        else -> ProducerRecord(rapidTopic, this.key, this.body)
+    }

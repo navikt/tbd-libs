@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit
 
 const val AZURE_AD_AUTHENTICATION_NAME = "azure-ad-jwt"
 
-
 fun <ROLLE : Brukerrolle> Application.configureJwtAuthentication(
     azureAdConfig: AzureAdConfig,
     tilgangsgrupperTilTilganger: TilgangsgrupperTilTilganger,

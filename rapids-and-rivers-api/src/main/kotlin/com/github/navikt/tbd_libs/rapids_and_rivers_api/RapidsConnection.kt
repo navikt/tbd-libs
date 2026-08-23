@@ -5,14 +5,20 @@ import org.slf4j.LoggerFactory
 
 interface MessageContext {
     fun publish(message: String)
-    fun publish(key: String, message: String)
+
+    fun publish(
+        key: String,
+        message: String,
+    )
+
     fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>>
+
     fun rapidName(): String
 }
 
 data class OutgoingMessage(
     val body: String,
-    val key: String? = null
+    val key: String? = null,
 )
 
 data class SentMessage(
@@ -25,7 +31,7 @@ data class SentMessage(
 data class FailedMessage(
     val index: Int,
     val message: OutgoingMessage,
-    val error: Throwable
+    val error: Throwable,
 )
 
 abstract class RapidsConnection : MessageContext {
@@ -49,7 +55,7 @@ abstract class RapidsConnection : MessageContext {
         message: String,
         context: MessageContext,
         metadata: MessageMetadata,
-        metrics: MeterRegistry
+        metrics: MeterRegistry,
     ) {
         listeners.forEach { it.onMessage(message, context, metadata, metrics) }
     }
@@ -97,18 +103,29 @@ abstract class RapidsConnection : MessageContext {
     }
 
     abstract fun start()
+
     abstract fun stop()
 
     interface StatusListener {
         fun onStartup(rapidsConnection: RapidsConnection) {}
+
         fun onReady(rapidsConnection: RapidsConnection) {}
+
         fun onNotReady(rapidsConnection: RapidsConnection) {}
+
         fun onShutdownSignal(rapidsConnection: RapidsConnection) {}
+
         fun onShutdown(rapidsConnection: RapidsConnection) {}
+
         fun onShutdownComplete(rapidsConnection: RapidsConnection) {}
     }
 
     fun interface MessageListener {
-        fun onMessage(message: String, context: MessageContext, metadata: MessageMetadata, metrics: MeterRegistry)
+        fun onMessage(
+            message: String,
+            context: MessageContext,
+            metadata: MessageMetadata,
+            metrics: MeterRegistry,
+        )
     }
 }

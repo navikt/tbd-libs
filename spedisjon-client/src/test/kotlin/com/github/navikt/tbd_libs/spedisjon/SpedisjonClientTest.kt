@@ -9,10 +9,6 @@ import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.net.http.HttpClient
-import java.time.LocalDateTime
-import java.util.*
-import kotlin.jvm.optionals.getOrNull
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -20,12 +16,17 @@ import org.junit.jupiter.api.Test
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.net.http.HttpClient
+import java.time.LocalDateTime
+import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 class SpedisjonClientTest {
     private companion object {
-        private val objectMapper = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .build()
+        private val objectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .build()
     }
 
     @Test
@@ -75,21 +76,25 @@ class SpedisjonClientTest {
         assertNull(response.cause)
     }
 
-    private fun mockClient(response: String, statusCode: Int = 200): Pair<SpedisjonClient, HttpClient> {
-        val httpClient = mockk<HttpClient> {
-            every {
-                send<String>(any(), any())
-            } returns MockHttpResponse(response, statusCode)
-        }
-        val tokenProvider = object : AzureTokenProvider {
-            override fun onBehalfOfToken(scope: String, token: String): Result<AzureToken> {
-                return AzureToken("on_behalf_of_token", LocalDateTime.now()).ok()
+    private fun mockClient(
+        response: String,
+        statusCode: Int = 200,
+    ): Pair<SpedisjonClient, HttpClient> {
+        val httpClient =
+            mockk<HttpClient> {
+                every {
+                    send<String>(any(), any())
+                } returns MockHttpResponse(response, statusCode)
             }
+        val tokenProvider =
+            object : AzureTokenProvider {
+                override fun onBehalfOfToken(
+                    scope: String,
+                    token: String,
+                ): Result<AzureToken> = AzureToken("on_behalf_of_token", LocalDateTime.now()).ok()
 
-            override fun bearerToken(scope: String): Result<AzureToken> {
-                return AzureToken("bearer_token", LocalDateTime.now()).ok()
+                override fun bearerToken(scope: String): Result<AzureToken> = AzureToken("bearer_token", LocalDateTime.now()).ok()
             }
-        }
         val spedisjonClient = SpedisjonClient(httpClient, objectMapper, tokenProvider)
         return spedisjonClient to httpClient
     }
@@ -102,27 +107,46 @@ class SpedisjonClientTest {
         verifiserRequestMethod(httpClient, "GET")
     }
 
-    fun verifiserRequestMethod(httpClient: HttpClient, method: String) {
+    fun verifiserRequestMethod(
+        httpClient: HttpClient,
+        method: String,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                request.method().uppercase() == method.uppercase()
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.method().uppercase() == method.uppercase()
+                },
+                any(),
+            )
         }
     }
 
-    fun verifiserRequestHeader(httpClient: HttpClient, headerName: String, verifisering: (String?) -> Boolean) {
+    fun verifiserRequestHeader(
+        httpClient: HttpClient,
+        headerName: String,
+        verifisering: (String?) -> Boolean,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                verifisering(request.headers().firstValue(headerName).getOrNull())
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    verifisering(request.headers().firstValue(headerName).getOrNull())
+                },
+                any(),
+            )
         }
     }
 
-    private fun verifiserRequestBody(httpClient: HttpClient, verifisering: (body: JsonNode) -> Boolean) {
+    private fun verifiserRequestBody(
+        httpClient: HttpClient,
+        verifisering: (body: JsonNode) -> Boolean,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                verifisering(objectMapper.readTree(request.bodyAsString()))
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    verifisering(objectMapper.readTree(request.bodyAsString()))
+                },
+                any(),
+            )
         }
     }
 

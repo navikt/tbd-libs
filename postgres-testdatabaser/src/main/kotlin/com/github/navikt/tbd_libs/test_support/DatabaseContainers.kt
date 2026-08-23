@@ -20,10 +20,9 @@ object DatabaseContainers {
         maxHikariPoolSize: Int = 2,
         databasePoolSize: Int = POOL_SIZE,
         walLevelLogical: Boolean = false,
-        postgresVersjon: Int = 15
-    ): DatabaseContainer {
-        return instances.getOrPut(appnavn) {
+        postgresVersjon: Int = 15,
+    ): DatabaseContainer =
+        instances.getOrPut(appnavn) {
             DatabaseContainer(appnavn, databasePoolSize, cleanupStrategy, initStrategy, maxHikariPoolSize, walLevelLogical, postgresVersjon)
         }
-    }
 }

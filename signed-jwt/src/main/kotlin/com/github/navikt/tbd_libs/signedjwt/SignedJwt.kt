@@ -10,26 +10,34 @@ import java.time.Instant
 import java.util.Base64
 import java.util.UUID
 
-class SignedJwt(private val privateKey: RSAPrivateKey, private val keyId: String) {
-    constructor(jwk: Map<String, Any?>): this(jwk.somRSAPrivateKey(), jwk.hent("kid", "Key ID"))
+class SignedJwt(
+    private val privateKey: RSAPrivateKey,
+    private val keyId: String,
+) {
+    constructor(jwk: Map<String, Any?>) : this(jwk.somRSAPrivateKey(), jwk.hent("kid", "Key ID"))
 
-    private val signature = Signature.getInstance("SHA256withRSA").apply {
-        initSign(privateKey)
-    }
+    private val signature =
+        Signature.getInstance("SHA256withRSA").apply {
+            initSign(privateKey)
+        }
 
-    fun generate(headers: Map<String, Any> = emptyMap(), claims: Map<String, Any> = emptyMap()): String {
-
-        val alleHeaders = headers
-            .plusIfMissing("kid" to keyId)
-            .plusIfMissing("typ" to "JWT")
-            .plusIfMissing("alg" to "RS256")
+    fun generate(
+        headers: Map<String, Any> = emptyMap(),
+        claims: Map<String, Any> = emptyMap(),
+    ): String {
+        val alleHeaders =
+            headers
+                .plusIfMissing("kid" to keyId)
+                .plusIfMissing("typ" to "JWT")
+                .plusIfMissing("alg" to "RS256")
 
         val issuedAt = claims.issuedAt
-        val alleClaims = claims
-            .plusIfMissing("iat" to issuedAt)
-            .plusIfMissing("nbf" to issuedAt)
-            .plusIfMissing("exp" to issuedAt + 10)
-            .plusIfMissing("jti" to "${UUID.randomUUID()}")
+        val alleClaims =
+            claims
+                .plusIfMissing("iat" to issuedAt)
+                .plusIfMissing("nbf" to issuedAt)
+                .plusIfMissing("exp" to issuedAt + 10)
+                .plusIfMissing("jti" to "${UUID.randomUUID()}")
 
         val signingInput = "${alleHeaders.jwtPart}.${alleClaims.jwtPart}"
         signature.update(signingInput.toByteArray())
@@ -39,8 +47,14 @@ class SignedJwt(private val privateKey: RSAPrivateKey, private val keyId: String
 
     private companion object {
         private fun Map<String, Any>.plusIfMissing(pair: Pair<String, Any>) = if (keys.contains(pair.first)) this else this.plus(pair)
+
         private val Map<String, Any>.jwtPart get() = base64Encoder.encodeToString(json.toByteArray())
-        private fun Map<String, Any?>.hent(key: String, navn: String) = checkNotNull(get(key)?.takeIf { it is String }?.let { it as String }) { "$navn ($key) må være satt. Fant kun $keys" }
+
+        private fun Map<String, Any?>.hent(
+            key: String,
+            navn: String,
+        ) = checkNotNull(get(key)?.takeIf { it is String }?.let { it as String }) { "$navn ($key) må være satt. Fant kun $keys" }
+
         private fun Map<String, Any?>.somRSAPrivateKey(): RSAPrivateKey {
             val keyType = hent("kty", "Key type")
             check(keyType.uppercase() == "RSA") { "Key type (kty) må være RSA" }
@@ -50,7 +64,8 @@ class SignedJwt(private val privateKey: RSAPrivateKey, private val keyId: String
             val factory = KeyFactory.getInstance("RSA")
             return (factory.generatePrivate(keySpec) as RSAPrivateKey)
         }
-        private val Map<String, Any>.json get() = entries.joinToString(separator = ",", prefix = "{", postfix = "}") { (key, value) -> "\"$key\":${value.jsonValue}"}
+
+        private val Map<String, Any>.json get() = entries.joinToString(separator = ",", prefix = "{", postfix = "}") { (key, value) -> "\"$key\":${value.jsonValue}" }
         private val Map<String, Any>.issuedAt get(): Long {
             val iat = get("iat") ?: return Instant.now(Clock.systemUTC()).epochSecond
             if (iat is Int) return iat.toLong()
@@ -58,11 +73,12 @@ class SignedJwt(private val privateKey: RSAPrivateKey, private val keyId: String
             error("Ugyldig 'iat' satt til $iat")
         }
 
-        private val Any.jsonValue get() = when (this) {
-            is Number, is Boolean -> this
-            is String -> "\"$this\""
-            else -> error("Støtter kun å lage jsons fra primitive verdier. Støtter ikke ${this::class.simpleName}")
-        }
+        private val Any.jsonValue get() =
+            when (this) {
+                is Number, is Boolean -> this
+                is String -> "\"$this\""
+                else -> error("Støtter kun å lage jsons fra primitive verdier. Støtter ikke ${this::class.simpleName}")
+            }
 
         private val base64Decoder = Base64.getUrlDecoder()
         private val base64Encoder = Base64.getUrlEncoder().withoutPadding()

@@ -7,13 +7,15 @@ import com.github.navikt.tbd_libs.rapids_and_rivers.ValueValidation.Companion.op
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import tools.jackson.databind.JsonNode
 
-val exist = ValidationResult.create("Feltet finnes ikke") { node ->
-    !node.isMissingOrNull()
-}
-fun be(expectedValue: String) = ValidationResult.create("Feltet har ikke forventet verdi $expectedValue") { node ->
-    node.asString() == expectedValue
-}
+val exist =
+    ValidationResult.create("Feltet finnes ikke") { node ->
+        !node.isMissingOrNull()
+    }
 
+fun be(expectedValue: String) =
+    ValidationResult.create("Feltet har ikke forventet verdi $expectedValue") { node ->
+        node.asString() == expectedValue
+    }
 
 fun validate(validationSpec: MessageValidation.() -> Unit): MessageValidation {
     val spec = MessageValidation()
@@ -32,22 +34,29 @@ fun interface ValueValidation {
     fun validate(node: JsonNode): ValidationResult
 
     companion object {
-        fun ValueValidation.optional() = ValueValidation { node ->
-            if (node.isMissingOrNull()) Valid else validate(node)
-        }
+        fun ValueValidation.optional() =
+            ValueValidation { node ->
+                if (node.isMissingOrNull()) Valid else validate(node)
+            }
     }
 }
 
 sealed class ValidationResult {
     data object Valid : ValidationResult()
-    data class Invalid(val message: String) : ValidationResult()
+
+    data class Invalid(
+        val message: String,
+    ) : ValidationResult()
+
     companion object {
-        fun create(message: String, validation: (JsonNode) -> Boolean) = ValueValidation { node ->
+        fun create(
+            message: String,
+            validation: (JsonNode) -> Boolean,
+        ) = ValueValidation { node ->
             when (validation(node)) {
                 true -> Valid
                 false -> Invalid(message)
             }
-
         }
     }
 }
@@ -55,36 +64,47 @@ sealed class ValidationResult {
 class MessageValidation {
     private val fields = mutableMapOf<String, MutableList<ValidationSpec>>()
 
-    fun validatedKeys(node: JsonNode, problems: MessageProblems): Set<String> {
-        return fields
+    fun validatedKeys(
+        node: JsonNode,
+        problems: MessageProblems,
+    ): Set<String> =
+        fields
             .filter { (key, validations) ->
                 val valueToBeEvaluated = node.path(key)
                 validations.allAreOK(key, valueToBeEvaluated, problems)
-            }
-            .keys
-    }
+            }.keys
 
-    infix fun String.should(what: ValueValidation) =
-        addValidation(this, ValidationSpec(what, MessageProblems::error))
+    infix fun String.should(what: ValueValidation) = addValidation(this, ValidationSpec(what, MessageProblems::error))
 
-    infix fun String.must(what: ValueValidation) =
-        addValidation(this, ValidationSpec(what, MessageProblems::severe))
+    infix fun String.must(what: ValueValidation) = addValidation(this, ValidationSpec(what, MessageProblems::severe))
 
-    infix fun String.can(what: ValueValidation) =
-        should(what.optional())
+    infix fun String.can(what: ValueValidation) = should(what.optional())
 
-    private fun addValidation(key: String, validation: ValidationSpec) = validation.also {
+    private fun addValidation(
+        key: String,
+        validation: ValidationSpec,
+    ) = validation.also {
         fields.getOrPut(key) { mutableListOf() }.add(it)
     }
 }
 
-class ValidationSpec(private val validation: ValueValidation, private val errorStrategy: MessageProblems.(String) -> Unit) {
+class ValidationSpec(
+    private val validation: ValueValidation,
+    private val errorStrategy: MessageProblems.(String) -> Unit,
+) {
     companion object {
-        fun List<ValidationSpec>.allAreOK(key: String, valueToBeEvaluated: JsonNode, problems: MessageProblems): Boolean {
-            return all { spec -> spec.validate(key, valueToBeEvaluated, problems) is Valid }
-        }
+        fun List<ValidationSpec>.allAreOK(
+            key: String,
+            valueToBeEvaluated: JsonNode,
+            problems: MessageProblems,
+        ): Boolean = all { spec -> spec.validate(key, valueToBeEvaluated, problems) is Valid }
     }
-    fun validate(key: String, node: JsonNode, problems: MessageProblems): ValidationResult {
+
+    fun validate(
+        key: String,
+        node: JsonNode,
+        problems: MessageProblems,
+    ): ValidationResult {
         val result = validation.validate(node)
         when (result) {
             is Valid -> { /* 😌 */ }

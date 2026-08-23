@@ -15,7 +15,10 @@ interface PopulasjonstilgangskontrollProvider {
      *   [TilgangskontrollResultat.IdentIkkeFunnet] dersom personen ikke ble funnet,
      *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
      */
-    fun kontrollerKomplettTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat
+    fun kontrollerKomplettTilgang(
+        accessToken: String,
+        fødselsnummer: String,
+    ): TilgangskontrollResultat
 
     /**
      * Kontrollerer om saksbehandleren som er autentisert via [accessToken] har tilgang til personen
@@ -28,7 +31,10 @@ interface PopulasjonstilgangskontrollProvider {
      *   [TilgangskontrollResultat.IdentIkkeFunnet] dersom personen ikke ble funnet,
      *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
      */
-    fun kontrollerKjerneTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat
+    fun kontrollerKjerneTilgang(
+        accessToken: String,
+        fødselsnummer: String,
+    ): TilgangskontrollResultat
 
     /**
      * Kontrollerer om NAV-ansatt identifisert av [ansattId] har tilgang til personen identifisert av
@@ -43,5 +49,8 @@ interface PopulasjonstilgangskontrollProvider {
      *   [TilgangskontrollResultat.IdentIkkeFunnet] dersom personen ikke ble funnet,
      *   eller [TilgangskontrollResultat.UventetFeil] ved en uventet feil.
      */
-    fun kontrollerKjerneTilgangForAnsatt(ansattId: String, fødselsnummer: String): TilgangskontrollResultat
+    fun kontrollerKjerneTilgangForAnsatt(
+        ansattId: String,
+        fødselsnummer: String,
+    ): TilgangskontrollResultat
 }

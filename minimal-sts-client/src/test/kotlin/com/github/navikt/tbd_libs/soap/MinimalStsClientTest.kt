@@ -5,12 +5,12 @@ import com.github.navikt.tbd_libs.result_object.Result
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import kotlin.jvm.optionals.getOrNull
@@ -34,8 +34,8 @@ class MinimalStsClientTest {
         result as Result.Ok
         assertEquals(TOKEN, result.value.token)
         verifiserRequest(httpClient) {
-            it.uri() == URI("http://localhost/rest/v1/sts/samltoken")
-                && it.headers().firstValue("Authorization").getOrNull() == "Basic ${"$USERNAME:$PASSWORD".encodeBase64()}"
+            it.uri() == URI("http://localhost/rest/v1/sts/samltoken") &&
+                it.headers().firstValue("Authorization").getOrNull() == "Basic ${"$USERNAME:$PASSWORD".encodeBase64()}"
         }
     }
 
@@ -72,25 +72,35 @@ class MinimalStsClientTest {
         assertEquals("Kunne ikke tolke JSON fra responsen til STS: Internal Server Error", result.error)
     }
 
-    private fun verifiserRequest(httpClient: HttpClient, sjekk: (HttpRequest) -> Boolean) {
+    private fun verifiserRequest(
+        httpClient: HttpClient,
+        sjekk: (HttpRequest) -> Boolean,
+    ) {
         verify {
-            httpClient.send<String>(match {
-                sjekk(it)
-            }, any())
+            httpClient.send<String>(
+                match {
+                    sjekk(it)
+                },
+                any(),
+            )
         }
     }
 
     private fun mockClient(response: String): Pair<HttpClient, MinimalStsClient> {
-        val httpClient = mockk<HttpClient> {
-            every {
-                send<String>(any(), any())
-            } returns MockHttpResponse(response)
-        }
+        val httpClient =
+            mockk<HttpClient> {
+                every {
+                    send<String>(any(), any())
+                } returns MockHttpResponse(response)
+            }
         val stsClient = MinimalStsClient(URI("http://localhost"), httpClient)
         return httpClient to stsClient
     }
 
-    private fun tokenResponse(token: String, tokenType: String = "urn:ietf:params:oauth:token-type:saml2"): String {
+    private fun tokenResponse(
+        token: String,
+        tokenType: String = "urn:ietf:params:oauth:token-type:saml2",
+    ): String {
         @Language("JSON")
         val response = """{
             "access_token": "$token",

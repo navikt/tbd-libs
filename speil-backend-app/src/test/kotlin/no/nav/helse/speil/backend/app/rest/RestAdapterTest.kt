@@ -265,8 +265,16 @@ class RestAdapterTest {
             val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
             val teamLogsLogger = loggerContext.getLogger("tjenestekall") as Logger
             val rootLogger = loggerContext.getLogger(Logger.ROOT_LOGGER_NAME) as Logger
-            val teamLogsAppender = ListAppender<ILoggingEvent>().apply { context = loggerContext; start() }
-            val rootAppender = ListAppender<ILoggingEvent>().apply { context = loggerContext; start() }
+            val teamLogsAppender =
+                ListAppender<ILoggingEvent>().apply {
+                    context = loggerContext
+                    start()
+                }
+            val rootAppender =
+                ListAppender<ILoggingEvent>().apply {
+                    context = loggerContext
+                    start()
+                }
             teamLogsLogger.addAppender(teamLogsAppender)
             rootLogger.addAppender(rootAppender)
 

@@ -15,34 +15,36 @@ import tools.jackson.module.kotlin.jacksonMapperBuilder
 val kafkaContainer = KafkaContainers.container("tbd-libs-kafka-test")
 
 class KafkaContainersTest {
+    @Test
+    fun `test 1`() =
+        kafkaTest(kafkaContainer) {
+            @Language("JSON")
+            val message = """{ "name":  "Foo" }"""
+            send(message)
+            pollRecords().also {
+                assertEquals(1, it.size)
+                assertEquals(message, it.single().value())
+            }
+        }
 
     @Test
-    fun `test 1`() = kafkaTest(kafkaContainer) {
-        @Language("JSON")
-        val message = """{ "name":  "Foo" }"""
-        send(message)
-        pollRecords().also {
-            assertEquals(1, it.size)
-            assertEquals(message, it.single().value())
+    fun `test 2`() =
+        kafkaTest(kafkaContainer) {
+            @Language("JSON")
+            val message = """{ "name":  "Bar" }"""
+            send(message)
+            pollRecords().also {
+                assertEquals(1, it.size)
+                assertEquals(message, it.single().value())
+            }
         }
-    }
-
-    @Test
-    fun `test 2`() = kafkaTest(kafkaContainer) {
-        @Language("JSON")
-        val message = """{ "name":  "Bar" }"""
-        send(message)
-        pollRecords().also {
-            assertEquals(1, it.size)
-            assertEquals(message, it.single().value())
-        }
-    }
 
     @Test
     fun `custom serde`() {
-        val objectMapper = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .build()
+        val objectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .build()
         kafkaTest(kafkaContainer) {
             @Language("JSON")
             val message = objectMapper.readTree("""{ "name":  "Bar" }""")
@@ -60,16 +62,22 @@ class KafkaContainersTest {
         private val objectMapper: ObjectMapper =
             jacksonMapperBuilder()
                 .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-                .build()
+                .build(),
     ) : Serde<JsonNode> {
-        override fun serializer() = object : Serializer<JsonNode> {
-            override fun serialize(topic: String, data: JsonNode) =
-                objectMapper.writeValueAsBytes(data)
-        }
+        override fun serializer() =
+            object : Serializer<JsonNode> {
+                override fun serialize(
+                    topic: String,
+                    data: JsonNode,
+                ) = objectMapper.writeValueAsBytes(data)
+            }
 
-        override fun deserializer() = object : Deserializer<JsonNode> {
-            override fun deserialize(topic: String, data: ByteArray) =
-                objectMapper.readTree(data)
-        }
+        override fun deserializer() =
+            object : Deserializer<JsonNode> {
+                override fun deserialize(
+                    topic: String,
+                    data: ByteArray,
+                ) = objectMapper.readTree(data)
+            }
     }
 }

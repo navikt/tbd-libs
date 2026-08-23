@@ -7,7 +7,5 @@ object KafkaContainers {
 
     // gjenbruker containers med samme navn for å unngå
     // å spinne opp mange containers
-    fun container(appnavn: String): KafkaContainer {
-        return instances.getOrPut(appnavn) { KafkaContainer(appnavn) }
-    }
+    fun container(appnavn: String): KafkaContainer = instances.getOrPut(appnavn) { KafkaContainer(appnavn) }
 }

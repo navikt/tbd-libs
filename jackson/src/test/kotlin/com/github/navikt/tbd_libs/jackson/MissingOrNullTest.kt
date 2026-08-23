@@ -1,15 +1,14 @@
 package com.github.navikt.tbd_libs.jackson
 
-import kotlin.test.Test
-import kotlin.test.assertTrue
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertFalse
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class MissingOrNullTest {
-
     @Test
     fun missing() {
         val node = jsonNode("""{}""")
@@ -31,10 +30,11 @@ class MissingOrNullTest {
         assertFalse(node.path("foo").isMissingOrNull())
     }
 
-    private fun jsonNode(@Language("JSON") json: String): JsonNode {
-        return jacksonMapperBuilder()
+    private fun jsonNode(
+        @Language("JSON") json: String,
+    ): JsonNode =
+        jacksonMapperBuilder()
             .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
             .build()
             .readTree(json)
-    }
 }

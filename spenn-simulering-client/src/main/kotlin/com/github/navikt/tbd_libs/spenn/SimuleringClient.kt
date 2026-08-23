@@ -8,6 +8,8 @@ import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.fold
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -15,29 +17,29 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.LocalDate
 import java.util.*
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.readValue
 
 class SimuleringClient(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
     private val objectMapper: ObjectMapper,
     private val tokenProvider: AzureTokenProvider,
     baseUrl: String? = null,
-    scope: String? = null
+    scope: String? = null,
 ) {
     private val baseUrl = baseUrl ?: "http://spenn-simulering-api"
     private val scope = scope ?: "api://${System.getenv("NAIS_CLUSTER_NAME")}.tbd.spenn-simulering-api/.default"
 
-    fun hentSimulering(simulering: SimuleringRequest, callId: String = UUID.randomUUID().toString()): Result<SimuleringResult> {
-        return tokenProvider.bearerToken(scope)
+    fun hentSimulering(
+        simulering: SimuleringRequest,
+        callId: String = UUID.randomUUID().toString(),
+    ): Result<SimuleringResult> =
+        tokenProvider
+            .bearerToken(scope)
             .map { token ->
                 val jsonInputString = objectMapper.writeValueAsString(simulering)
                 request("/api/simulering", token, jsonInputString, callId)
-            }
-            .map { response ->
+            }.map { response ->
                 håndterRespons(response)
             }
-    }
 
     private fun håndterRespons(response: HttpResponse<String>): Result<SimuleringResult> {
         val body: String? = response.body()
@@ -45,57 +47,73 @@ class SimuleringClient(
         return tolkResponskoder(response.statusCode(), body)
     }
 
-    private fun tolkResponskoder(status: Int, body: String): Result<SimuleringResult> {
-        return when (status) {
-            200 -> convertResponseBody<SimuleringResponse>(body).map {
-                SimuleringResult.Ok(it).ok()
-            }
+    private fun tolkResponskoder(
+        status: Int,
+        body: String,
+    ): Result<SimuleringResult> =
+        when (status) {
+            200 ->
+                convertResponseBody<SimuleringResponse>(body).map {
+                    SimuleringResult.Ok(it).ok()
+                }
             204 -> SimuleringResult.OkMenTomt.ok()
-            400 -> convertResponseBody<SimuleringFeilresponse>(body).fold(
-                whenOk = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.detail}").ok() },
-                whenError = { msg, cause -> "Det er feil i requesten vår, men vi klarte ikke tolke feilrespons fra Spenn simulering: $msg".error(cause) }
-            )
+            400 ->
+                convertResponseBody<SimuleringFeilresponse>(body).fold(
+                    whenOk = { SimuleringResult.FunksjonellFeil("Feil i requesten vår til Spenn Simulering: ${it.detail}").ok() },
+                    whenError = { msg, cause -> "Det er feil i requesten vår, men vi klarte ikke tolke feilrespons fra Spenn simulering: $msg".error(cause) },
+                )
             503 -> SimuleringResult.SimuleringtjenesteUtilgjengelig.ok()
             else -> {
                 convertResponseBody<SimuleringFeilresponse>(body).fold(
                     whenOk = { "Feil fra Spenn Simulering (http $status): ${it.detail}".error() },
-                    whenError = { msg, cause -> "Klarte ikke tolke feilrespons fra Spenn simulering (http $status): $msg".error(cause) }
+                    whenError = { msg, cause -> "Klarte ikke tolke feilrespons fra Spenn simulering (http $status): $msg".error(cause) },
                 )
             }
         }
-    }
 
-    private fun request(action: String, bearerToken: AzureToken, jsonInputString: String, callId: String): Result<HttpResponse<String>> {
-        return try {
-            val request = HttpRequest.newBuilder()
-                .uri(URI("$baseUrl$action"))
-                .timeout(Duration.ofSeconds(10))
-                .header("Accept", "application/json")
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer ${bearerToken.token}")
-                .header("callId", callId)
-                .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
-                .build()
+    private fun request(
+        action: String,
+        bearerToken: AzureToken,
+        jsonInputString: String,
+        callId: String,
+    ): Result<HttpResponse<String>> =
+        try {
+            val request =
+                HttpRequest
+                    .newBuilder()
+                    .uri(URI("$baseUrl$action"))
+                    .timeout(Duration.ofSeconds(10))
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer ${bearerToken.token}")
+                    .header("callId", callId)
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonInputString))
+                    .build()
 
             httpClient.send(request, HttpResponse.BodyHandlers.ofString()).ok()
         } catch (err: Exception) {
             err.error("Feil ved sending av http request")
         }
-    }
 
-    private inline fun <reified T> convertResponseBody(response: String): Result<T> {
-        return try {
+    private inline fun <reified T> convertResponseBody(response: String): Result<T> =
+        try {
             objectMapper.readValue<T>(response).ok()
         } catch (err: Exception) {
             err.error(err.message ?: "JSON parsing error")
         }
-    }
 
     sealed interface SimuleringResult {
-        data class Ok(val data: SimuleringResponse) : SimuleringResult
+        data class Ok(
+            val data: SimuleringResponse,
+        ) : SimuleringResult
+
         data object OkMenTomt : SimuleringResult
+
         data object SimuleringtjenesteUtilgjengelig : SimuleringResult
-        data class FunksjonellFeil(val feilmelding: String) : SimuleringResult
+
+        data class FunksjonellFeil(
+            val feilmelding: String,
+        ) : SimuleringResult
     }
 }
 
@@ -103,21 +121,24 @@ data class SimuleringRequest(
     val fødselsnummer: String,
     val oppdrag: Oppdrag,
     val maksdato: LocalDate?,
-    val saksbehandler: String
+    val saksbehandler: String,
 ) {
     data class Oppdrag(
         val fagområde: Fagområde,
         val fagsystemId: String,
         val endringskode: Endringskode,
         val mottakerAvUtbetalingen: String,
-        val linjer: List<Oppdragslinje>
+        val linjer: List<Oppdragslinje>,
     ) {
         enum class Fagområde {
             ARBEIDSGIVERREFUSJON,
-            BRUKERUTBETALING
+            BRUKERUTBETALING,
         }
+
         enum class Endringskode {
-            NY, ENDRET, IKKE_ENDRET
+            NY,
+            ENDRET,
+            IKKE_ENDRET,
         }
 
         data class Oppdragslinje(
@@ -127,18 +148,18 @@ data class SimuleringRequest(
             val satstype: Satstype,
             val sats: Int,
             val grad: Int?,
-
             val delytelseId: Int,
             val refDelytelseId: Int?,
             val refFagsystemId: String?,
-
             val klassekode: Klassekode,
             val klassekodeFom: LocalDate?,
-            val opphørerFom: LocalDate?
+            val opphørerFom: LocalDate?,
         ) {
             enum class Satstype {
-                DAGLIG, ENGANGS
+                DAGLIG,
+                ENGANGS,
             }
+
             enum class Klassekode {
                 REFUSJON_IKKE_OPPLYSNINGSPLIKTIG,
                 REFUSJON_FERIEPENGER_IKKE_OPPLYSNINGSPLIKTIG,
@@ -147,7 +168,7 @@ data class SimuleringRequest(
                 SELVSTENDIG_NÆRINGSDRIVENDE,
                 SELVSTENDIG_NÆRINGSDRIVENDE_FISKER,
                 SELVSTENDIG_NÆRINGSDRIVENDE_JORDBRUK,
-                BARNEPASSER
+                BARNEPASSER,
             }
         }
     }
@@ -161,20 +182,21 @@ data class SimuleringFeilresponse(
     val detail: String?,
     val instance: URI,
     val callId: String?,
-    val stacktrace: String? = null
+    val stacktrace: String? = null,
 )
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SimuleringResponse(
     val gjelderId: String,
     val gjelderNavn: String,
     val datoBeregnet: LocalDate,
     val totalBelop: Int,
-    val periodeList: List<SimulertPeriode>
+    val periodeList: List<SimulertPeriode>,
 ) {
     data class SimulertPeriode(
         val fom: LocalDate,
         val tom: LocalDate,
-        val utbetaling: List<Utbetaling>
+        val utbetaling: List<Utbetaling>,
     )
 
     data class Utbetaling(
@@ -183,7 +205,7 @@ data class SimuleringResponse(
         val utbetalesTilNavn: String,
         val forfall: LocalDate,
         val feilkonto: Boolean,
-        val detaljer: List<Detaljer>
+        val detaljer: List<Detaljer>,
     )
 
     data class Detaljer(
@@ -199,6 +221,6 @@ data class SimuleringResponse(
         val klassekode: String,
         val klassekodeBeskrivelse: String,
         val utbetalingsType: String,
-        val refunderesOrgNr: String
+        val refunderesOrgNr: String,
     )
 }

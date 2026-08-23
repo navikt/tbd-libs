@@ -11,15 +11,16 @@ import java.util.*
 import java.util.concurrent.Flow
 import javax.net.ssl.SSLSession
 
-fun HttpRequest.bodyAsString(): String {
-    return bodyPublisher().get().let {
+fun HttpRequest.bodyAsString(): String =
+    bodyPublisher().get().let {
         val subscriber = HttpResponse.BodySubscribers.ofString(StandardCharsets.UTF_8)
         it.subscribe(StringSubscriber(subscriber))
         subscriber.body.toCompletableFuture().get()
     }
-}
 
-private class StringSubscriber(private val other: HttpResponse.BodySubscriber<String>) : Flow.Subscriber<ByteBuffer> {
+private class StringSubscriber(
+    private val other: HttpResponse.BodySubscriber<String>,
+) : Flow.Subscriber<ByteBuffer> {
     override fun onSubscribe(subscription: Flow.Subscription) {
         other.onSubscribe(subscription)
     }
@@ -40,19 +41,15 @@ private class StringSubscriber(private val other: HttpResponse.BodySubscriber<St
 class MockHttpResponse(
     private val body: String,
     private val statusCode: Int? = null,
-    private val headers: Map<String, String>? = null
+    private val headers: Map<String, String>? = null,
 ) : HttpResponse<String> {
     override fun body() = body
 
     override fun statusCode() = statusCode ?: throw NotImplementedError("Ikke implementert i mocken")
 
-    override fun request(): HttpRequest {
-        throw NotImplementedError("Ikke implementert i mocken")
-    }
+    override fun request(): HttpRequest = throw NotImplementedError("Ikke implementert i mocken")
 
-    override fun previousResponse(): Optional<HttpResponse<String>> {
-        throw NotImplementedError("Ikke implementert i mocken")
-    }
+    override fun previousResponse(): Optional<HttpResponse<String>> = throw NotImplementedError("Ikke implementert i mocken")
 
     override fun headers(): HttpHeaders {
         if (headers == null) throw NotImplementedError("Ikke implementert i mocken")
@@ -60,15 +57,9 @@ class MockHttpResponse(
         return HttpHeaders.of(headers.mapValues { listOf(it.value) }, acceptAll)
     }
 
-    override fun sslSession(): Optional<SSLSession> {
-        throw NotImplementedError("Ikke implementert i mocken")
-    }
+    override fun sslSession(): Optional<SSLSession> = throw NotImplementedError("Ikke implementert i mocken")
 
-    override fun uri(): URI {
-        throw NotImplementedError("Ikke implementert i mocken")
-    }
+    override fun uri(): URI = throw NotImplementedError("Ikke implementert i mocken")
 
-    override fun version(): HttpClient.Version {
-        throw NotImplementedError("Ikke implementert i mocken")
-    }
+    override fun version(): HttpClient.Version = throw NotImplementedError("Ikke implementert i mocken")
 }

@@ -1,13 +1,6 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.YearMonth
-import java.time.ZoneId
-import java.time.format.DateTimeParseException
-import java.util.*
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -26,13 +19,20 @@ import tools.jackson.databind.node.MissingNode
 import tools.jackson.databind.node.NullNode
 import tools.jackson.databind.node.StringNode
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.YearMonth
+import java.time.ZoneId
+import java.time.format.DateTimeParseException
+import java.util.*
 
 internal class JsonMessageTest {
-
-    private val objectMapper = jacksonMapperBuilder()
-        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-        .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        .build()
+    private val objectMapper =
+        jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .build()
     private val ValidJson = "{\"foo\": \"bar\"}"
     private val InvalidJson = "foo"
     private val ValidJsonNoObject = "[]"
@@ -54,7 +54,7 @@ internal class JsonMessageTest {
         val data = node.path("data")
         assertEquals(
             setOf("årsak", "ønsketDato", "ærligTalt", "vanligFelt"),
-            data.propertyNames().toSet()
+            data.propertyNames().toSet(),
         )
         assertEquals("dårlig vær", data.path("årsak").asString())
         assertEquals("2018-01-01", data.path("ønsketDato").asString())
@@ -75,7 +75,7 @@ internal class JsonMessageTest {
         val årsak: String = "dårlig vær",
         val ønsketDato: LocalDate = LocalDate.of(2018, 1, 1),
         val ærligTalt: Boolean = true,
-        val vanligFelt: String = "uendret"
+        val vanligFelt: String = "uendret",
     )
 
     @Test
@@ -115,14 +115,14 @@ internal class JsonMessageTest {
     @Test
     fun `custom id generator`() {
         val expected = "notSoRandom"
-        val msg = JsonMessage.newMessage() { expected }
+        val msg = JsonMessage.newMessage { expected }
         assertEquals(expected, msg.id)
     }
 
     @Test
     fun `populate missing fields`() {
         val expected = "notSoRandom"
-        val msg = JsonMessage.newMessage() { expected }
+        val msg = JsonMessage.newMessage { expected }
         val json1 = JsonMessage.populateStandardFields(msg, msg.toJson())
         val node1 = objectMapper.readTree(json1)
         assertEquals(expected, node1.path("@forårsaket_av").path("id").asString())
@@ -250,14 +250,16 @@ internal class JsonMessageTest {
     @Test
     fun `read count`() {
         val problems = MessageProblems("{}")
-        val firstMessage = JsonMessage("{}", problems).apply {
-            interestedIn("system_read_count")
-        }
+        val firstMessage =
+            JsonMessage("{}", problems).apply {
+                interestedIn("system_read_count")
+            }
         assertEquals(0, firstMessage["system_read_count"].intValue())
 
-        val secondMessage = JsonMessage(firstMessage.toJson(), problems).apply {
-            interestedIn("system_read_count")
-        }
+        val secondMessage =
+            JsonMessage(firstMessage.toJson(), problems).apply {
+                interestedIn("system_read_count")
+            }
         assertEquals(1, secondMessage["system_read_count"].intValue())
     }
 
@@ -273,9 +275,10 @@ internal class JsonMessageTest {
     @Test
     fun `update value`() {
         val problems = MessageProblems("{}")
-        val message = JsonMessage("{}", problems).apply {
-            interestedIn("key")
-        }
+        val message =
+            JsonMessage("{}", problems).apply {
+                interestedIn("key")
+            }
         assertTrue(message["key"].isMissingNode)
         message["key"] = "Hello!"
         assertEquals("Hello!", message["key"].asString())
@@ -851,9 +854,10 @@ internal class JsonMessageTest {
 
     @Test
     fun `requiredKey can not return null`() {
-        val message = message("{\"foo\": null}").apply {
-            requireKey("foo")
-        }
+        val message =
+            message("{\"foo\": null}").apply {
+                requireKey("foo")
+            }
 
         assertThrows<IllegalArgumentException> {
             message["foo"]
@@ -862,9 +866,10 @@ internal class JsonMessageTest {
 
     @Test
     fun `interestedIn can return null`() {
-        val message = message("{\"foo\": null}").apply {
-            interestedIn("foo", "bar")
-        }
+        val message =
+            message("{\"foo\": null}").apply {
+                interestedIn("foo", "bar")
+            }
         assertTrue(message["foo"].isNull)
         assertTrue(message["bar"].isMissingNode)
         assertNull(message["foo"].stringValue(null))
@@ -946,7 +951,6 @@ internal class JsonMessageTest {
         }
     }
 
-
     @Test
     fun asLocalDateTime() {
         assertThrows<DateTimeParseException> { MissingNode.getInstance().asLocalDateTime() }
@@ -959,6 +963,7 @@ internal class JsonMessageTest {
         }
         assertThrows<DateTimeParseException> { StringNode.valueOf(Instant.now().toString()).asLocalDateTime() }
     }
+
     @Test
     fun asLocalDateTimeLenient() {
         assertThrows<DateTimeParseException> { MissingNode.getInstance().asLocalDateTimeLenient() }
@@ -1035,7 +1040,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertEquals(msg: String, key: String, expectedValue: String) {
+    private fun assertEquals(
+        msg: String,
+        key: String,
+        expectedValue: String,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireValue(key, expectedValue)
@@ -1044,7 +1053,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertEquals(msg: String, key: String, expectedValue: Number) {
+    private fun assertEquals(
+        msg: String,
+        key: String,
+        expectedValue: Number,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireValue(key, expectedValue)
@@ -1053,7 +1066,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertEquals(msg: String, key: String, expectedValue: Boolean) {
+    private fun assertEquals(
+        msg: String,
+        key: String,
+        expectedValue: Boolean,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireValue(key, expectedValue)
@@ -1062,7 +1079,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertEquals(msg: String, key: String, expectedValues: List<String>) {
+    private fun assertEquals(
+        msg: String,
+        key: String,
+        expectedValues: List<String>,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireAll(key, expectedValues)
@@ -1070,7 +1091,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertThrows(msg: String, key: String, expectedValues: List<String>) {
+    private fun assertThrows(
+        msg: String,
+        key: String,
+        expectedValues: List<String>,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireAll(key, expectedValues)
@@ -1078,7 +1103,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertThrows(msg: String, key: String, expectedValue: Boolean) {
+    private fun assertThrows(
+        msg: String,
+        key: String,
+        expectedValue: Boolean,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireValue(key, expectedValue)
@@ -1087,7 +1116,11 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertThrows(msg: String, key: String, expectedValue: String) {
+    private fun assertThrows(
+        msg: String,
+        key: String,
+        expectedValue: String,
+    ) {
         val problems = MessageProblems(msg)
         JsonMessage(msg, problems).also {
             it.requireValue(key, expectedValue)
@@ -1096,26 +1129,30 @@ internal class JsonMessageTest {
         }
     }
 
-    private fun assertThrows(message: JsonMessage, key: String) {
+    private fun assertThrows(
+        message: JsonMessage,
+        key: String,
+    ) {
         assertThrows<IllegalArgumentException>({ "should throw exception, instead returned ${message[key]}" }) {
             message[key]
         }
     }
 
     private lateinit var problems: MessageProblems
+
     private fun message(json: String): JsonMessage {
         problems = MessageProblems(json)
         return JsonMessage(json, problems)
     }
 
-    private class ExtendedMessage(originalMessage: String, problems: MessageProblems) :
-        JsonMessage(originalMessage, problems) {
+    private class ExtendedMessage(
+        originalMessage: String,
+        problems: MessageProblems,
+    ) : JsonMessage(originalMessage, problems) {
         init {
             requireKey("required_key")
         }
     }
-
-
 
     @Test
     fun `allParticipatingServices returns empty list when no participating services field`() {

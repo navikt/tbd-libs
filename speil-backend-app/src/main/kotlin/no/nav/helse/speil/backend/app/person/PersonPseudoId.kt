@@ -2,7 +2,6 @@ package no.nav.helse.speil.backend.app.person
 
 import java.util.UUID
 
-
 @JvmInline
 value class PersonPseudoId(
     val value: UUID,

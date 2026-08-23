@@ -5,19 +5,19 @@ import com.github.navikt.tbd_libs.access_token.TexasClient
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangSomMangler
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
+import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.*
-import tools.jackson.databind.DeserializationFeature
-import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
-import tools.jackson.module.kotlin.jacksonMapperBuilder
-import tools.jackson.module.kotlin.readValue
 
 private data class MinimalTilgangsmaskinenResponse(
-    val title: String
+    val title: String,
 )
 
 class TilgangsmaskinenClient(
@@ -25,60 +25,76 @@ class TilgangsmaskinenClient(
     private val baseUrl: String,
     private val tokenProvider: AccessTokenProvider,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
-): PopulasjonstilgangskontrollProvider {
-    private val objectMapper = jacksonMapperBuilder()
-        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .build()
+) : PopulasjonstilgangskontrollProvider {
+    private val objectMapper =
+        jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .build()
 
-    override fun kontrollerKomplettTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
+    override fun kontrollerKomplettTilgang(
+        accessToken: String,
+        fødselsnummer: String,
+    ): TilgangskontrollResultat {
         val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
 
-        val request = HttpRequest.newBuilder()
-            .uri(URI("$baseUrl/api/v1/komplett"))
-            .timeout(Duration.ofSeconds(10))
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer $oboToken")
-            .header("callId", UUID.randomUUID().toString())
-            .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
-            .build()
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI("$baseUrl/api/v1/komplett"))
+                .timeout(Duration.ofSeconds(10))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer $oboToken")
+                .header("callId", UUID.randomUUID().toString())
+                .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
+                .build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
         return håndterResponse(response)
     }
 
-    override fun kontrollerKjerneTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
+    override fun kontrollerKjerneTilgang(
+        accessToken: String,
+        fødselsnummer: String,
+    ): TilgangskontrollResultat {
         val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)
 
-        val request = HttpRequest.newBuilder()
-            .uri(URI("$baseUrl/api/v1/kjerne"))
-            .timeout(Duration.ofSeconds(10))
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer $oboToken")
-            .header("callId", UUID.randomUUID().toString())
-            .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
-            .build()
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI("$baseUrl/api/v1/kjerne"))
+                .timeout(Duration.ofSeconds(10))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer $oboToken")
+                .header("callId", UUID.randomUUID().toString())
+                .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
+                .build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
         return håndterResponse(response)
     }
 
-    override fun kontrollerKjerneTilgangForAnsatt(ansattId: String, fødselsnummer: String): TilgangskontrollResultat {
+    override fun kontrollerKjerneTilgangForAnsatt(
+        ansattId: String,
+        fødselsnummer: String,
+    ): TilgangskontrollResultat {
         val machineToken = tokenProvider.machineToken(scope = scope)
 
-        val request = HttpRequest.newBuilder()
-            .uri(URI("$baseUrl/api/v1/ccf/kjerne/$ansattId"))
-            .timeout(Duration.ofSeconds(10))
-            .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer $machineToken")
-            .header("callId", UUID.randomUUID().toString())
-            .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
-            .build()
+        val request =
+            HttpRequest
+                .newBuilder()
+                .uri(URI("$baseUrl/api/v1/ccf/kjerne/$ansattId"))
+                .timeout(Duration.ofSeconds(10))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer $machineToken")
+                .header("callId", UUID.randomUUID().toString())
+                .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
+                .build()
 
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
@@ -113,7 +129,7 @@ class TilgangsmaskinenClient(
     companion object {
         fun fromEnv(
             env: Map<String, String> = System.getenv(),
-            tokenProvider: AccessTokenProvider = TexasClient.fromEnv()
+            tokenProvider: AccessTokenProvider = TexasClient.fromEnv(),
         ): TilgangsmaskinenClient {
             val prod = env["NAIS_CLUSTER_NAME"]?.startsWith("prod") ?: false
             val scope = if (prod) "api://prod-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default" else "api://dev-gcp.tilgangsmaskin.populasjonstilgangskontroll/.default"
@@ -122,5 +138,3 @@ class TilgangsmaskinenClient(
         }
     }
 }
-
-

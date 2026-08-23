@@ -1,6 +1,5 @@
 package com.github.navikt.tbd_libs.azure
 
-import java.time.LocalDateTime
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -9,11 +8,13 @@ import tools.jackson.databind.InjectableValues
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
 import tools.jackson.module.kotlin.readValue
+import java.time.LocalDateTime
 
 class AzureTokenResponseTest {
-    private val objectMapper = jacksonMapperBuilder()
-        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-        .build()
+    private val objectMapper =
+        jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
 
     @Test
     fun deserializeTokenResponse() {
@@ -25,9 +26,13 @@ class AzureTokenResponseTest {
   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6Ik1uQ19WWmNBVGZNNXBP..."
 }"""
         val utstedtTidspunkt = LocalDateTime.of(2018, 1, 1, 13, 37, 0, 123)
-        val reader = objectMapper.reader(InjectableValues.Std()
-            .addValue(LocalDateTime::class.java, utstedtTidspunkt)
-        ).forType(AzureTokenResponse::class.java)
+        val reader =
+            objectMapper
+                .reader(
+                    InjectableValues
+                        .Std()
+                        .addValue(LocalDateTime::class.java, utstedtTidspunkt),
+                ).forType(AzureTokenResponse::class.java)
 
         val token = assertDoesNotThrow { reader.readValue<AzureTokenResponse>(json) }
         assertEquals(utstedtTidspunkt.plusSeconds(3599), token.expirationTime)

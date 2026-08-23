@@ -13,7 +13,6 @@ class ValkeyPersonPseudoIdProvider(
     override fun finnIdentitetsnummer(personPseudoId: PersonPseudoId): Identitetsnummer? = client.finnIdentitetsnummer(personPseudoId.value)?.let { Identitetsnummer(it) }
 
     companion object {
-
         fun fraEnv(
             instansNavn: String = "personpseudoid",
             env: Map<String, String> = System.getenv(),

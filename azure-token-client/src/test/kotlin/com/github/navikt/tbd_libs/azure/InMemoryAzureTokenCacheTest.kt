@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 class InMemoryAzureTokenCacheTest {
-
     @Test
     fun `henter verdi når cache er tom`() {
         val mock = mockk<AzureTokenProvider>(relaxed = true)
@@ -19,11 +18,13 @@ class InMemoryAzureTokenCacheTest {
         cache.bearerToken(scope)
         verify(exactly = 1) { mock.bearerToken(scope) }
     }
+
     @Test
     fun `henter ikke verdi når cache finnes`() {
-        val mock = mockk<AzureTokenProvider> {
-            every { bearerToken(any()) } returns AzureToken("", LocalDateTime.MAX).ok()
-        }
+        val mock =
+            mockk<AzureTokenProvider> {
+                every { bearerToken(any()) } returns AzureToken("", LocalDateTime.MAX).ok()
+            }
         val cache = InMemoryAzureTokenCache(mock)
         val scope = "testscope"
         cache.bearerToken(scope) // første kall
@@ -56,9 +57,10 @@ class InMemoryAzureTokenCacheTest {
 
     @Test
     fun `henter obo token fra cache`() {
-        val mock = mockk<AzureTokenProvider> {
-            every { onBehalfOfToken(any(), any()) } returns AzureToken("", LocalDateTime.MAX).ok()
-        }
+        val mock =
+            mockk<AzureTokenProvider> {
+                every { onBehalfOfToken(any(), any()) } returns AzureToken("", LocalDateTime.MAX).ok()
+            }
         val cache = InMemoryAzureTokenCache(mock)
         val scope = "testscope"
         val result1 = cache.onBehalfOfToken(scope, "ett token")

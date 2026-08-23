@@ -14,7 +14,7 @@ internal data class AzureTokenResponse(
     @param:JsonProperty("expires_in")
     val expiresIn: Long,
     @param:JacksonInject
-    private val utstedtTidspunkt: LocalDateTime
+    private val utstedtTidspunkt: LocalDateTime,
 ) {
     val expirationTime: LocalDateTime = utstedtTidspunkt.plusSeconds(expiresIn)
 

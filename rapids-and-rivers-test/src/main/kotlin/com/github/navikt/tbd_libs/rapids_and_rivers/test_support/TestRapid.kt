@@ -12,12 +12,14 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
 
-class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()) :
-    RapidsConnection() {
+class TestRapid(
+    private val meterRegistry: MeterRegistry = SimpleMeterRegistry(),
+) : RapidsConnection() {
     private companion object {
-        private val objectMapper = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .build()
+        private val objectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .build()
     }
 
     private val messages = mutableListOf<Pair<String?, String>>()
@@ -31,7 +33,10 @@ class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()
         notifyMessage(message, this, MessageMetadata("test.message", -1, -1, null, emptyMap()), meterRegistry)
     }
 
-    fun sendTestMessage(message: String, key: String) {
+    fun sendTestMessage(
+        message: String,
+        key: String,
+    ) {
         notifyMessage(message, KeyMessageContext(this, key), MessageMetadata("test.message", -1, -1, key, emptyMap()), meterRegistry)
     }
 
@@ -39,7 +44,10 @@ class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()
         messages.add(null to message)
     }
 
-    override fun publish(key: String, message: String) {
+    override fun publish(
+        key: String,
+        message: String,
+    ) {
         messages.add(key to message)
     }
 
@@ -50,27 +58,32 @@ class TestRapid(private val meterRegistry: MeterRegistry = SimpleMeterRegistry()
                 index = index,
                 message = it,
                 partition = 0,
-                offset = 0L
+                offset = 0L,
             )
         } to emptyList()
     }
 
-    override fun rapidName(): String {
-        return "testRapid"
-    }
+    override fun rapidName(): String = "testRapid"
 
     override fun start() {}
+
     override fun stop() {}
 
-    class RapidInspector(private val messages: List<Pair<String?, String>>) {
+    class RapidInspector(
+        private val messages: List<Pair<String?, String>>,
+    ) {
         private val jsonMessages = mutableMapOf<Int, JsonNode>()
         val size get() = messages.size
 
         fun key(index: Int) = messages[index].first
+
         fun message(index: Int) = jsonMessages.getOrPut(index) { objectMapper.readTree(messages[index].second) }
-        fun field(index: Int, field: String) =
-            requireNotNull(message(index).path(field).takeUnless { it.isMissingNode || it.isNull }) {
-                "Message does not contain field '$field'"
-            }
+
+        fun field(
+            index: Int,
+            field: String,
+        ) = requireNotNull(message(index).path(field).takeUnless { it.isMissingNode || it.isNull }) {
+            "Message does not contain field '$field'"
+        }
     }
 }

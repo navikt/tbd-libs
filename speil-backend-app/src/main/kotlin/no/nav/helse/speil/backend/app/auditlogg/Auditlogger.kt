@@ -1,7 +1,7 @@
 package no.nav.helse.speil.backend.app.auditlogg
 
-import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Metrics
 import no.nav.helse.speil.backend.app.auth.NavIdent
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

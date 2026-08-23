@@ -12,7 +12,6 @@ import no.nav.helse.speil.backend.app.person.Identitetsnummer
 import no.nav.helse.speil.backend.app.person.PersonPseudoId
 import no.nav.helse.speil.backend.app.person.PersonPseudoIdProvider
 
-
 class KallKontekst<TRANSAKSJON, ROLLE : Brukerrolle>(
     val saksbehandler: Saksbehandler,
     val tilganger: Set<Tilgang>,
@@ -23,7 +22,7 @@ class KallKontekst<TRANSAKSJON, ROLLE : Brukerrolle>(
     private val populasjonstilgangskontrollProvider: PopulasjonstilgangskontrollProvider,
     private val auditlogger: Auditlogger,
 ) {
-        fun <RESPONSE, ERROR : ApiErrorCode> medPerson(
+    fun <RESPONSE, ERROR : ApiErrorCode> medPerson(
         personPseudoId: PersonPseudoId,
         personIkkeFunnet: () -> ERROR,
         manglerTilgang: () -> ERROR,

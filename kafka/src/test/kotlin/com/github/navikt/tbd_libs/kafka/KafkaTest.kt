@@ -30,9 +30,10 @@ class KafkaTest {
 
             val partitions = adminClient.getPartitions(topicnavn)
             val recordMeta = recordMetaFuture.resultNow()
-            val expectedOffsets = partitions.associateWith {
-                if (it.partition() == recordMeta.partition()) recordMeta.offset() + 1 else 0
-            }
+            val expectedOffsets =
+                partitions.associateWith {
+                    if (it.partition() == recordMeta.partition()) recordMeta.offset() + 1 else 0
+                }
             val actualOffsets = adminClient.findOffsets(partitions, OffsetSpec.latest())
             assertEquals(expectedOffsets, actualOffsets)
         }

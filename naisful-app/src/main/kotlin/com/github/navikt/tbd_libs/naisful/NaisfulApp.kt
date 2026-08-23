@@ -54,38 +54,40 @@ import io.micrometer.core.instrument.binder.jvm.JvmThreadMetrics
 import io.micrometer.core.instrument.binder.logging.LogbackMetrics
 import io.micrometer.core.instrument.binder.system.ProcessorMetrics
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import java.net.URI
-import java.util.*
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
 import org.slf4j.event.Level
 import tools.jackson.databind.ObjectMapper
+import java.net.URI
+import java.util.*
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 data class NaisEndpoints(
     val isaliveEndpoint: String,
     val isreadyEndpoint: String,
     val metricsEndpoint: String,
-    val preStopEndpoint: String
+    val preStopEndpoint: String,
 ) {
     companion object {
-        val Default = NaisEndpoints(
-            isaliveEndpoint = "/isalive",
-            isreadyEndpoint = "/isready",
-            metricsEndpoint = "/metrics",
-            preStopEndpoint = "/stop"
-        )
+        val Default =
+            NaisEndpoints(
+                isaliveEndpoint = "/isalive",
+                isreadyEndpoint = "/isready",
+                metricsEndpoint = "/metrics",
+                preStopEndpoint = "/stop",
+            )
     }
 }
 
-private fun defaultCIOConfiguration(port: Int) = CIOApplicationEngine.Configuration().apply {
-    connector {
-        this.port = port
+private fun defaultCIOConfiguration(port: Int) =
+    CIOApplicationEngine.Configuration().apply {
+        connector {
+            this.port = port
+        }
     }
-}
 
 fun plainApp(
     applicationLogger: Logger,
@@ -93,29 +95,32 @@ fun plainApp(
     developmentMode: Boolean = defaultDevelopmentMode(),
     gracefulShutdownDelay: Duration = 20.seconds,
     cioConfiguration: CIOApplicationEngine.Configuration.() -> Unit = { },
-    applicationModule: Application.() -> Unit
+    applicationModule: Application.() -> Unit,
 ): EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration> {
-    val config = serverConfig(
-        environment = applicationEnvironment {
-            log = applicationLogger
-        }
-    ) {
-        this.developmentMode = developmentMode
-        module {
-            monitor.subscribe(ApplicationStarting) { it.log.info("Application starting …") }
-            monitor.subscribe(ApplicationStarted) { it.log.info("Application started …") }
-            monitor.subscribe(ServerReady) { it.log.info("Application ready …") }
-            monitor.subscribe(ApplicationStopPreparing) { it.log.info("Application preparing to stop …") }
-            monitor.subscribe(ApplicationStopping) { it.log.info("Application stopping …") }
-            monitor.subscribe(ApplicationStopped) { it.log.info("Application stopped …") }
+    val config =
+        serverConfig(
+            environment =
+                applicationEnvironment {
+                    log = applicationLogger
+                },
+        ) {
+            this.developmentMode = developmentMode
+            module {
+                monitor.subscribe(ApplicationStarting) { it.log.info("Application starting …") }
+                monitor.subscribe(ApplicationStarted) { it.log.info("Application started …") }
+                monitor.subscribe(ServerReady) { it.log.info("Application ready …") }
+                monitor.subscribe(ApplicationStopPreparing) { it.log.info("Application preparing to stop …") }
+                monitor.subscribe(ApplicationStopping) { it.log.info("Application stopping …") }
+                monitor.subscribe(ApplicationStopped) { it.log.info("Application stopped …") }
 
-            applicationModule()
+                applicationModule()
+            }
         }
-    }
     val cioConfig = defaultCIOConfiguration(port).apply(cioConfiguration)
-    val app = EmbeddedServer(config, CIO) {
-        takeFrom(cioConfig)
-    }
+    val app =
+        EmbeddedServer(config, CIO) {
+            takeFrom(cioConfig)
+        }
 
     val hook = ShutdownHook(app, gracefulShutdownDelay)
     Runtime.getRuntime().addShutdownHook(hook)
@@ -146,7 +151,7 @@ fun naisApp(
     statusPagesConfig: StatusPagesConfig.(String) -> Unit = { defaultStatusPagesConfig(callIdHeaderName) },
     developmentMode: Boolean = defaultDevelopmentMode(),
     gracefulShutdownDelay: Duration = 20.seconds,
-    applicationModule: Application.() -> Unit
+    applicationModule: Application.() -> Unit,
 ) = plainApp(
     applicationLogger = applicationLogger,
     port = port,
@@ -165,10 +170,10 @@ fun naisApp(
             readyCheck = readyCheck,
             timersConfig = timersConfig,
             mdcEntries = mdcEntries,
-            statusPagesConfig = statusPagesConfig
+            statusPagesConfig = statusPagesConfig,
         )
         applicationModule()
-    }
+    },
 )
 
 fun Application.standardApiModule(
@@ -182,7 +187,7 @@ fun Application.standardApiModule(
     readyCheck: () -> Boolean = { true },
     timersConfig: Timer.Builder.(ApplicationCall, Throwable?) -> Unit = { _, _ -> },
     mdcEntries: Map<String, (ApplicationCall) -> String?> = emptyMap(),
-    statusPagesConfig: StatusPagesConfig.(String) -> Unit = { callIdHeaderName -> defaultStatusPagesConfig(callIdHeaderName) }
+    statusPagesConfig: StatusPagesConfig.(String) -> Unit = { callIdHeaderName -> defaultStatusPagesConfig(callIdHeaderName) },
 ) {
     install(CallId) {
         header(callIdHeaderName)
@@ -196,14 +201,15 @@ fun Application.standardApiModule(
         logger = callLogger
         level = Level.INFO
         callIdMdc(callIdHeaderName)
-        mdcEntries.forEach { (k, v) -> mdc(k, v)}
+        mdcEntries.forEach { (k, v) -> mdc(k, v) }
         disableDefaultColors()
 
-        val ignoredPaths = setOf(
-            naisEndpoints.metricsEndpoint,
-            naisEndpoints.isreadyEndpoint,
-            naisEndpoints.isaliveEndpoint
-        )
+        val ignoredPaths =
+            setOf(
+                naisEndpoints.metricsEndpoint,
+                naisEndpoints.isreadyEndpoint,
+                naisEndpoints.isaliveEndpoint,
+            )
         filter { call ->
             ignoredPaths.none { ignoredPath ->
                 call.request.path().startsWith(ignoredPath)
@@ -216,27 +222,31 @@ fun Application.standardApiModule(
     install(MicrometerMetrics) {
         registry = meterRegistry
         timers(timersConfig)
-        val defaultBinders = listOf(
-            ClassLoaderMetrics(),
-            JvmInfoMetrics(),
-            JvmMemoryMetrics(),
-            JvmThreadMetrics(),
-            JvmGcMetrics(),
-            ProcessorMetrics()
-        )
-        meterBinders = defaultBinders + buildList {
-            try {
-                Class.forName("ch.qos.logback.classic.LoggerContext")
-                add(LogbackMetrics())
-            } catch (_: ClassNotFoundException) {}
-        }
+        val defaultBinders =
+            listOf(
+                ClassLoaderMetrics(),
+                JvmInfoMetrics(),
+                JvmMemoryMetrics(),
+                JvmThreadMetrics(),
+                JvmGcMetrics(),
+                ProcessorMetrics(),
+            )
+        meterBinders = defaultBinders +
+            buildList {
+                try {
+                    Class.forName("ch.qos.logback.classic.LoggerContext")
+                    add(LogbackMetrics())
+                } catch (_: ClassNotFoundException) {
+                }
+            }
     }
 
     with(meterRegistry) {
         val pkg = ::naisApp.javaClass.`package`
         val title = pkg?.implementationTitle ?: "unknown"
         val version = pkg?.implementationVersion ?: "unknown"
-        MultiGauge.builder("naisful.info")
+        MultiGauge
+            .builder("naisful.info")
             .description("Naisful version info")
             .tag("title", title)
             .tag("version", version)
@@ -290,7 +300,7 @@ fun Application.standardApiModule(
         }
 
         get(naisEndpoints.metricsEndpoint) {
-             call.request.acceptItems().firstOrNull()?.let {
+            call.request.acceptItems().firstOrNull()?.let {
                 val contentType = ContentType.parse(it.value)
                 val metrics = meterRegistry.scrape(it.value)
 
@@ -317,73 +327,87 @@ fun StatusPagesConfig.defaultStatusPagesConfig(callIdHeaderName: String) {
     exception<BadRequestException> { call, cause ->
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
         call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
-        call.respond(HttpStatusCode.BadRequest, FeilResponse(
-            status = HttpStatusCode.BadRequest,
-            type = URI("urn:error:bad_request"),
-            detail = cause.message,
-            instance = URI(call.request.uri),
-            callId = call.callId,
-            stacktrace = cause.stackTraceToString()
-        ))
+        call.respond(
+            HttpStatusCode.BadRequest,
+            FeilResponse(
+                status = HttpStatusCode.BadRequest,
+                type = URI("urn:error:bad_request"),
+                detail = cause.message,
+                instance = URI(call.request.uri),
+                callId = call.callId,
+                stacktrace = cause.stackTraceToString(),
+            ),
+        )
     }
     exception<NotFoundException> { call, cause ->
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
         call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
-        call.respond(HttpStatusCode.NotFound, FeilResponse(
-            status = HttpStatusCode.NotFound,
-            type = URI("urn:error:not_found"),
-            detail = cause.message,
-            instance = URI(call.request.uri),
-            callId = call.callId,
-            stacktrace = cause.stackTraceToString()
-        ))
+        call.respond(
+            HttpStatusCode.NotFound,
+            FeilResponse(
+                status = HttpStatusCode.NotFound,
+                type = URI("urn:error:not_found"),
+                detail = cause.message,
+                instance = URI(call.request.uri),
+                callId = call.callId,
+                stacktrace = cause.stackTraceToString(),
+            ),
+        )
     }
     exception<Throwable> { call, cause ->
         call.application.log.info("ukjent feil: ${cause.message}. svarer med InternalServerError og en feilmelding i JSON", cause)
         call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
         call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
-        call.respond(HttpStatusCode.InternalServerError, FeilResponse(
-            status = HttpStatusCode.InternalServerError,
-            type = URI("urn:error:internal_error"),
-            detail = "Uventet feil: ${cause.message}",
-            instance = URI(call.request.uri),
-            callId = call.callId,
-            stacktrace = cause.stackTraceToString()
-        ))
+        call.respond(
+            HttpStatusCode.InternalServerError,
+            FeilResponse(
+                status = HttpStatusCode.InternalServerError,
+                type = URI("urn:error:internal_error"),
+                detail = "Uventet feil: ${cause.message}",
+                instance = URI(call.request.uri),
+                callId = call.callId,
+                stacktrace = cause.stackTraceToString(),
+            ),
+        )
     }
     status(*allStatusCodes.filterNot { code -> code.isSuccess() }.toTypedArray()) { statusCode ->
-        /* exhaustive when-block so it will be compiler error if new types are added */
+        // exhaustive when-block so it will be compiler error if new types are added
         when (content) {
             is OutgoingContent.NoContent -> {
                 call.response.header("Content-Type", ContentType.Application.ProblemJson.toString())
                 call.response.header(callIdHeaderName, call.callId ?: "callId ikke satt")
-                call.respond(statusCode, FeilResponse(
-                    status = statusCode,
-                    type = statusCode.toURI(call),
-                    detail = statusCode.description,
-                    instance = URI(call.request.uri),
-                    callId = call.callId,
-                    stacktrace = null
-                ))
+                call.respond(
+                    statusCode,
+                    FeilResponse(
+                        status = statusCode,
+                        type = statusCode.toURI(call),
+                        detail = statusCode.description,
+                        instance = URI(call.request.uri),
+                        callId = call.callId,
+                        stacktrace = null,
+                    ),
+                )
             }
             is OutgoingContent.ByteArrayContent,
             is OutgoingContent.ContentWrapper,
             is OutgoingContent.ProtocolUpgrade,
             is OutgoingContent.ReadChannelContent,
-            is OutgoingContent.WriteChannelContent -> {
-                /* do nothing */
+            is OutgoingContent.WriteChannelContent,
+            -> {
+                // do nothing
             }
         }
     }
 }
 
 private fun HttpStatusCode.toURI(call: ApplicationCall): URI {
-    val type = try {
-        description.lowercase().replace("\\s+".toRegex(), "_")
-    } catch (_: Exception) {
-        call.application.log.error("klarte ikke lage uri fra httpstatuscode=$this")
-        "unknown_error"
-    }
+    val type =
+        try {
+            description.lowercase().replace("\\s+".toRegex(), "_")
+        } catch (_: Exception) {
+            call.application.log.error("klarte ikke lage uri fra httpstatuscode=$this")
+            "unknown_error"
+        }
     return URI("urn:error:$type")
 }
 
@@ -396,7 +420,7 @@ data class FeilResponse(
     val detail: String?,
     val instance: URI,
     val callId: String?,
-    val stacktrace: String? = null
+    val stacktrace: String? = null,
 ) {
     constructor(
         status: HttpStatusCode,
@@ -404,13 +428,13 @@ data class FeilResponse(
         detail: String?,
         instance: URI,
         callId: String?,
-        stacktrace: String? = null
+        stacktrace: String? = null,
     ) : this(type, status.description, status.value, detail, instance, callId, stacktrace)
 }
 
 private data class ShutdownHook(
     val app: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>,
-    val gracefulShutdownDelay: Duration
+    val gracefulShutdownDelay: Duration,
 ) : Thread("naisful-app-shutdown-hook") {
     init {
         // deaktiverer ktors egen shutdown hook fordi den ikke er så graceful!

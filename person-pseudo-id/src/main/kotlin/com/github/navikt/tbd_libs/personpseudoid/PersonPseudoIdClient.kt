@@ -4,9 +4,9 @@ import io.valkey.Connection
 import io.valkey.DefaultJedisClientConfig
 import io.valkey.HostAndPort
 import io.valkey.JedisPooled
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 import java.time.Duration
 import java.util.*
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig
 
 data class ValkeyConfig(
     val username: String,
@@ -36,7 +36,7 @@ class PersonPseudoIdClient(
                 testWhileIdle = true
                 timeBetweenEvictionRuns = Duration.ofSeconds(30)
                 minEvictableIdleDuration = Duration.ofMinutes(1)
-            }
+            },
         )
 
     fun nyPersonPseudoId(identitetsnummer: String): UUID {
@@ -45,7 +45,5 @@ class PersonPseudoIdClient(
         return nyId
     }
 
-    fun finnIdentitetsnummer(personPseudoId: UUID): String? {
-        return jedisPooled.get(personPseudoId.toString())
-    }
+    fun finnIdentitetsnummer(personPseudoId: UUID): String? = jedisPooled.get(personPseudoId.toString())
 }

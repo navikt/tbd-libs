@@ -19,18 +19,20 @@ fun createDefaultKafkaRapid(
     extraTopics: List<String>,
     offsetResetStrategy: OffsetResetStrategy = OffsetResetStrategy.LATEST,
     maxPollRecords: Int = ConsumerConfig.DEFAULT_MAX_POLL_RECORDS,
-    maxIntervalMs: Long = Duration.ofMinutes(30).toMillis()
+    maxIntervalMs: Long = Duration.ofMinutes(30).toMillis(),
 ): KafkaRapid {
-    val consumerProperties = Properties().apply {
-        put(ConsumerConfig.CLIENT_ID_CONFIG, "consumer-${instanceId}")
-        put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, instanceId)
-        put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, offsetResetStrategy.name.lowercase())
-        put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "$maxPollRecords")
-        put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "$maxIntervalMs")
-    }
-    val producerProperties = Properties().apply {
-        put(ProducerConfig.CLIENT_ID_CONFIG, "producer-${instanceId}")
-    }
+    val consumerProperties =
+        Properties().apply {
+            put(ConsumerConfig.CLIENT_ID_CONFIG, "consumer-$instanceId")
+            put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, instanceId)
+            put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, offsetResetStrategy.name.lowercase())
+            put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "$maxPollRecords")
+            put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, "$maxIntervalMs")
+        }
+    val producerProperties =
+        Properties().apply {
+            put(ProducerConfig.CLIENT_ID_CONFIG, "producer-$instanceId")
+        }
 
     return KafkaRapid(
         factory = factory,
@@ -40,11 +42,15 @@ fun createDefaultKafkaRapid(
         consumerProperties = consumerProperties,
         producerProperties = producerProperties,
         autoCommit = autoCommit,
-        extraTopics = extraTopics
+        extraTopics = extraTopics,
     )
 }
 
-fun createDefaultKafkaRapidFromEnv(factory: ConsumerProducerFactory, meterRegistry: MeterRegistry, env: Map<String, String> = System.getenv()): KafkaRapid {
+fun createDefaultKafkaRapidFromEnv(
+    factory: ConsumerProducerFactory,
+    meterRegistry: MeterRegistry,
+    env: Map<String, String> = System.getenv(),
+): KafkaRapid {
     val resetPolicy = env["KAFKA_RESET_POLICY"]?.let { OffsetResetStrategy.valueOf(it.uppercase()) } ?: OffsetResetStrategy.LATEST
     return createDefaultKafkaRapid(
         factory = factory,
@@ -56,7 +62,7 @@ fun createDefaultKafkaRapidFromEnv(factory: ConsumerProducerFactory, meterRegist
         extraTopics = env["KAFKA_EXTRA_TOPIC"]?.split(',')?.map(String::trim) ?: emptyList(),
         offsetResetStrategy = resetPolicy,
         maxPollRecords = env["KAFKA_MAX_RECORDS"]?.toInt() ?: ConsumerConfig.DEFAULT_MAX_POLL_RECORDS,
-        maxIntervalMs = env["KAFKA_MAX_POLL_INTERVAL_MS"]?.toLong() ?: Duration.ofMinutes(30).toMillis()
+        maxIntervalMs = env["KAFKA_MAX_POLL_INTERVAL_MS"]?.toLong() ?: Duration.ofMinutes(30).toMillis(),
     )
 }
 

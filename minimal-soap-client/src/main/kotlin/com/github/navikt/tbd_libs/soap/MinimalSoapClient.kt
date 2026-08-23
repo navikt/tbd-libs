@@ -19,22 +19,28 @@ class MinimalSoapClient(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
     private val proxyAuthorization: (() -> Result<String>)? = null,
 ) {
-
-    fun doSoapAction(action: String, body: String, tokenStrategy: SoapAssertionStrategy): Result<HttpResponse<String>> {
-        val proxyAuthorizationResult = when (proxyAuthorization) {
-            null -> Result.Ok(null)
-            else -> proxyAuthorization()
-        }
+    fun doSoapAction(
+        action: String,
+        body: String,
+        tokenStrategy: SoapAssertionStrategy,
+    ): Result<HttpResponse<String>> {
+        val proxyAuthorizationResult =
+            when (proxyAuthorization) {
+                null -> Result.Ok(null)
+                else -> proxyAuthorization()
+            }
         return try {
             tokenStrategy.token(tokenProvider).map { assertion ->
                 proxyAuthorizationResult.map { proxyAuthorizationToken ->
                     val requestBody = createXmlRequest(assertion, action, body)
-                    val request = HttpRequest.newBuilder()
-                        .uri(serviceUrl)
-                        .header("SOAPAction", action)
-                        .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
-                        .POST(BodyPublishers.ofString(requestBody))
-                        .build()
+                    val request =
+                        HttpRequest
+                            .newBuilder()
+                            .uri(serviceUrl)
+                            .header("SOAPAction", action)
+                            .apply { if (proxyAuthorizationToken != null) this.header("X-Proxy-Authorization", proxyAuthorizationToken) }
+                            .POST(BodyPublishers.ofString(requestBody))
+                            .build()
 
                     httpClient.send(request, BodyHandlers.ofString())?.ok() ?: "Tom responskropp fra tjenesten".error()
                 }
@@ -44,13 +50,17 @@ class MinimalSoapClient(
         }
     }
 
-    private fun createXmlRequest(assertion: String, action: String, body: String, messageId: UUID = UUID.randomUUID()): String {
-        return defaultXmlBody
+    private fun createXmlRequest(
+        assertion: String,
+        action: String,
+        body: String,
+        messageId: UUID = UUID.randomUUID(),
+    ): String =
+        defaultXmlBody
             .replace("{{action}}", action)
             .replace("{{messageId}}", "$messageId")
             .replace("{{assertion}}", assertion)
             .replace("{{body}}", body)
-    }
 
     private companion object {
         @Language("XML")

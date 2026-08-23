@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 internal class MessageProblemsTest {
-
     private lateinit var problems: MessageProblems
 
     private val Message = "the message"

@@ -4,19 +4,23 @@ import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.ok
 import java.util.concurrent.ConcurrentHashMap
 
-class InMemoryStsClient(private val other: SamlTokenProvider) : SamlTokenProvider by (other) {
+class InMemoryStsClient(
+    private val other: SamlTokenProvider,
+) : SamlTokenProvider by (other) {
     private val cache = ConcurrentHashMap<String, SamlToken>()
 
-    override fun samlToken(username: String, password: String): Result<SamlToken> {
-        return retrieveFromCache(username) ?: storeInCache(username, password)
-    }
+    override fun samlToken(
+        username: String,
+        password: String,
+    ): Result<SamlToken> = retrieveFromCache(username) ?: storeInCache(username, password)
 
-    private fun retrieveFromCache(username: String) =
-        cache[username]?.takeUnless(SamlToken::isExpired)?.ok()
+    private fun retrieveFromCache(username: String) = cache[username]?.takeUnless(SamlToken::isExpired)?.ok()
 
-    private fun storeInCache(username: String, password: String): Result<SamlToken> {
-        return other.samlToken(username, password).also {
+    private fun storeInCache(
+        username: String,
+        password: String,
+    ): Result<SamlToken> =
+        other.samlToken(username, password).also {
             if (it is Result.Ok) cache[username] = it.value
         }
-    }
 }

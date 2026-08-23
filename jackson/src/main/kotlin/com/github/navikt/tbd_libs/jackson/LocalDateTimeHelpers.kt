@@ -1,7 +1,7 @@
 package com.github.navikt.tbd_libs.jackson
 
-import java.time.LocalDateTime
 import tools.jackson.databind.JsonNode
+import java.time.LocalDateTime
 
 /**
  * Utility function for parsing a LocalDateTime from a Jackson JsonNode.

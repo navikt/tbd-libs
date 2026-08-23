@@ -3,19 +3,25 @@ package com.github.navikt.tbd_libs.rapids_and_rivers
 import org.slf4j.MDC
 import java.io.Closeable
 
-fun <R> withMDC(keyvalue: Pair<String, String>, block: () -> R): R {
-    return MDC.putCloseable(keyvalue.first, keyvalue.second).use {
+fun <R> withMDC(
+    keyvalue: Pair<String, String>,
+    block: () -> R,
+): R =
+    MDC.putCloseable(keyvalue.first, keyvalue.second).use {
         block()
     }
-}
 
-fun <R> withMDC(context: Map<String, String>, block: () -> R): R {
-    return CloseableMDCContext(context).use {
+fun <R> withMDC(
+    context: Map<String, String>,
+    block: () -> R,
+): R =
+    CloseableMDCContext(context).use {
         block()
     }
-}
 
-private class CloseableMDCContext(newContext: Map<String, String>) : Closeable {
+private class CloseableMDCContext(
+    newContext: Map<String, String>,
+) : Closeable {
     private val originalContextMap = MDC.getCopyOfContextMap() ?: emptyMap()
 
     init {

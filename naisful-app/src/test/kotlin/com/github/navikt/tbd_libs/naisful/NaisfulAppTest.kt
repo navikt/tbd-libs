@@ -25,11 +25,6 @@ import io.micrometer.prometheusmetrics.PrometheusConfig
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import io.prometheus.metrics.model.registry.PrometheusRegistry
 import io.prometheus.metrics.tracer.common.SpanContext
-import java.net.ServerSocket
-import java.net.URI
-import java.time.Duration
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -41,9 +36,13 @@ import org.junit.jupiter.api.assertDoesNotThrow
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.net.ServerSocket
+import java.net.URI
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 
 class NaisfulAppTest {
-
     @Test
     fun test() {
         testApp(NaisEndpoints.Default) {
@@ -56,20 +55,20 @@ class NaisfulAppTest {
     @Test
     fun exemplars() {
         val exemplarSamler = ExemplarSampler()
-        val meterRegistry = PrometheusMeterRegistry(
-            PrometheusConfig.DEFAULT,
-            PrometheusRegistry.defaultRegistry,
-            Clock.SYSTEM,
-            exemplarSamler
-        )
+        val meterRegistry =
+            PrometheusMeterRegistry(
+                PrometheusConfig.DEFAULT,
+                PrometheusRegistry.defaultRegistry,
+                Clock.SYSTEM,
+                exemplarSamler,
+            )
         testApp(NaisEndpoints.Default, meterRegistry) {
             assertEquals("ALIVE", get("/isalive").bodyAsText())
             assertEquals("READY", get("/isready").bodyAsText())
 
             get("/metrics") {
                 accept(ContentType.Text.Plain.withCharset(Charsets.UTF_8))
-            }
-                .bodyAsText()
+            }.bodyAsText()
                 .also { body ->
                     assertTrue(body.contains("jvm_memory_used_bytes"))
                     assertFalse(body.contains("my_trace_id"))
@@ -77,8 +76,7 @@ class NaisfulAppTest {
 
             get("/metrics") {
                 accept(ContentType.parse("application/openmetrics-text; version=1.0.0"))
-            }
-                .bodyAsText()
+            }.bodyAsText()
                 .also { body ->
                     assertTrue(body.contains("jvm_memory_used_bytes"))
                     assertTrue(body.contains("my_trace_id"))
@@ -118,12 +116,13 @@ class NaisfulAppTest {
 
     @Test
     fun `custom routes`() {
-        val endpoints = NaisEndpoints(
-            isaliveEndpoint = "/erILive",
-            isreadyEndpoint = "/erKlar",
-            metricsEndpoint = "/metrikker",
-            preStopEndpoint = "/stopp",
-        )
+        val endpoints =
+            NaisEndpoints(
+                isaliveEndpoint = "/erILive",
+                isreadyEndpoint = "/erKlar",
+                metricsEndpoint = "/metrikker",
+                preStopEndpoint = "/stopp",
+            )
         testApp(endpoints) {
             assertEquals("ALIVE", get(endpoints.isaliveEndpoint).bodyAsText())
             assertEquals("READY", get(endpoints.isreadyEndpoint).bodyAsText())
@@ -134,9 +133,10 @@ class NaisfulAppTest {
     @Test
     fun `shutdown hook`() {
         testApp {
-            val stopRequest = async(Dispatchers.IO) {
-                get("/stop")
-            }
+            val stopRequest =
+                async(Dispatchers.IO) {
+                    get("/stop")
+                }
             val maxWait = Duration.ofSeconds(5)
             assertUntil(maxWait) {
                 assertDoesNotThrow {
@@ -168,7 +168,7 @@ class NaisfulAppTest {
                         call.respond(HttpStatusCode.Forbidden, CustomResponse("Fault"))
                     }
                 }
-            }
+            },
         ) {
             post("/test1").also { response ->
                 val body = response.body<FeilResponse>()
@@ -193,9 +193,14 @@ class NaisfulAppTest {
         }
     }
 
-    private data class CustomResponse(val text: String)
+    private data class CustomResponse(
+        val text: String,
+    )
 
-    private suspend fun assertUntil(maxWait: Duration, assertion: suspend () -> Unit) {
+    private suspend fun assertUntil(
+        maxWait: Duration,
+        assertion: suspend () -> Unit,
+    ) {
         val startTime = System.currentTimeMillis()
         lateinit var lastAssertionError: AssertionError
         while ((System.currentTimeMillis() - startTime) < maxWait.toMillis()) {
@@ -217,7 +222,7 @@ class NaisfulAppTest {
                         throw RuntimeException("Denne feilen forventet DU IKKE")
                     }
                 }
-            }
+            },
         ) {
             val response = get("/problem")
             val body = response.body<FeilResponse>()
@@ -236,11 +241,12 @@ class NaisfulAppTest {
         aliveCheck: () -> Boolean = { true },
         readyCheck: () -> Boolean = { true },
         applicationModule: Application.() -> Unit = {},
-        testBlock: suspend HttpClient.() -> Unit
+        testBlock: suspend HttpClient.() -> Unit,
     ) {
-        val objectMapper = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .build()
+        val objectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .build()
         val randomPort = ServerSocket(0).localPort
 
         testApplication {
@@ -262,20 +268,21 @@ class NaisfulAppTest {
                     callIdHeaderName = "callId",
                     preStopHook = { delay(250.milliseconds) },
                     aliveCheck = aliveCheck,
-                    readyCheck = readyCheck
+                    readyCheck = readyCheck,
                 )
                 applicationModule()
             }
             startApplication()
 
-            val testClient = createClient {
-                defaultRequest {
-                    port = randomPort
+            val testClient =
+                createClient {
+                    defaultRequest {
+                        port = randomPort
+                    }
+                    install(ContentNegotiation) {
+                        register(ContentType.Application.Json, JacksonConverter(objectMapper))
+                    }
                 }
-                install(ContentNegotiation) {
-                    register(ContentType.Application.Json, JacksonConverter(objectMapper))
-                }
-            }
 
             do {
                 val response = testClient.get(naisEndpoints.isreadyEndpoint)

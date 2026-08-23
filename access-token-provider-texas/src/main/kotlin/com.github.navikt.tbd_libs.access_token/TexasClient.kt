@@ -4,15 +4,15 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.github.navikt.tbd_libs.retry.DefaultUtsettelser
 import com.github.navikt.tbd_libs.retry.retryBlocking
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
-import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
-import tools.jackson.module.kotlin.jacksonMapperBuilder
-import tools.jackson.module.kotlin.readValue
 
 /**
  * Implementasjon av [AccessTokenProvider] som henter tokens via Texas (Token Exchange as a Service)
@@ -32,63 +32,70 @@ class TexasClient(
     private val tokenEndpoint: URI,
     private val tokenExchangeEndpoint: URI,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
-    private val utsettelser: () -> Iterator<Duration> = ::DefaultUtsettelser
+    private val utsettelser: () -> Iterator<Duration> = ::DefaultUtsettelser,
 ) : AccessTokenProvider {
-
-    private val objectMapper = jacksonMapperBuilder()
-        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-        .build()
+    private val objectMapper =
+        jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
 
     /**
      * Henter et maskin-til-maskin bearer token for [scope]
      * via Texas `/api/v1/token`-endepunktet med Entra ID som identity provider.
      */
-    override fun machineToken(scope: String): String {
-        return runCatching {
+    override fun machineToken(scope: String): String =
+        runCatching {
             retryBlocking(utsettelser = utsettelser(), avbryt = ::ikkeRetrye) {
                 post(tokenEndpoint, TokenRequest(target = scope))
             }
         }.getOrElse {
             throw AccessTokenException(it.message ?: "Uventet feil oppstod")
         }
-    }
 
     /**
      * Veksler inn [accessToken] mot et On-Behalf-Of (OBO) bearer-token scoped til [scope]
      * via Texas `/api/v1/token/exchange`-endepunktet med Entra ID som identity provider.
      */
-    override fun oboToken(accessToken: String, scope: String): String {
-        return runCatching {
+    override fun oboToken(
+        accessToken: String,
+        scope: String,
+    ): String =
+        runCatching {
             retryBlocking(utsettelser = utsettelser(), avbryt = ::ikkeRetrye) {
                 post(tokenExchangeEndpoint, TokenExchangeRequest(target = scope, userToken = accessToken))
             }
         }.getOrElse {
             throw AccessTokenException(it.message ?: "Uventet feil oppstod")
         }
-    }
 
-    private fun post(endpoint: URI, tokenRequest: TokenRequest): String {
-        val request = HttpRequest.newBuilder(endpoint)
-            .header("Content-Type", "application/json")
-            .header("Accept", "application/json")
-            .POST(BodyPublishers.ofString(objectMapper.writeValueAsString(tokenRequest)))
-            .build()
+    private fun post(
+        endpoint: URI,
+        tokenRequest: TokenRequest,
+    ): String {
+        val request =
+            HttpRequest
+                .newBuilder(endpoint)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .POST(BodyPublishers.ofString(objectMapper.writeValueAsString(tokenRequest)))
+                .build()
 
         val response = httpClient.send(request, BodyHandlers.ofString())
-        val responseBody = response.body()
-            ?: throw TexasException("Tom responskropp fra Texas (HTTP ${response.statusCode()})")
+        val responseBody =
+            response.body()
+                ?: throw TexasException("Tom responskropp fra Texas (HTTP ${response.statusCode()})")
 
         if (response.statusCode() in 400..499) {
             val error = runCatching { objectMapper.readValue<TokenErrorResponse>(responseBody) }.getOrNull()
             throw TexasClientException(
-                "Klientfeil fra Texas (HTTP ${response.statusCode()}): ${error?.error ?: responseBody}"
+                "Klientfeil fra Texas (HTTP ${response.statusCode()}): ${error?.error ?: responseBody}",
             )
         }
 
         if (response.statusCode() !in 200..299) {
             val error = runCatching { objectMapper.readValue<TokenErrorResponse>(responseBody) }.getOrNull()
             throw TexasException(
-                "Feil fra Texas (HTTP ${response.statusCode()}): ${error?.error ?: responseBody}"
+                "Feil fra Texas (HTTP ${response.statusCode()}): ${error?.error ?: responseBody}",
             )
         }
 
@@ -102,12 +109,14 @@ class TexasClient(
          * - `NAIS_TOKEN_EXCHANGE_ENDPOINT` for OBO-token-veksling
          */
         fun fromEnv(httpClient: HttpClient = HttpClient.newHttpClient()): TexasClient {
-            val tokenEndpoint = requireNotNull(System.getenv("NAIS_TOKEN_ENDPOINT")) {
-                "Miljøvariabelen NAIS_TOKEN_ENDPOINT er ikke satt"
-            }
-            val tokenExchangeEndpoint = requireNotNull(System.getenv("NAIS_TOKEN_EXCHANGE_ENDPOINT")) {
-                "Miljøvariabelen NAIS_TOKEN_EXCHANGE_ENDPOINT er ikke satt"
-            }
+            val tokenEndpoint =
+                requireNotNull(System.getenv("NAIS_TOKEN_ENDPOINT")) {
+                    "Miljøvariabelen NAIS_TOKEN_ENDPOINT er ikke satt"
+                }
+            val tokenExchangeEndpoint =
+                requireNotNull(System.getenv("NAIS_TOKEN_EXCHANGE_ENDPOINT")) {
+                    "Miljøvariabelen NAIS_TOKEN_EXCHANGE_ENDPOINT er ikke satt"
+                }
             return TexasClient(URI(tokenEndpoint), URI(tokenExchangeEndpoint), httpClient)
         }
 
@@ -125,23 +134,26 @@ private open class TokenRequest(
 private class TokenExchangeRequest(
     target: String,
     @param:JsonProperty("user_token")
-    val userToken: String
-): TokenRequest(target) {
-}
+    val userToken: String,
+) : TokenRequest(target)
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class TokenResponse(
     @param:JsonProperty("access_token")
-    val accessToken: String
+    val accessToken: String,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class TokenErrorResponse(
-    val error: String
+    val error: String,
 )
 
 /** Kastes ved forbigående feil mot Texas (nettverksfeil, 5xx). Retryes automatisk. */
-private open class TexasException(message: String) : RuntimeException(message)
+private open class TexasException(
+    message: String,
+) : RuntimeException(message)
 
 /** Kastes ved klientfeil mot Texas (4xx). Retryes ikke. */
-private class TexasClientException(message: String) : TexasException(message)
+private class TexasClientException(
+    message: String,
+) : TexasException(message)

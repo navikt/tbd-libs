@@ -32,7 +32,7 @@ class DatabaseContainersTest {
 
     @Test
     fun `tømmer bassenget`() {
-        val tilkoblinger = (1..< MAX_POOL_SIZE).map { databaseContainer.nyTilkobling() }
+        val tilkoblinger = (1..<MAX_POOL_SIZE).map { databaseContainer.nyTilkobling() }
         assertThrows<RuntimeException> { databaseContainer.nyTilkobling(Duration.ofMillis(10)) }
         tilkoblinger.forEach { databaseContainer.droppTilkobling(it) }
     }

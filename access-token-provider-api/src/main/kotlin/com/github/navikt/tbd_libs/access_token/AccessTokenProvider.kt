@@ -6,7 +6,6 @@ package com.github.navikt.tbd_libs.access_token
  * Implementasjoner forventes å håndtere tokenhenting, mellomlagring og fornyelse.
  */
 interface AccessTokenProvider {
-
     /**
      * Returnerer et maskin-til-maskin (client credentials) bearer-token for det angitte [scope].
      *
@@ -34,8 +33,13 @@ interface AccessTokenProvider {
      * @return En rå bearer token som kan sendes i en `Authorization: Bearer <token>`-header.
      * @throws AccessTokenException ved en uventet feil
      */
-    fun oboToken(accessToken: String, scope: String): String
+    fun oboToken(
+        accessToken: String,
+        scope: String,
+    ): String
 }
 
-class AccessTokenException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
-
+class AccessTokenException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)

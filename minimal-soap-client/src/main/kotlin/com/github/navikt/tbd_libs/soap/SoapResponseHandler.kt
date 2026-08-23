@@ -9,26 +9,39 @@ import tools.jackson.databind.ObjectMapper
 import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import tools.jackson.module.kotlin.readValue
 
-inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): Result<SoapResult<T>> {
-    val fault = try {
-        mapper.readValue<SoapResponse<SoapFault>>(body).body.fault
-    } catch (_: Exception) { null }
-    return when (fault) {
-        null -> try {
-            when (val ting = mapper.readValue<SoapResponse<T?>>(body).body) {
-                null -> "SOAP Body er null".error()
-                else -> SoapResult.Ok(ting).ok()
-            }
-        } catch (err: Exception) {
-            err.error("Klarte ikke tolke SOAP-responsen")
+inline fun <reified T> deserializeSoapBody(
+    mapper: ObjectMapper,
+    body: String,
+): Result<SoapResult<T>> {
+    val fault =
+        try {
+            mapper.readValue<SoapResponse<SoapFault>>(body).body.fault
+        } catch (_: Exception) {
+            null
         }
+    return when (fault) {
+        null ->
+            try {
+                when (val ting = mapper.readValue<SoapResponse<T?>>(body).body) {
+                    null -> "SOAP Body er null".error()
+                    else -> SoapResult.Ok(ting).ok()
+                }
+            } catch (err: Exception) {
+                err.error("Klarte ikke tolke SOAP-responsen")
+            }
         else -> SoapResult.Fault("SOAP fault: ${fault.code} - ${fault.messsage}", fault.detail?.toPrettyString()).ok()
     }
 }
 
 sealed interface SoapResult<out T> {
-    data class Ok<T>(val response: T) : SoapResult<T>
-    data class Fault( val message: String, val detalje: String?) : SoapResult<Nothing>
+    data class Ok<T>(
+        val response: T,
+    ) : SoapResult<T>
+
+    data class Fault(
+        val message: String,
+        val detalje: String?,
+    ) : SoapResult<Nothing>
 }
 
 @JsonRootName(value = "Envelope", namespace = "http://schemas.xmlsoap.org/soap/envelope/")
@@ -36,7 +49,7 @@ data class SoapResponse<T>(
     @param:JacksonXmlProperty(localName = "Header")
     val header: SoapHeader?,
     @param:JacksonXmlProperty(localName = "Body")
-    val body: T
+    val body: T,
 )
 
 data class SoapHeader(
@@ -45,12 +58,12 @@ data class SoapHeader(
     @param:JacksonXmlProperty(localName = "MessageID", namespace = "http://www.w3.org/2005/08/addressing")
     val messageId: String,
     @param:JacksonXmlProperty(localName = "RelatesTo", namespace = "http://www.w3.org/2005/08/addressing")
-    val relatesTo: String
+    val relatesTo: String,
 )
 
 data class SoapFault(
     @param:JacksonXmlProperty(localName = "Fault", namespace = "http://www.w3.org/2003/05/soap-envelope")
-    val fault: Fault
+    val fault: Fault,
 )
 
 data class Fault(
@@ -59,5 +72,5 @@ data class Fault(
     @param:JacksonXmlProperty(localName = "faultstring")
     val messsage: String,
     @param:JacksonXmlProperty(localName = "detail")
-    val detail: JsonNode?
+    val detail: JsonNode?,
 )

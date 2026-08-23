@@ -2,11 +2,17 @@ package com.github.navikt.tbd_libs.populasjonstilgang.api
 
 sealed interface TilgangskontrollResultat {
     object Ok : TilgangskontrollResultat
-    data class ManglerTilgang(val tilgangSomMangler: TilgangSomMangler): TilgangskontrollResultat
-    object IdentIkkeFunnet : TilgangskontrollResultat
-    data class UventetFeil(val menneskeligLesbarForklaring: String): TilgangskontrollResultat
-}
 
+    data class ManglerTilgang(
+        val tilgangSomMangler: TilgangSomMangler,
+    ) : TilgangskontrollResultat
+
+    object IdentIkkeFunnet : TilgangskontrollResultat
+
+    data class UventetFeil(
+        val menneskeligLesbarForklaring: String,
+    ) : TilgangskontrollResultat
+}
 
 enum class TilgangSomMangler {
     StrengtFortroligAdresse,
@@ -16,5 +22,5 @@ enum class TilgangSomMangler {
     Habilitet,
     Verge,
     GeografiskTilhørighet,
-    PersonDød
+    PersonDød,
 }

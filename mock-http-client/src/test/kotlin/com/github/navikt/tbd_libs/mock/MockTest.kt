@@ -13,7 +13,6 @@ import java.net.http.HttpResponse.BodyHandlers
 import java.util.*
 
 class MockTest {
-
     @Test
     fun `kan mocke response`() {
         val expectedRequestBody = "Hello, Server!"
@@ -21,10 +20,11 @@ class MockTest {
         val callId = "${UUID.randomUUID()}"
         val expectedStatusCode = 201
 
-        val actualRequest = HttpRequest
-            .newBuilder()
-            .uri(URI("http://localhost"))
-            .POST(BodyPublishers.ofString(expectedRequestBody))
+        val actualRequest =
+            HttpRequest
+                .newBuilder()
+                .uri(URI("http://localhost"))
+                .POST(BodyPublishers.ofString(expectedRequestBody))
 
         val httpClient = mockk<HttpClient>()
         every {
@@ -33,9 +33,14 @@ class MockTest {
 
         val result = httpClient.send(actualRequest.build(), BodyHandlers.ofString())
 
-        verify { httpClient.send<String>(match {
-            it.bodyAsString() == expectedRequestBody
-        }, any()) }
+        verify {
+            httpClient.send<String>(
+                match {
+                    it.bodyAsString() == expectedRequestBody
+                },
+                any(),
+            )
+        }
 
         assertEquals(expectedStatusCode, result.statusCode())
         assertEquals(callId, result.headers().firstValue("X-Call-Id").get())

@@ -9,10 +9,12 @@ import java.time.Duration.ofMillis
 suspend inline fun <T> retry(
     utsettelser: Iterator<Duration> = DefaultUtsettelser(),
     avbryt: (throwable: Throwable) -> Boolean = { false },
-    block: () -> T
+    block: () -> T,
 ): T {
     while (utsettelser.hasNext()) {
-        try { return block() } catch (t: Throwable) {
+        try {
+            return block()
+        } catch (t: Throwable) {
             if (t is CancellationException || avbryt(t)) throw t
         }
         delay(utsettelser.next().toMillis())
@@ -23,14 +25,21 @@ suspend inline fun <T> retry(
 inline fun <T> retryBlocking(
     utsettelser: Iterator<Duration> = DefaultUtsettelser(),
     crossinline avbryt: (throwable: Throwable) -> Boolean = { false },
-    crossinline block: () -> T
+    crossinline block: () -> T,
 ) = runBlocking { retry(utsettelser, avbryt, block) }
 
-open class PredefinerteUtsettelser(vararg utsettelser: Duration): Iterator<Duration> {
+open class PredefinerteUtsettelser(
+    vararg utsettelser: Duration,
+) : Iterator<Duration> {
     private val utsettelser = utsettelser.toMutableList()
-    init { require(utsettelser.isNotEmpty()) { "Må sette minst en utsettelse!"} }
+
+    init {
+        require(utsettelser.isNotEmpty()) { "Må sette minst en utsettelse!" }
+    }
+
     override fun hasNext() = utsettelser.isNotEmpty()
+
     override fun next(): Duration = utsettelser.removeAt(0)
 }
 
-class DefaultUtsettelser: PredefinerteUtsettelser(ofMillis(200), ofMillis(600), ofMillis(1200))
+class DefaultUtsettelser : PredefinerteUtsettelser(ofMillis(200), ofMillis(600), ofMillis(1200))

@@ -7,7 +7,9 @@ import org.testcontainers.utility.DockerImageName
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicInteger
 
-class KafkaContainer(private val appnavn: String) {
+class KafkaContainer(
+    private val appnavn: String,
+) {
     private val instance by lazy {
         ConfluentKafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.7.1")).apply {
             withCreateContainerCmdModifier { command -> command.withName(appnavn) }
@@ -37,14 +39,9 @@ class KafkaContainer(private val appnavn: String) {
         }
     }
 
-    fun nyTopic(): TestTopic {
-        return nyeTopics(1).single()
-    }
+    fun nyTopic(): TestTopic = nyeTopics(1).single()
 
-    fun nyeTopics(antall: Int): List<TestTopic> {
-        return (0..<antall).map { TestTopic("test.topic.${topicCount.incrementAndGet()}", connectionProperties) }
-    }
-
+    fun nyeTopics(antall: Int): List<TestTopic> = (0..<antall).map { TestTopic("test.topic.${topicCount.incrementAndGet()}", connectionProperties) }
 
     fun droppTopic(testTopic: TestTopic) {
         droppTopics(listOf(testTopic))
@@ -52,11 +49,14 @@ class KafkaContainer(private val appnavn: String) {
 
     @SuppressWarnings("unused")
     fun droppTopics(testTopics: List<TestTopic>) {
-        /* todo: fremtidig api? */
+        // todo: fremtidig api?
     }
 }
 
-fun kafkaTest(kafkaContainer: KafkaContainer, testBlock: TestTopic.() -> Unit) {
+fun kafkaTest(
+    kafkaContainer: KafkaContainer,
+    testBlock: TestTopic.() -> Unit,
+) {
     val testTopic = kafkaContainer.nyTopic()
     try {
         testBlock(testTopic)

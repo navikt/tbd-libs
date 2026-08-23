@@ -3,20 +3,19 @@ package com.github.navikt.tbd_libs.populasjonstilgang.client
 import com.github.navikt.tbd_libs.access_token.AccessTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
-import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangSomMangler
+import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.net.http.HttpClient
-import kotlin.jvm.optionals.getOrNull
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.net.http.HttpClient
+import kotlin.jvm.optionals.getOrNull
 
 class TilgangsmaskinenClientTest {
-
     @Test
     fun `tilgang ok - 204`() {
         val (client, httpClient) = mockClient("", 204)
@@ -39,7 +38,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse),
-            result
+            result,
         )
     }
 
@@ -49,7 +48,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland),
-            result
+            result,
         )
     }
 
@@ -87,7 +86,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKomplettTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet),
-            result
+            result,
         )
     }
 
@@ -120,9 +119,12 @@ class TilgangsmaskinenClientTest {
         val (client, httpClient) = mockClient("", 204)
         client.kontrollerKomplettTilgang("access_token", fødselsnummer)
         verify {
-            httpClient.send<String>(match { request ->
-                request.bodyAsString() == fødselsnummer
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.bodyAsString() == fødselsnummer
+                },
+                any(),
+            )
         }
     }
 
@@ -155,7 +157,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse),
-            result
+            result,
         )
     }
 
@@ -165,7 +167,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland),
-            result
+            result,
         )
     }
 
@@ -203,7 +205,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKjerneTilgang("access_token", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet),
-            result
+            result,
         )
     }
 
@@ -236,9 +238,12 @@ class TilgangsmaskinenClientTest {
         val (client, httpClient) = mockClient("", 204)
         client.kontrollerKjerneTilgang("access_token", fødselsnummer)
         verify {
-            httpClient.send<String>(match { request ->
-                request.bodyAsString() == fødselsnummer
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.bodyAsString() == fødselsnummer
+                },
+                any(),
+            )
         }
     }
 
@@ -271,7 +276,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKjerneTilgangForAnsatt("Z999999", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresse),
-            result
+            result,
         )
     }
 
@@ -281,7 +286,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKjerneTilgangForAnsatt("Z999999", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.StrengtFortroligAdresseUtland),
-            result
+            result,
         )
     }
 
@@ -319,7 +324,7 @@ class TilgangsmaskinenClientTest {
         val result = client.kontrollerKjerneTilgangForAnsatt("Z999999", "12345678901")
         assertEquals(
             TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.GeografiskTilhørighet),
-            result
+            result,
         )
     }
 
@@ -352,9 +357,12 @@ class TilgangsmaskinenClientTest {
         val (client, httpClient) = mockClient("", 204)
         client.kontrollerKjerneTilgangForAnsatt("Z999999", fødselsnummer)
         verify {
-            httpClient.send<String>(match { request ->
-                request.bodyAsString() == fødselsnummer
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.bodyAsString() == fødselsnummer
+                },
+                any(),
+            )
         }
     }
 
@@ -363,9 +371,12 @@ class TilgangsmaskinenClientTest {
         val (client, httpClient) = mockClient("", 204)
         client.kontrollerKjerneTilgangForAnsatt("Z999999", "12345678901")
         verify {
-            httpClient.send<String>(match { request ->
-                request.uri().path.endsWith("/api/v1/ccf/kjerne/Z999999")
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.uri().path.endsWith("/api/v1/ccf/kjerne/Z999999")
+                },
+                any(),
+            )
         }
     }
 
@@ -378,46 +389,62 @@ class TilgangsmaskinenClientTest {
 
     private fun verifiserPOST(httpClient: HttpClient) {
         verify {
-            httpClient.send<String>(match { request ->
-                request.method().uppercase() == "POST"
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.method().uppercase() == "POST"
+                },
+                any(),
+            )
         }
     }
 
-    private fun verifiserRequestHeader(httpClient: HttpClient, headerName: String, verifisering: (String?) -> Boolean) {
+    private fun verifiserRequestHeader(
+        httpClient: HttpClient,
+        headerName: String,
+        verifisering: (String?) -> Boolean,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                verifisering(request.headers().firstValue(headerName).getOrNull())
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    verifisering(request.headers().firstValue(headerName).getOrNull())
+                },
+                any(),
+            )
         }
     }
 
-    private fun mockClient(response: String, statusCode: Int = 200): Pair<TilgangsmaskinenClient, HttpClient> {
-        val httpClient = mockk<HttpClient> {
-            every {
-                send<String>(any(), any())
-            } returns MockHttpResponse(response, statusCode)
-        }
-        val tokenProvider = object : AccessTokenProvider {
-            override fun machineToken(scope: String): String {
-                return "machine_token"
+    private fun mockClient(
+        response: String,
+        statusCode: Int = 200,
+    ): Pair<TilgangsmaskinenClient, HttpClient> {
+        val httpClient =
+            mockk<HttpClient> {
+                every {
+                    send<String>(any(), any())
+                } returns MockHttpResponse(response, statusCode)
             }
+        val tokenProvider =
+            object : AccessTokenProvider {
+                override fun machineToken(scope: String): String = "machine_token"
 
-            override fun oboToken(accessToken: String, scope: String): String {
-                return "on_behalf_of_token"
+                override fun oboToken(
+                    accessToken: String,
+                    scope: String,
+                ): String = "on_behalf_of_token"
             }
-        }
-        val tilgangsmaskinenClient = TilgangsmaskinenClient(
-            scope = "test_scope",
-            baseUrl = "http://test-url",
-            tokenProvider = tokenProvider,
-            httpClient = httpClient
-        )
+        val tilgangsmaskinenClient =
+            TilgangsmaskinenClient(
+                scope = "test_scope",
+                baseUrl = "http://test-url",
+                tokenProvider = tokenProvider,
+                httpClient = httpClient,
+            )
         return tilgangsmaskinenClient to httpClient
     }
 
     @Language("JSON")
-    private fun avvistResponse(title: String) = """{
+    private fun avvistResponse(title: String) =
+        """{
         "title": "$title"
     }"""
 }

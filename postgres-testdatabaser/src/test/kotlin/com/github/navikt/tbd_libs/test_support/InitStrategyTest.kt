@@ -10,16 +10,18 @@ class InitStrategyTest {
     private companion object {
         private const val MAX_POOL_SIZE = 4
 
-        private val initStrategy = InitStrategy {
-            it.createStatement().use { statement ->
-                statement.execute("create user unit_test_user;")
+        private val initStrategy =
+            InitStrategy {
+                it.createStatement().use { statement ->
+                    statement.execute("create user unit_test_user;")
+                }
             }
-        }
-        private val cleanUpStrategy = CleanupStrategy {
-            it.createStatement().use { statement ->
-                statement.execute("drop user unit_test_user;")
+        private val cleanUpStrategy =
+            CleanupStrategy {
+                it.createStatement().use { statement ->
+                    statement.execute("drop user unit_test_user;")
+                }
             }
-        }
         private val databaseContainer = DatabaseContainers.container("tbd-libs-psql-init-test", cleanupStrategy = cleanUpStrategy, initStrategy = initStrategy, databasePoolSize = MAX_POOL_SIZE)
 
         @AfterAll
@@ -43,13 +45,14 @@ class InitStrategyTest {
 
     @Test
     fun `bruker finnes`() {
-        val finnes = testDataSource.ds.connection.createStatement().use { statement ->
-            statement.execute("SELECT 1 FROM pg_roles WHERE rolname='unit_test_user';")
-            statement.resultSet.use { resultSet ->
-                resultSet.next()
-                resultSet.getBoolean(1)
+        val finnes =
+            testDataSource.ds.connection.createStatement().use { statement ->
+                statement.execute("SELECT 1 FROM pg_roles WHERE rolname='unit_test_user';")
+                statement.resultSet.use { resultSet ->
+                    resultSet.next()
+                    resultSet.getBoolean(1)
+                }
             }
-        }
         assertTrue(finnes)
     }
 }

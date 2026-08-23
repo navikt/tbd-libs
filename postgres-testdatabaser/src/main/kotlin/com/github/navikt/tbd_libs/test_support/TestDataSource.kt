@@ -2,16 +2,16 @@ package com.github.navikt.tbd_libs.test_support
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import java.time.Duration
 import org.flywaydb.core.Flyway
 import java.sql.Connection
+import java.time.Duration
 
 class TestDataSource(
     private val dbnavn: String,
     config: HikariConfig,
     private val cleanupStrategy: CleanupStrategy? = null, // komma-separert liste over tabeller som skal tømmes
     private val initStrategy: InitStrategy? = null,
-    maxHikariPoolSize: Int = 2 // hvor stor hikari-poolen skal være
+    maxHikariPoolSize: Int = 2, // hvor stor hikari-poolen skal være
 ) {
     private val migrationConfig = HikariConfig()
     private val appConfig = HikariConfig()
@@ -19,7 +19,8 @@ class TestDataSource(
     private val migrationDataSource: HikariDataSource by lazy { HikariDataSource(migrationConfig) }
 
     private val flyway by lazy {
-        Flyway.configure()
+        Flyway
+            .configure()
             .dataSource(migrationDataSource)
             .validateMigrationNaming(true)
             .cleanDisabled(false)
@@ -66,6 +67,7 @@ class TestDataSource(
             cleanupStrategy.cleanup(it)
         }
     }
+
     fun teardown(dropDatabase: (String) -> Unit) {
         migrationDataSource.close()
         dataSource.close()
@@ -82,10 +84,9 @@ fun interface CleanupStrategy {
 
     companion object {
         // comma-separated list of tables
-        fun tables(tables: String): CleanupStrategy {
-            return CleanupStrategy {
+        fun tables(tables: String): CleanupStrategy =
+            CleanupStrategy {
                 it.createStatement().execute("truncate table $tables restart identity cascade;")
             }
-        }
     }
 }

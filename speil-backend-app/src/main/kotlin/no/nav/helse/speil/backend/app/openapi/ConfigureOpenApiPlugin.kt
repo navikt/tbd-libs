@@ -13,9 +13,9 @@ import io.ktor.server.application.install
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import io.swagger.v3.oas.models.media.Schema
-import java.math.BigDecimal
 import no.nav.helse.speil.backend.app.logging.loggInfo
 import no.nav.helse.speil.backend.app.serialization.customSerializersModule
+import java.math.BigDecimal
 
 fun Application.configureOpenApiPlugin(config: OpenApiConfig) {
     if (!config.eksponerOpenApi) {
@@ -30,25 +30,26 @@ fun Application.configureOpenApiPlugin(config: OpenApiConfig) {
         pathFilter = { _, url -> url.firstOrNull() == "api" }
         autoDocumentResourcesRoutes = true
         schemas {
-            generator = SchemaGenerator.kotlinx {
-                referencePath = RefType.OPENAPI_SIMPLE
-                serializersModule = customSerializersModule
-                overwrite(SchemaGenerator.TypeOverwrites.JavaUuid())
-                overwrite(SchemaGenerator.TypeOverwrites.Instant())
-                overwrite(SchemaGenerator.TypeOverwrites.LocalDateTime())
-                overwrite(SchemaGenerator.TypeOverwrites.LocalDate())
-                overwrite(
-                    object : SchemaOverwriteModule(
-                        identifier = BigDecimal::class.qualifiedName!!,
-                        schema = {
-                            Schema<Any>().also {
-                                it.types = setOf("string")
-                                it.format = "bigdecimal"
-                            }
-                        },
-                    ) {},
-                )
-            }
+            generator =
+                SchemaGenerator.kotlinx {
+                    referencePath = RefType.OPENAPI_SIMPLE
+                    serializersModule = customSerializersModule
+                    overwrite(SchemaGenerator.TypeOverwrites.JavaUuid())
+                    overwrite(SchemaGenerator.TypeOverwrites.Instant())
+                    overwrite(SchemaGenerator.TypeOverwrites.LocalDateTime())
+                    overwrite(SchemaGenerator.TypeOverwrites.LocalDate())
+                    overwrite(
+                        object : SchemaOverwriteModule(
+                            identifier = BigDecimal::class.qualifiedName!!,
+                            schema = {
+                                Schema<Any>().also {
+                                    it.types = setOf("string")
+                                    it.format = "bigdecimal"
+                                }
+                            },
+                        ) {},
+                    )
+                }
         }
         security {
             securityScheme("JWT") {

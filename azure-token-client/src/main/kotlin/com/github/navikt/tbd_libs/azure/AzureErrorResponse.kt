@@ -8,5 +8,5 @@ internal data class AzureErrorResponse(
     @param:JsonProperty("error")
     val error: String,
     @param:JsonProperty("error_description")
-    val description: String
+    val description: String,
 )

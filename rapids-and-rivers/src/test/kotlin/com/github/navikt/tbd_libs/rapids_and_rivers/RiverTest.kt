@@ -16,7 +16,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 
 internal class RiverTest {
-
     @Test
     internal fun `sets id if missing`() {
         river.onMessage("{}", context, MessageMetadata("", -1, -1, null, emptyMap()), SimpleMeterRegistry())
@@ -81,6 +80,7 @@ internal class RiverTest {
     @Test
     internal fun `participating_services tag on message_counter with participating services`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
         val message = """{
             "@event_name": "test_event",
@@ -91,7 +91,7 @@ internal class RiverTest {
         }"""
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("original-app,other-app", counter!!.id.getTag("participating_services"))
@@ -100,11 +100,12 @@ internal class RiverTest {
     @Test
     internal fun `participating_services tag none on message_counter without participating services`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
         val message = """{ "@event_name": "test_event" }"""
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         // Since NAIS_APP_NAME is null in tests, the participating service entry has null service name, filtered out
@@ -125,42 +126,48 @@ internal class RiverTest {
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertFalse(gotMessage)
         assertEquals(RiverValidationResult.VALIDATION_FAILED, validationResult)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("failing-app", counter!!.id.getTag("participating_services"))
     }
 
+    private val context =
+        object : MessageContext {
+            override fun publish(message: String) {}
 
-    private val context = object : MessageContext {
-        override fun publish(message: String) {}
-        override fun publish(key: String, message: String) {}
-        override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
-            return emptyList<SentMessage>() to emptyList()
+            override fun publish(
+                key: String,
+                message: String,
+            ) {}
+
+            override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> = emptyList<SentMessage>() to emptyList()
+
+            override fun rapidName(): String = "test"
         }
-        override fun rapidName(): String {return "test"}
-    }
 
     private var gotMessage = false
     private lateinit var gotPacket: JsonMessage
     private lateinit var messageProblems: MessageProblems
     private lateinit var river: River
     private lateinit var validationResult: RiverValidationResult
-    private val rapid = object : RapidsConnection() {
-        override fun publish(message: String) {}
-        override fun publish(key: String, message: String) {}
-        override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> {
-            return emptyList<SentMessage>() to emptyList()
+    private val rapid =
+        object : RapidsConnection() {
+            override fun publish(message: String) {}
+
+            override fun publish(
+                key: String,
+                message: String,
+            ) {}
+
+            override fun publish(messages: List<OutgoingMessage>): Pair<List<SentMessage>, List<FailedMessage>> = emptyList<SentMessage>() to emptyList()
+
+            override fun rapidName(): String = "test"
+
+            override fun start() {}
+
+            override fun stop() {}
         }
-
-        override fun rapidName(): String {
-            return "test"
-        }
-
-        override fun start() {}
-
-        override fun stop() {}
-    }
 
     @BeforeEach
     internal fun setup() {
@@ -169,42 +176,57 @@ internal class RiverTest {
     }
 
     private enum class RiverValidationResult {
-        PASSED, PRECONDITION_FAILED, VALIDATION_FAILED
+        PASSED,
+        PRECONDITION_FAILED,
+        VALIDATION_FAILED,
     }
+
     private fun configureRiver(river: River): River =
-        river.register(object : River.PacketListener {
-            override fun onPacket(packet: JsonMessage, context: MessageContext, metadata: MessageMetadata, meterRegistry: MeterRegistry) {
-                gotPacket = packet
-                gotMessage = true
-                validationResult = RiverValidationResult.PASSED
-            }
+        river.register(
+            object : River.PacketListener {
+                override fun onPacket(
+                    packet: JsonMessage,
+                    context: MessageContext,
+                    metadata: MessageMetadata,
+                    meterRegistry: MeterRegistry,
+                ) {
+                    gotPacket = packet
+                    gotMessage = true
+                    validationResult = RiverValidationResult.PASSED
+                }
 
-            override fun onPreconditionError(
-                error: MessageProblems,
-                context: MessageContext,
-                metadata: MessageMetadata
-            ) {
-                messageProblems = error
-                validationResult = RiverValidationResult.PRECONDITION_FAILED
-            }
+                override fun onPreconditionError(
+                    error: MessageProblems,
+                    context: MessageContext,
+                    metadata: MessageMetadata,
+                ) {
+                    messageProblems = error
+                    validationResult = RiverValidationResult.PRECONDITION_FAILED
+                }
 
-            override fun onSevere(
-                error: MessageProblems.MessageException,
-                context: MessageContext
-            ) {
-                messageProblems = error.problems
-                validationResult = RiverValidationResult.PRECONDITION_FAILED
-            }
+                override fun onSevere(
+                    error: MessageProblems.MessageException,
+                    context: MessageContext,
+                ) {
+                    messageProblems = error.problems
+                    validationResult = RiverValidationResult.PRECONDITION_FAILED
+                }
 
-            override fun onError(problems: MessageProblems, context: MessageContext, metadata: MessageMetadata) {
-                messageProblems = problems
-                validationResult = RiverValidationResult.VALIDATION_FAILED
-            }
-        })
+                override fun onError(
+                    problems: MessageProblems,
+                    context: MessageContext,
+                    metadata: MessageMetadata,
+                ) {
+                    messageProblems = problems
+                    validationResult = RiverValidationResult.VALIDATION_FAILED
+                }
+            },
+        )
 
     @Test
     internal fun `behov tag on message_counter with behov array`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
         val message = """{
             "@event_name": "test_event",
@@ -212,7 +234,7 @@ internal class RiverTest {
         }"""
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("Inntekt,Sykepengehistorikk", counter!!.id.getTag("behov"))
@@ -221,11 +243,12 @@ internal class RiverTest {
     @Test
     internal fun `behov tag none on message_counter when behov is missing`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
         val message = """{ "@event_name": "test_event" }"""
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("none", counter!!.id.getTag("behov"))
@@ -234,6 +257,7 @@ internal class RiverTest {
     @Test
     internal fun `losninger tag on message_counter when losning key exists`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
         val message = """{
             "@event_name": "test_event",
@@ -242,7 +266,7 @@ internal class RiverTest {
         }"""
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("Inntekt", counter!!.id.getTag("losninger"))
@@ -251,14 +275,17 @@ internal class RiverTest {
     @Test
     internal fun `losninger tag none on message_counter when losning key is missing`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
-        val message = """
+        val message =
+            """
             { "@event_name": "test_event",
               "@behov": ["Sykepengehistorikk", "Inntekt"]
-            }""".trimIndent()
+            }
+            """.trimIndent()
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("none", counter!!.id.getTag("losninger"))
@@ -267,6 +294,7 @@ internal class RiverTest {
     @Test
     internal fun `all tags together - participating_services, behov, and losninger`() {
         val metrics = SimpleMeterRegistry()
+
         @Language("JSON")
         val message = """{
             "@event_name": "behov_event",
@@ -278,7 +306,7 @@ internal class RiverTest {
         }"""
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertTrue(gotMessage)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("test-app", counter!!.id.getTag("participating_services"))
@@ -299,7 +327,7 @@ internal class RiverTest {
         river.onMessage(message, context, MessageMetadata("", -1, -1, null, emptyMap()), metrics)
         assertFalse(gotMessage)
         assertEquals(RiverValidationResult.VALIDATION_FAILED, validationResult)
-        
+
         val counter = metrics.find("message_counter").counter()
         assertNotNull(counter)
         assertEquals("Inntekt", counter!!.id.getTag("behov"))

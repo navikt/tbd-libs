@@ -1,8 +1,8 @@
 package com.github.navikt.tbd_libs.azure
 
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.mockOkResponse
-import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserJwtRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserClientSecretRequestBody
+import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserJwtRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserOBOClientSecretRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserOBOJwtRequestBody
 import com.github.navikt.tbd_libs.azure.MockHttpClient.Companion.verifiserPOST

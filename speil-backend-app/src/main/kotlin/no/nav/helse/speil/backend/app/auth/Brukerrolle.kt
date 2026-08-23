@@ -7,5 +7,5 @@ package no.nav.helse.speil.backend.app.auth
  * markørinterface for lesbarhet).
  */
 interface Brukerrolle {
-  val navn: String
+    val navn: String
 }

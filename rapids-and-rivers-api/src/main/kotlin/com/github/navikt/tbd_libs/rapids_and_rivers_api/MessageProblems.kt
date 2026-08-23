@@ -1,18 +1,29 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers_api
 
-class MessageProblems(private val originalMessage: String) {
+class MessageProblems(
+    private val originalMessage: String,
+) {
     private val errors = mutableListOf<String>()
     private val severe = mutableListOf<String>()
 
-    fun error(melding: String, vararg params: Any) {
+    fun error(
+        melding: String,
+        vararg params: Any,
+    ) {
         errors.add(String.format(melding, *params))
     }
 
-    internal fun error(melding: String, other: MessageProblems) {
+    internal fun error(
+        melding: String,
+        other: MessageProblems,
+    ) {
         other.errors.forEach { errors.add("$melding $it") }
     }
 
-    fun severe(melding: String, vararg params: Any): Nothing {
+    fun severe(
+        melding: String,
+        vararg params: Any,
+    ): Nothing {
         severe.add(String.format(melding, *params))
         throw MessageException(this)
     }
@@ -30,12 +41,15 @@ class MessageProblems(private val originalMessage: String) {
         return results.toString()
     }
 
-    override fun toString(): String {
-        return (severe.map { "S: $it" } + errors.map { "E: $it" })
+    override fun toString(): String =
+        (severe.map { "S: $it" } + errors.map { "E: $it" })
             .joinToString(separator = "\n")
-    }
 
-    private fun append(label: String, messages: List<String>, results: StringBuffer) {
+    private fun append(
+        label: String,
+        messages: List<String>,
+        results: StringBuffer,
+    ) {
         if (messages.isEmpty()) return
         results.append("\n")
         results.append(label)
@@ -47,5 +61,7 @@ class MessageProblems(private val originalMessage: String) {
         }
     }
 
-    class MessageException(val problems: MessageProblems) : RuntimeException(problems.toString())
+    class MessageException(
+        val problems: MessageProblems,
+    ) : RuntimeException(problems.toString())
 }

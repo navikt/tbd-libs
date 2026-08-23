@@ -1,28 +1,30 @@
 package com.github.navikt.tbd_libs.personpseudoid
 
 import io.valkey.DefaultJedisClientConfig
-import org.testcontainers.containers.GenericContainer
-import org.testcontainers.utility.DockerImageName
 import io.valkey.HostAndPort
 import io.valkey.JedisPooled
-import java.time.Duration
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.testcontainers.containers.GenericContainer
+import org.testcontainers.utility.DockerImageName
+import java.time.Duration
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PersonPseudoIdClientTest {
-    private val valkeyInstance = GenericContainer(DockerImageName.parse("valkey/valkey:latest")).apply {
-        withExposedPorts(6379)
-        withCommand("valkey-server", "--requirepass", "password")
-        start()
-    }
-    private val valkeyConfig = ValkeyConfig(
-        username = "default",
-        password = "password",
-        connectionString = "valkey://${valkeyInstance.host}:${valkeyInstance.getMappedPort(6379)}",
-    )
+    private val valkeyInstance =
+        GenericContainer(DockerImageName.parse("valkey/valkey:latest")).apply {
+            withExposedPorts(6379)
+            withCommand("valkey-server", "--requirepass", "password")
+            start()
+        }
+    private val valkeyConfig =
+        ValkeyConfig(
+            username = "default",
+            password = "password",
+            connectionString = "valkey://${valkeyInstance.host}:${valkeyInstance.getMappedPort(6379)}",
+        )
     private val client = PersonPseudoIdClient(valkeyConfig)
 
     private val jedisPooled =
@@ -62,4 +64,3 @@ class PersonPseudoIdClientTest {
         assertEquals(ttl, Duration.ofDays(7).seconds)
     }
 }
-

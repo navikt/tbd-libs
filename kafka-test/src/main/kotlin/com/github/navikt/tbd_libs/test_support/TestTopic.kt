@@ -22,39 +22,44 @@ import java.util.concurrent.Future
 
 class TestTopic(
     val topicnavn: String,
-    private val connectionProperties: Properties
+    private val connectionProperties: Properties,
 ) {
     private val bytes = ByteArraySerde()
     private val strings = StringSerde()
 
     private val activePartitions = mutableListOf<TopicPartition>()
     val producer by lazy {
-        val producerProperties = Properties().apply {
-            putAll(connectionProperties)
-            put(ProducerConfig.LINGER_MS_CONFIG, "0")
-        }
+        val producerProperties =
+            Properties().apply {
+                putAll(connectionProperties)
+                put(ProducerConfig.LINGER_MS_CONFIG, "0")
+            }
         KafkaProducer(producerProperties, bytes.serializer(), bytes.serializer())
     }
 
     val consumer by lazy {
-        val consumerProperties = Properties().apply {
-            putAll(connectionProperties)
-            put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-$topicnavn")
-            put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
-            put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
-        }
+        val consumerProperties =
+            Properties().apply {
+                putAll(connectionProperties)
+                put(ConsumerConfig.GROUP_ID_CONFIG, "test-consumer-$topicnavn")
+                put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+                put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
+            }
         KafkaConsumer(consumerProperties, bytes.deserializer(), bytes.deserializer()).apply {
-            subscribe(listOf(topicnavn), object : ConsumerRebalanceListener {
-                override fun onPartitionsRevoked(partitions: Collection<TopicPartition>) {
-                    println("> $topicnavn mister partisjoner: ${partitions.joinToString()}")
-                    activePartitions.removeAll(partitions)
-                }
+            subscribe(
+                listOf(topicnavn),
+                object : ConsumerRebalanceListener {
+                    override fun onPartitionsRevoked(partitions: Collection<TopicPartition>) {
+                        println("> $topicnavn mister partisjoner: ${partitions.joinToString()}")
+                        activePartitions.removeAll(partitions)
+                    }
 
-                override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
-                    println("> $topicnavn får partisjoner: ${partitions.joinToString()}")
-                    activePartitions.addAll(partitions)
-                }
-            })
+                    override fun onPartitionsAssigned(partitions: Collection<TopicPartition>) {
+                        println("> $topicnavn får partisjoner: ${partitions.joinToString()}")
+                        activePartitions.addAll(partitions)
+                    }
+                },
+            )
         }
     }
 
@@ -71,20 +76,34 @@ class TestTopic(
     fun cleanUp() {
         println("> Rydder opp og forbereder gjenbruk i $topicnavn - ${Thread.currentThread()}")
         producedMessages.clear()
-        try { consumer.close() }
-        catch (_: Exception) {}
-        try { producer.close() }
-        catch (_: Exception) {}
+        try {
+            consumer.close()
+        } catch (_: Exception) {
+        }
+        try {
+            producer.close()
+        } catch (_: Exception) {
+        }
     }
 
     fun send(message: String): Future<RecordMetadata> = send(message, strings.serializer())
-    fun send(key: String, message: String?) = send(key, message, strings.serializer(), strings.serializer())
 
-    fun <V> send(message: V, valueSerializer: Serializer<V>) =
-        send(ProducerRecord(topicnavn, valueSerializer.serialize(topicnavn, message)))
+    fun send(
+        key: String,
+        message: String?,
+    ) = send(key, message, strings.serializer(), strings.serializer())
 
-    fun <K, V> send(key: K, message: V, keySerializer: Serializer<K>, valueSerializer: Serializer<V>) =
-        send(ProducerRecord(topicnavn, keySerializer.serialize(topicnavn, key), valueSerializer.serialize(topicnavn, message)))
+    fun <V> send(
+        message: V,
+        valueSerializer: Serializer<V>,
+    ) = send(ProducerRecord(topicnavn, valueSerializer.serialize(topicnavn, message)))
+
+    fun <K, V> send(
+        key: K,
+        message: V,
+        keySerializer: Serializer<K>,
+        valueSerializer: Serializer<V>,
+    ) = send(ProducerRecord(topicnavn, keySerializer.serialize(topicnavn, key), valueSerializer.serialize(topicnavn, message)))
 
     private fun send(record: ProducerRecord<ByteArray, ByteArray>): Future<RecordMetadata> {
         println("> Sender melding #${producedMessages.size + 1} for topic $topicnavn")
@@ -93,10 +112,17 @@ class TestTopic(
         }
     }
 
-    fun pollRecords(timeout: Duration = Duration.ofMillis(100), maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(5)) =
-        pollRecords(strings.deserializer(), strings.deserializer(), timeout, maxWaitForAtLeastOneRecord)
+    fun pollRecords(
+        timeout: Duration = Duration.ofMillis(100),
+        maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(5),
+    ) = pollRecords(strings.deserializer(), strings.deserializer(), timeout, maxWaitForAtLeastOneRecord)
 
-    fun <K, V> pollRecords(keyDeserializer: Deserializer<K>, valueDeserializer: Deserializer<V>, timeout: Duration = Duration.ofMillis(100), maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(5)): List<ConsumerRecord<K, V>> {
+    fun <K, V> pollRecords(
+        keyDeserializer: Deserializer<K>,
+        valueDeserializer: Deserializer<V>,
+        timeout: Duration = Duration.ofMillis(100),
+        maxWaitForAtLeastOneRecord: Duration = Duration.ofSeconds(5),
+    ): List<ConsumerRecord<K, V>> {
         producer.flush()
         producedMessages.forEach { it.get() }
         println("> Consumerer meldinger fra $topicnavn (consumer position ${activePartitions.joinToString { "${it.topic()} @ #${it.partition()} - offset ${consumer.position(it)}" }}) - ${Thread.currentThread()}")
@@ -111,7 +137,12 @@ class TestTopic(
         }
     }
 
-    private fun <K, V> MutableList<ConsumerRecord<K, V>>.pollUntilAtLeastOneRecordOrTimeout(keyDeserializer: Deserializer<K>, valueDeserializer: Deserializer<V>, timeout: Duration, maxWaitForAtLeastOneRecord: Duration) {
+    private fun <K, V> MutableList<ConsumerRecord<K, V>>.pollUntilAtLeastOneRecordOrTimeout(
+        keyDeserializer: Deserializer<K>,
+        valueDeserializer: Deserializer<V>,
+        timeout: Duration,
+        maxWaitForAtLeastOneRecord: Duration,
+    ) {
         val start = System.currentTimeMillis()
         while (isEmpty() && (System.currentTimeMillis() - start) < maxWaitForAtLeastOneRecord.toMillis()) {
             val pollStart = System.currentTimeMillis()
@@ -122,19 +153,31 @@ class TestTopic(
                 val key = keyDeserializer.deserialize(it.topic(), it.headers(), it.key())
                 val value = valueDeserializer.deserialize(it.topic(), it.headers(), it.value())
 
-                val copy = ConsumerRecord<K, V>(
-                    /* topic = */ it.topic(),
-                    /* partition = */ it.partition(),
-                    /* offset = */ it.offset(),
-                    /* timestamp = */ it.timestamp(),
-                    /* timestampType = */ it.timestampType(),
-                    /* serializedKeySize = */ it.key()?.size ?: NULL_SIZE,
-                    /* serializedValueSize = */ it.value()?.size ?: NULL_SIZE,
-                    /* key = */ key,
-                    /* value = */ value,
-                    /* headers = */ it.headers(),
-                    /* leaderEpoch = */ it.leaderEpoch()
-                )
+                val copy =
+                    ConsumerRecord<K, V>(
+                        // topic =
+                        it.topic(),
+                        // partition =
+                        it.partition(),
+                        // offset =
+                        it.offset(),
+                        // timestamp =
+                        it.timestamp(),
+                        // timestampType =
+                        it.timestampType(),
+                        // serializedKeySize =
+                        it.key()?.size ?: NULL_SIZE,
+                        // serializedValueSize =
+                        it.value()?.size ?: NULL_SIZE,
+                        // key =
+                        key,
+                        // value =
+                        value,
+                        // headers =
+                        it.headers(),
+                        // leaderEpoch =
+                        it.leaderEpoch(),
+                    )
                 add(copy)
             }
         }

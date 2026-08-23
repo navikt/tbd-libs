@@ -5,5 +5,5 @@ data class MessageMetadata(
     val partition: Int,
     val offset: Long,
     val key: String?,
-    val headers: Map<String, ByteArray>
+    val headers: Map<String, ByteArray>,
 )

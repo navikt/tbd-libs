@@ -10,7 +10,6 @@ import java.lang.IllegalArgumentException
 import java.time.Duration
 
 internal class RetryTest {
-
     @Test
     fun `Først en test av dingsen`() {
         val dings = DingsSomFunkerPåForsøk(4)
@@ -43,15 +42,16 @@ internal class RetryTest {
         val dings = DingsSomFunkerPåForsøk(10, feil = { EnfeilViIkkeVilRetrye(it) })
         assertEquals(
             "For dette her fikses ikke av en retry. Så derfor feiler vi på forsøk 1",
-            assertThrows<IllegalStateException> { retryBlocking(avbryt = { it is EnfeilViIkkeVilRetrye} ) { dings.gjørtingBlocking() } }.message
+            assertThrows<IllegalStateException> { retryBlocking(avbryt = { it is EnfeilViIkkeVilRetrye }) { dings.gjørtingBlocking() } }.message,
         )
     }
 
     @Test
-    fun `Når noe funker med på førsøk 3 suspendable`() = runBlocking {
-        val dings = DingsSomFunkerPåForsøk(3)
-        assertEquals("Det gikk jo bra på førsøk 3 da", retry { dings.gjørting() })
-    }
+    fun `Når noe funker med på førsøk 3 suspendable`() =
+        runBlocking {
+            val dings = DingsSomFunkerPåForsøk(3)
+            assertEquals("Det gikk jo bra på førsøk 3 da", retry { dings.gjørting() })
+        }
 
     @Test
     fun `kan sette sine egne predefinerte utsettelser`() {
@@ -73,21 +73,26 @@ internal class RetryTest {
 
     private class DingsSomFunkerPåForsøk(
         private val forsøk: Int,
-        private val feil: (nåværendeForsøk: Int) -> Throwable = { IllegalStateException("En feil på forsøk $it") }
+        private val feil: (nåværendeForsøk: Int) -> Throwable = { IllegalStateException("En feil på forsøk $it") },
     ) {
-        init { check(forsøk >= 1) }
+        init {
+            check(forsøk >= 1)
+        }
+
         private var nåværendeForsøk = 1
 
         fun gjørtingBlocking(): String {
             if (nåværendeForsøk == forsøk) return "Det gikk jo bra på førsøk $nåværendeForsøk da"
             throw feil(nåværendeForsøk++)
         }
+
         suspend fun gjørting(): String {
             delay(1)
             return gjørtingBlocking()
         }
-
     }
 
-    private class EnfeilViIkkeVilRetrye(nåværendeForsøk: Int): IllegalStateException("For dette her fikses ikke av en retry. Så derfor feiler vi på forsøk $nåværendeForsøk")
+    private class EnfeilViIkkeVilRetrye(
+        nåværendeForsøk: Int,
+    ) : IllegalStateException("For dette her fikses ikke av en retry. Så derfor feiler vi på forsøk $nåværendeForsøk")
 }

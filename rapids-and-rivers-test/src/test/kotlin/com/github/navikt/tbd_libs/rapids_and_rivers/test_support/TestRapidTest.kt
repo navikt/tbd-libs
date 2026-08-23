@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 internal class TestRapidTest {
-
     private val rapid = TestRapid()
 
     @BeforeEach
@@ -18,7 +17,13 @@ internal class TestRapidTest {
     fun `send and read messages`() {
         rapid.publish("""{ "hello": "world" }""")
         assertEquals(1, rapid.inspektør.size)
-        assertEquals("world", rapid.inspektør.message(0).path("hello").asString())
+        assertEquals(
+            "world",
+            rapid.inspektør
+                .message(0)
+                .path("hello")
+                .asString(),
+        )
         assertEquals("world", rapid.inspektør.field(0, "hello").asString())
         rapid.reset()
         assertEquals(0, rapid.inspektør.size)

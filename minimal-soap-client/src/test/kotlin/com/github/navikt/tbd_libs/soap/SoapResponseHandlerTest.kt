@@ -17,13 +17,15 @@ import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty
 class SoapResponseHandlerTest {
     private companion object {
         private const val NAME_FOR_TEXT_ELEMENT = "innerText"
-        private val xmlMapper = XmlMapper.builder()
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            // issue: https://github.com/FasterXML/jackson-module-kotlin/issues/138
-            // workaround: https://github.com/FasterXML/jackson-module-kotlin/issues/138#issuecomment-576484905
-            .nameForTextElement(NAME_FOR_TEXT_ELEMENT)
-            .build()
+        private val xmlMapper =
+            XmlMapper
+                .builder()
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                // issue: https://github.com/FasterXML/jackson-module-kotlin/issues/138
+                // workaround: https://github.com/FasterXML/jackson-module-kotlin/issues/138#issuecomment-576484905
+                .nameForTextElement(NAME_FOR_TEXT_ELEMENT)
+                .build()
     }
 
     @Test
@@ -45,10 +47,11 @@ class SoapResponseHandlerTest {
 """
         val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
         when (result) {
-            is Result.Ok -> when (val svar = result.value) {
-                is SoapResult.Fault -> error("Forventet OK resultat")
-                is SoapResult.Ok -> assertEquals(expectedGreeting, svar.response.greeting)
-            }
+            is Result.Ok ->
+                when (val svar = result.value) {
+                    is SoapResult.Fault -> error("Forventet OK resultat")
+                    is SoapResult.Ok -> assertEquals(expectedGreeting, svar.response.greeting)
+                }
             else -> error("Forventet OK resultat")
         }
     }
@@ -67,13 +70,15 @@ class SoapResponseHandlerTest {
 """
         val result = deserializeSoapBody<Greeting>(xmlMapper, xml)
         when (result) {
-            is Result.Ok -> when (val svar = result.value) {
-                is SoapResult.Fault -> error("Forventet OK resultat")
-                is SoapResult.Ok -> assertEquals(expectedGreeting, svar.response.greeting)
-            }
+            is Result.Ok ->
+                when (val svar = result.value) {
+                    is SoapResult.Fault -> error("Forventet OK resultat")
+                    is SoapResult.Ok -> assertEquals(expectedGreeting, svar.response.greeting)
+                }
             else -> error("Forventet OK resultat")
         }
     }
+
     @Test
     fun `deserialiserer verdi med attributt`() {
         @Language("XML")
@@ -91,13 +96,14 @@ class SoapResponseHandlerTest {
 """
         val result = deserializeSoapBody<ResponseLength>(xmlMapper, xml)
         when (result) {
-            is Result.Ok -> when (val svar = result.value) {
-                is SoapResult.Fault -> error("Forventet OK resultat")
-                is SoapResult.Ok -> {
-                    assertEquals("METERS", svar.response.length.unit)
-                    assertEquals(1337, svar.response.length.value)
+            is Result.Ok ->
+                when (val svar = result.value) {
+                    is SoapResult.Fault -> error("Forventet OK resultat")
+                    is SoapResult.Ok -> {
+                        assertEquals("METERS", svar.response.length.unit)
+                        assertEquals(1337, svar.response.length.value)
+                    }
                 }
-            }
             else -> error("Forventet OK resultat")
         }
     }
@@ -105,6 +111,7 @@ class SoapResponseHandlerTest {
     @Test
     fun `deserialiserer liste med ett element`() {
         val expectedGreeting = "Hello, World!"
+
         @Language("XML")
         val xml = """<?xml version="1.0" encoding="UTF-8" ?>
 <Soap:Envelope xmlns:Soap="https://schemas.xmlsoap.org/soap/envelope/">
@@ -122,13 +129,19 @@ class SoapResponseHandlerTest {
 """
         val result = deserializeSoapBody<Greetings>(xmlMapper, xml)
         when (result) {
-            is Result.Ok -> when (val svar = result.value) {
-                is SoapResult.Fault -> error("Forventet OK resultat")
-                is SoapResult.Ok -> {
-                    assertEquals(1, svar.response.greetings.size)
-                    assertEquals(expectedGreeting, svar.response.greetings.single().greeting)
+            is Result.Ok ->
+                when (val svar = result.value) {
+                    is SoapResult.Fault -> error("Forventet OK resultat")
+                    is SoapResult.Ok -> {
+                        assertEquals(1, svar.response.greetings.size)
+                        assertEquals(
+                            expectedGreeting,
+                            svar.response.greetings
+                                .single()
+                                .greeting,
+                        )
+                    }
                 }
-            }
             else -> error("Forventet OK resultat")
         }
     }
@@ -158,13 +171,14 @@ class SoapResponseHandlerTest {
 
         val result = deserializeSoapBody<Unit>(xmlMapper, xml)
         when (result) {
-            is Result.Ok -> when (val svar = result.value) {
-                is SoapResult.Fault -> {
-                    assertEquals("SOAP fault: $errorCode - $errorMessage", svar.message)
-                    assertNull(svar.detalje)
+            is Result.Ok ->
+                when (val svar = result.value) {
+                    is SoapResult.Fault -> {
+                        assertEquals("SOAP fault: $errorCode - $errorMessage", svar.message)
+                        assertNull(svar.detalje)
+                    }
+                    is SoapResult.Ok -> error("Forventet Fault resultat")
                 }
-                is SoapResult.Ok -> error("Forventet Fault resultat")
-            }
             else -> error("Forventet Fault resultat")
         }
     }
@@ -183,6 +197,7 @@ class SoapResponseHandlerTest {
         <dateTimeStamp>2018-01-01T23:59:59</dateTimeStamp>
 </sf:simulerBeregningFeilUnderBehandling>
 </detail>"""
+
         @Language("XML")
         val xml = """<?xml version="1.0" encoding="UTF-8" ?>
 <Soap:Envelope xmlns:Soap="https://schemas.xmlsoap.org/soap/envelope/">
@@ -204,13 +219,14 @@ class SoapResponseHandlerTest {
 
         val result = deserializeSoapBody<Unit>(xmlMapper, xml)
         when (result) {
-            is Result.Ok -> when (val svar = result.value) {
-                is SoapResult.Fault -> {
-                    assertEquals("SOAP fault: $errorCode - $errorMessage", svar.message)
-                    assertEquals(xmlMapper.readTree(detalje).toPrettyString(), svar.detalje)
+            is Result.Ok ->
+                when (val svar = result.value) {
+                    is SoapResult.Fault -> {
+                        assertEquals("SOAP fault: $errorCode - $errorMessage", svar.message)
+                        assertEquals(xmlMapper.readTree(detalje).toPrettyString(), svar.detalje)
+                    }
+                    is SoapResult.Ok -> error("Forventet Fault resultat")
                 }
-                is SoapResult.Ok -> error("Forventet Fault resultat")
-            }
             else -> error("Forventet Fault resultat")
         }
     }
@@ -243,24 +259,24 @@ class SoapResponseHandlerTest {
 
     private data class Greeting(
         @param:JacksonXmlProperty(localName = "greeting")
-        val greeting: String
+        val greeting: String,
     )
 
     private data class Greetings(
         @param:JacksonXmlProperty(localName = "greetings")
         @param:JacksonXmlElementWrapper(useWrapping = false)
-        val greetings: List<Greeting>
+        val greetings: List<Greeting>,
     )
 
     private data class ResponseLength(
         @param:JacksonXmlProperty(localName = "length")
-        val length: Length
+        val length: Length,
     )
 
     private data class Length(
         @param:JacksonXmlProperty(localName = "unit", isAttribute = true)
         val unit: String,
         @param:JacksonXmlProperty(localName = NAME_FOR_TEXT_ELEMENT)
-        val value: Int
+        val value: Int,
     )
 }

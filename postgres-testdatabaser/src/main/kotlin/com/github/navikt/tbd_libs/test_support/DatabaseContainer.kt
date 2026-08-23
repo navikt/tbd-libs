@@ -18,7 +18,7 @@ class DatabaseContainer(
     private val initStrategy: InitStrategy? = null,
     private val maxHikariPoolSize: Int = 2,
     private val walLevelLogical: Boolean = false,
-    private val postgresVersjon: Int
+    private val postgresVersjon: Int,
 ) {
     private val instance by lazy {
         PostgreSQLContainer("postgres:$postgresVersjon").apply {
@@ -49,28 +49,39 @@ class DatabaseContainer(
         ArrayBlockingQueue(poolSize, false, opprettTilkoblinger(cleanupStrategy, initStrategy, maxHikariPoolSize))
     }
 
-    fun nyTilkobling(timeout: Duration = Duration.ofSeconds(20)): TestDataSource {
-        return tilgjengeligeTilkoblinger.poll(timeout.toMillis(), TimeUnit.MILLISECONDS) ?: tilkoblingIkkeTilgjengelig(timeout)
-    }
+    fun nyTilkobling(timeout: Duration = Duration.ofSeconds(20)): TestDataSource = tilgjengeligeTilkoblinger.poll(timeout.toMillis(), TimeUnit.MILLISECONDS) ?: tilkoblingIkkeTilgjengelig(timeout)
 
-    private fun tilkoblingIkkeTilgjengelig(timeout: Duration): Nothing {
-        throw RuntimeException("Ventet i ${timeout.toMillis()} millisekunder uten å få en ledig database")
-    }
+    private fun tilkoblingIkkeTilgjengelig(timeout: Duration): Nothing = throw RuntimeException("Ventet i ${timeout.toMillis()} millisekunder uten å få en ledig database")
 
-    private fun opprettTilkoblinger(cleanupStrategy: CleanupStrategy?, initStrategy: InitStrategy?, maxHikariPoolSize: Int) = runBlocking(Dispatchers.IO) {
+    private fun opprettTilkoblinger(
+        cleanupStrategy: CleanupStrategy?,
+        initStrategy: InitStrategy?,
+        maxHikariPoolSize: Int,
+    ) = runBlocking(Dispatchers.IO) {
         (1..poolSize)
             .map { async { opprettTilkobling("testdb_$it", cleanupStrategy, initStrategy, maxHikariPoolSize) } }
             .awaitAll()
     }
 
-    private fun opprettTilkobling(dbnavn: String, cleanupStrategy: CleanupStrategy?, initStrategy: InitStrategy?, maxHikariPoolSize: Int): TestDataSource {
+    private fun opprettTilkobling(
+        dbnavn: String,
+        cleanupStrategy: CleanupStrategy?,
+        initStrategy: InitStrategy?,
+        maxHikariPoolSize: Int,
+    ): TestDataSource {
         opprettDatabase(dbnavn)
         instance.withDatabaseName(dbnavn)
-        return TestDataSource(dbnavn, HikariConfig().apply {
-            username = instance.username
-            password = instance.password
-            jdbcUrl = instance.jdbcUrl
-        }, cleanupStrategy, initStrategy, maxHikariPoolSize)
+        return TestDataSource(
+            dbnavn,
+            HikariConfig().apply {
+                username = instance.username
+                password = instance.password
+                jdbcUrl = instance.jdbcUrl
+            },
+            cleanupStrategy,
+            initStrategy,
+            maxHikariPoolSize,
+        )
     }
 
     private fun opprettDatabase(dbnavn: String) {

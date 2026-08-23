@@ -1,13 +1,13 @@
 package no.nav.helse.speil.backend.app.rest
 
+import io.ktor.server.request.receive
+import io.ktor.server.routing.Route
+import no.nav.helse.speil.backend.app.auth.Brukerrolle
 import io.github.smiley4.ktoropenapi.resources.delete as documentedDelete
 import io.github.smiley4.ktoropenapi.resources.get as documentedGet
 import io.github.smiley4.ktoropenapi.resources.patch as documentedPatch
 import io.github.smiley4.ktoropenapi.resources.post as documentedPost
 import io.github.smiley4.ktoropenapi.resources.put as documentedPut
-import io.ktor.server.request.receive
-import io.ktor.server.routing.Route
-import no.nav.helse.speil.backend.app.auth.Brukerrolle
 
 inline fun <reified RESOURCE : Any, reified RESPONSE, ERROR : ApiErrorCode, ROLLE : Brukerrolle, TRANSAKSJON> Route.get(
     behandler: GetBehandler<RESOURCE, RESPONSE, ERROR, ROLLE, TRANSAKSJON>,

@@ -1,17 +1,16 @@
 package com.github.navikt.tbd_libs.jackson
 
-import java.time.YearMonth
-import java.time.format.DateTimeParseException
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.assertThrows
 import tools.jackson.databind.JsonNode
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.time.YearMonth
+import java.time.format.DateTimeParseException
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 internal class YearMonthTest {
-
     @Test
     fun `Successfully parse YearMonth`() {
         val expected = YearMonth.of(2024, 1)
@@ -80,10 +79,11 @@ internal class YearMonthTest {
         }
     }
 
-    private fun jsonNode(@Language("JSON") json: String): JsonNode {
-        return jacksonMapperBuilder()
+    private fun jsonNode(
+        @Language("JSON") json: String,
+    ): JsonNode =
+        jacksonMapperBuilder()
             .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
             .build()
             .readTree(json)
-    }
 }

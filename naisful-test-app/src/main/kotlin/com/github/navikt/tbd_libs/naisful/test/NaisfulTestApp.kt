@@ -13,19 +13,20 @@ import io.ktor.server.application.Application
 import io.ktor.server.engine.connector
 import io.ktor.server.testing.testApplication
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
-import java.net.ServerSocket
 import kotlinx.coroutines.delay
 import org.slf4j.LoggerFactory
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.net.ServerSocket
 
 fun plainTestApp(
     testApplicationModule: Application.() -> Unit,
     isreadyEndpoint: String = NaisEndpoints.Default.isreadyEndpoint,
-    testClientObjectMapper: ObjectMapper = jacksonMapperBuilder()
-        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-        .build(),
+    testClientObjectMapper: ObjectMapper =
+        jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build(),
     testblokk: suspend TestContext.() -> Unit,
 ) {
     val randomPort = ServerSocket(0).localPort
@@ -44,14 +45,15 @@ fun plainTestApp(
         }
         startApplication()
 
-        val testClient = createClient {
-            defaultRequest {
-                port = randomPort
+        val testClient =
+            createClient {
+                defaultRequest {
+                    port = randomPort
+                }
+                install(ContentNegotiation) {
+                    register(ContentType.Application.Json, JacksonConverter(testClientObjectMapper))
+                }
             }
-            install(ContentNegotiation) {
-                register(ContentType.Application.Json, JacksonConverter(testClientObjectMapper))
-            }
-        }
 
         do {
             val response = testClient.get(isreadyEndpoint)
@@ -69,7 +71,7 @@ fun naisfulTestApp(
     naisEndpoints: NaisEndpoints = NaisEndpoints.Default,
     callIdHeaderName: String = "callId",
     preStopHook: suspend () -> Unit = { delay(5000) },
-    testblokk: suspend TestContext.() -> Unit
+    testblokk: suspend TestContext.() -> Unit,
 ) = plainTestApp(
     testApplicationModule = {
         standardApiModule(meterRegistry, objectMapper, environment.log, naisEndpoints, callIdHeaderName, preStopHook)
@@ -79,4 +81,6 @@ fun naisfulTestApp(
     testClientObjectMapper = objectMapper,
 ) { testblokk() }
 
-class TestContext(val client: HttpClient)
+class TestContext(
+    val client: HttpClient,
+)

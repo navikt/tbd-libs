@@ -9,11 +9,6 @@ import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import java.net.http.HttpClient
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.util.*
-import kotlin.jvm.optionals.getOrNull
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -22,13 +17,19 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.databind.cfg.DateTimeFeature
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.net.http.HttpClient
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 class SpurteDuClientTest {
     private companion object {
-        private val objectMapper = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .disable(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
-            .build()
+        private val objectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .disable(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+                .build()
     }
 
     @Test
@@ -83,9 +84,12 @@ class SpurteDuClientTest {
         val secret = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d")
         val response = spurteDuClient.metadata(secret)
         verifiserGET(httpClient)
-        assertEquals(MetadataResponse(
-            opprettet = OffsetDateTime.parse("2024-05-30T20:25:46.226344852+02:00")
-        ), response)
+        assertEquals(
+            MetadataResponse(
+                opprettet = OffsetDateTime.parse("2024-05-30T20:25:46.226344852+02:00"),
+            ),
+            response,
+        )
     }
 
     @Test
@@ -104,35 +108,45 @@ class SpurteDuClientTest {
         assertEquals("en jsonmelding", objectMapper.readTree(response.text).path("foo").asString())
     }
 
-    private fun utveksle(payload: SkjulRequest, verifisering: (body: JsonNode) -> Boolean) {
+    private fun utveksle(
+        payload: SkjulRequest,
+        verifisering: (body: JsonNode) -> Boolean,
+    ) {
         val (spurteDuClient, httpClient) = mockClient(okUtveksleResponse)
 
         val response = spurteDuClient.skjul(payload)
 
         verifiserPOST(httpClient)
         verifiserRequestBody(httpClient, verifisering)
-        assertEquals(SkjulResponse(
-            id = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d"),
-            url = "https://spurte-du/vis_meg/2d05217c-1c16-4581-b4e8-08e115a2274d",
-            path = "/vis_meg/2d05217c-1c16-4581-b4e8-08e115a2274d"
-        ), response)
+        assertEquals(
+            SkjulResponse(
+                id = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d"),
+                url = "https://spurte-du/vis_meg/2d05217c-1c16-4581-b4e8-08e115a2274d",
+                path = "/vis_meg/2d05217c-1c16-4581-b4e8-08e115a2274d",
+            ),
+            response,
+        )
     }
 
-    private fun mockClient(response: String, statusCode: Int = 200): Pair<SpurteDuClient, HttpClient> {
-        val httpClient = mockk<HttpClient> {
-            every {
-                send<String>(any(), any())
-            } returns MockHttpResponse(response, statusCode)
-        }
-        val tokenProvider = object : AzureTokenProvider {
-            override fun onBehalfOfToken(scope: String, token: String): Result<AzureToken> {
-                return AzureToken("on_behalf_of_token", LocalDateTime.now()).ok()
+    private fun mockClient(
+        response: String,
+        statusCode: Int = 200,
+    ): Pair<SpurteDuClient, HttpClient> {
+        val httpClient =
+            mockk<HttpClient> {
+                every {
+                    send<String>(any(), any())
+                } returns MockHttpResponse(response, statusCode)
             }
+        val tokenProvider =
+            object : AzureTokenProvider {
+                override fun onBehalfOfToken(
+                    scope: String,
+                    token: String,
+                ): Result<AzureToken> = AzureToken("on_behalf_of_token", LocalDateTime.now()).ok()
 
-            override fun bearerToken(scope: String): Result<AzureToken> {
-                return AzureToken("bearer_token", LocalDateTime.now()).ok()
+                override fun bearerToken(scope: String): Result<AzureToken> = AzureToken("bearer_token", LocalDateTime.now()).ok()
             }
-        }
         val spurteDuClient = SpurteDuClient(httpClient, objectMapper, tokenProvider)
         return spurteDuClient to httpClient
     }
@@ -145,27 +159,46 @@ class SpurteDuClientTest {
         verifiserRequestMethod(httpClient, "GET")
     }
 
-    fun verifiserRequestMethod(httpClient: HttpClient, method: String) {
+    fun verifiserRequestMethod(
+        httpClient: HttpClient,
+        method: String,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                request.method().uppercase() == method.uppercase()
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    request.method().uppercase() == method.uppercase()
+                },
+                any(),
+            )
         }
     }
 
-    fun verifiserRequestHeader(httpClient: HttpClient, headerName: String, verifisering: (String?) -> Boolean) {
+    fun verifiserRequestHeader(
+        httpClient: HttpClient,
+        headerName: String,
+        verifisering: (String?) -> Boolean,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                verifisering(request.headers().firstValue(headerName).getOrNull())
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    verifisering(request.headers().firstValue(headerName).getOrNull())
+                },
+                any(),
+            )
         }
     }
 
-    private fun verifiserRequestBody(httpClient: HttpClient, verifisering: (body: JsonNode) -> Boolean) {
+    private fun verifiserRequestBody(
+        httpClient: HttpClient,
+        verifisering: (body: JsonNode) -> Boolean,
+    ) {
         verify {
-            httpClient.send<String>(match { request ->
-                verifisering(objectMapper.readTree(request.bodyAsString()))
-            }, any())
+            httpClient.send<String>(
+                match { request ->
+                    verifisering(objectMapper.readTree(request.bodyAsString()))
+                },
+                any(),
+            )
         }
     }
 

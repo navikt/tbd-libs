@@ -13,50 +13,50 @@ import org.slf4j.event.Level
 val teamLogs: Logger = LoggerFactory.getLogger("tjenestekall")
 
 inline val <reified T> T.logg: Logger
-  get() = LoggerFactory.getLogger(T::class.java)
+    get() = LoggerFactory.getLogger(T::class.java)
 
 inline fun <reified T> T.loggError(
-  melding: String,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(logg, Level.ERROR, melding, teamLogsDetaljer.toList())
+    loggMedDetaljer(logg, Level.ERROR, melding, teamLogsDetaljer.toList())
 }
 
 inline fun <reified T> T.loggError(
-  melding: String,
-  throwable: Throwable?,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    throwable: Throwable?,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(logg, Level.ERROR, melding, teamLogsDetaljer.toList(), throwable)
+    loggMedDetaljer(logg, Level.ERROR, melding, teamLogsDetaljer.toList(), throwable)
 }
 
 inline fun <reified T> T.loggWarn(
-  melding: String,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(logg, Level.WARN, melding, teamLogsDetaljer.toList())
+    loggMedDetaljer(logg, Level.WARN, melding, teamLogsDetaljer.toList())
 }
 
 inline fun <reified T> T.loggWarn(
-  melding: String,
-  throwable: Throwable?,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    throwable: Throwable?,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(logg, Level.WARN, melding, teamLogsDetaljer.toList(), throwable)
+    loggMedDetaljer(logg, Level.WARN, melding, teamLogsDetaljer.toList(), throwable)
 }
 
 inline fun <reified T> T.loggInfo(
-  melding: String,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(logg, Level.INFO, melding, teamLogsDetaljer.toList())
+    loggMedDetaljer(logg, Level.INFO, melding, teamLogsDetaljer.toList())
 }
 
 inline fun <reified T> T.loggDebug(
-  melding: String,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(logg, Level.DEBUG, melding, teamLogsDetaljer.toList())
+    loggMedDetaljer(logg, Level.DEBUG, melding, teamLogsDetaljer.toList())
 }
 
 /**
@@ -64,67 +64,66 @@ inline fun <reified T> T.loggDebug(
  * f.eks. `startApp`.
  */
 fun loggInfo(
-  melding: String,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(LoggerFactory.getLogger("no.nav.helse.speil.backend.app"), Level.INFO, melding, teamLogsDetaljer.toList())
+    loggMedDetaljer(LoggerFactory.getLogger("no.nav.helse.speil.backend.app"), Level.INFO, melding, teamLogsDetaljer.toList())
 }
 
 fun loggError(
-  melding: String,
-  throwable: Throwable? = null,
-  vararg teamLogsDetaljer: Pair<String, Any?>,
+    melding: String,
+    throwable: Throwable? = null,
+    vararg teamLogsDetaljer: Pair<String, Any?>,
 ) {
-  loggMedDetaljer(LoggerFactory.getLogger("no.nav.helse.speil.backend.app"), Level.ERROR, melding, teamLogsDetaljer.toList(), throwable)
+    loggMedDetaljer(LoggerFactory.getLogger("no.nav.helse.speil.backend.app"), Level.ERROR, melding, teamLogsDetaljer.toList(), throwable)
 }
 
 fun loggMedDetaljer(
-  logger: Logger,
-  level: Level,
-  melding: String,
-  teamLogsDetaljer: List<Pair<String, Any?>>,
-  throwable: Throwable? = null,
+    logger: Logger,
+    level: Level,
+    melding: String,
+    teamLogsDetaljer: List<Pair<String, Any?>>,
+    throwable: Throwable? = null,
 ) {
-  logger
-    .atLevel(level)
-    .setMessage(melding)
-    .addMarker(SKIP_TEAM_LOGS_MARKER)
-    .also { if (throwable != null) it.setCause(throwable) }
-    .log()
-  teamLogs
-    .atLevel(level)
-    .setMessage(melding.medTeamLogsDetaljer(teamLogsDetaljer))
-    .also { if (throwable != null) it.setCause(throwable) }
-    .log()
+    logger
+        .atLevel(level)
+        .setMessage(melding)
+        .addMarker(SKIP_TEAM_LOGS_MARKER)
+        .also { if (throwable != null) it.setCause(throwable) }
+        .log()
+    teamLogs
+        .atLevel(level)
+        .setMessage(melding.medTeamLogsDetaljer(teamLogsDetaljer))
+        .also { if (throwable != null) it.setCause(throwable) }
+        .log()
 }
 
 private fun String.medTeamLogsDetaljer(teamLogsDetaljer: List<Pair<String, Any?>>): String =
-  buildString {
-    append(this@medTeamLogsDetaljer)
-    if (teamLogsDetaljer.isNotEmpty()) {
-      append(" - ")
-      teamLogsDetaljer.forEach { (name, value) ->
-        append(name)
-        append(": ")
-        append(if (value is String) "\"$value\"" else value.toString())
-      }
+    buildString {
+        append(this@medTeamLogsDetaljer)
+        if (teamLogsDetaljer.isNotEmpty()) {
+            append(" - ")
+            teamLogsDetaljer.forEach { (name, value) ->
+                append(name)
+                append(": ")
+                append(if (value is String) "\"$value\"" else value.toString())
+            }
+        }
     }
-  }
-
 
 interface MdcKey {
-  val value: String
+    val value: String
 }
 
 fun <T> medMdc(
-  vararg pairs: Pair<MdcKey, String>?,
-  block: () -> T,
+    vararg pairs: Pair<MdcKey, String>?,
+    block: () -> T,
 ): T {
-  val contextMap = MDC.getCopyOfContextMap() ?: emptyMap()
-  try {
-    MDC.setContextMap(contextMap + pairs.filterNotNull().associate { it.first.value to it.second })
-    return block()
-  } finally {
-    MDC.setContextMap(contextMap)
-  }
+    val contextMap = MDC.getCopyOfContextMap() ?: emptyMap()
+    try {
+        MDC.setContextMap(contextMap + pairs.filterNotNull().associate { it.first.value to it.second })
+        return block()
+    } finally {
+        MDC.setContextMap(contextMap)
+    }
 }

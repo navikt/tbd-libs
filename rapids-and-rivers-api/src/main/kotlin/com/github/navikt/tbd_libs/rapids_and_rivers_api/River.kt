@@ -6,5 +6,6 @@ fun interface RandomIdGenerator {
     companion object {
         val Default = RandomIdGenerator { UUID.randomUUID().toString() }
     }
+
     fun generateId(): String
 }

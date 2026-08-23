@@ -1,15 +1,7 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
-
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RandomIdGenerator
-import java.net.InetAddress
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.YearMonth
-import java.time.ZoneId
-import java.util.*
 import tools.jackson.core.exc.StreamReadException
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.JsonNode
@@ -17,21 +9,29 @@ import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.databind.node.ArrayNode
 import tools.jackson.databind.node.ObjectNode
 import tools.jackson.module.kotlin.jacksonMapperBuilder
+import java.net.InetAddress
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.YearMonth
+import java.time.ZoneId
+import java.util.*
 
 // Understands a specific JSON-formatted message
 open class JsonMessage(
     originalMessage: String,
     private val problems: MessageProblems,
-    randomIdGenerator: RandomIdGenerator? = null
+    randomIdGenerator: RandomIdGenerator? = null,
 ) {
     private val idGenerator = randomIdGenerator ?: RandomIdGenerator.Default
     val id: String
 
     companion object {
-        private val objectMapper = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .build()
+        private val objectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .build()
 
         private const val nestedKeySeparator = '.'
         private const val IdKey = "@id"
@@ -47,7 +47,7 @@ open class JsonMessage(
 
         fun newMessage(
             map: Map<String, Any> = emptyMap(),
-            randomIdGenerator: RandomIdGenerator? = null
+            randomIdGenerator: RandomIdGenerator? = null,
         ) = objectMapper.writeValueAsString(map).let {
             JsonMessage(it, MessageProblems(it), randomIdGenerator)
         }
@@ -55,52 +55,73 @@ open class JsonMessage(
         fun newMessage(
             eventName: String,
             map: Map<String, Any> = emptyMap(),
-            randomIdGenerator: RandomIdGenerator? = null
+            randomIdGenerator: RandomIdGenerator? = null,
         ) = newMessage(mapOf(EventNameKey to eventName) + map, randomIdGenerator)
 
         fun newNeed(
             behov: Collection<String>,
             map: Map<String, Any> = emptyMap(),
-            randomIdGenerator: RandomIdGenerator? = null
-        ) = newMessage("behov", mapOf(
-            "@behovId" to UUID.randomUUID(),
-            NeedKey to behov
-        ) + map, randomIdGenerator)
+            randomIdGenerator: RandomIdGenerator? = null,
+        ) = newMessage(
+            "behov",
+            mapOf(
+                "@behovId" to UUID.randomUUID(),
+                NeedKey to behov,
+            ) + map,
+            randomIdGenerator,
+        )
 
-        internal fun populateStandardFields(originalMessage: JsonMessage, message: String, randomIdGenerator: RandomIdGenerator = originalMessage.idGenerator): String {
-            return (objectMapper.readTree(message) as ObjectNode).also {
-                it.replace("@forårsaket_av", objectMapper.valueToTree(originalMessage.tracing))
-                if (it.path("@id").isMissingOrNull() || it.path("@id").asString() == originalMessage.id) {
-                    val id = randomIdGenerator.generateId()
-                    val opprettet = LocalDateTime.now()
-                    it.put(IdKey, id)
-                    it.put(OpprettetKey, "$opprettet")
-                    initializeOrSetParticipatingServices(it, id, opprettet)
+        internal fun populateStandardFields(
+            originalMessage: JsonMessage,
+            message: String,
+            randomIdGenerator: RandomIdGenerator = originalMessage.idGenerator,
+        ): String =
+            (objectMapper.readTree(message) as ObjectNode)
+                .also {
+                    it.replace("@forårsaket_av", objectMapper.valueToTree(originalMessage.tracing))
+                    if (it.path("@id").isMissingOrNull() || it.path("@id").asString() == originalMessage.id) {
+                        val id = randomIdGenerator.generateId()
+                        val opprettet = LocalDateTime.now()
+                        it.put(IdKey, id)
+                        it.put(OpprettetKey, "$opprettet")
+                        initializeOrSetParticipatingServices(it, id, opprettet)
+                    }
+                }.toString()
+
+        private fun initializeOrSetParticipatingServices(
+            node: JsonNode,
+            id: String,
+            opprettet: LocalDateTime,
+        ) {
+            val entry =
+                mutableMapOf(
+                    "id" to id,
+                    "time" to "$opprettet",
+                ).apply {
+                    compute("service") { _, _ -> serviceName }
+                    compute("instance") { _, _ -> serviceHostname }
+                    compute("image") { _, _ -> serviceImage }
                 }
-            }.toString()
+            if (node.path(ParticipatingServicesKey).isMissingOrNull()) {
+                (node as ObjectNode)
+                    .putArray(
+                        ParticipatingServicesKey,
+                    ).add(objectMapper.valueToTree<ObjectNode>(entry))
+            } else {
+                (node.path(ParticipatingServicesKey) as ArrayNode).add(objectMapper.valueToTree<JsonNode>(entry))
+            }
         }
 
-        private fun initializeOrSetParticipatingServices(node: JsonNode, id: String, opprettet: LocalDateTime) {
-            val entry = mutableMapOf(
-                "id" to id,
-                "time" to "$opprettet"
-            ).apply {
-                compute("service") { _, _ -> serviceName }
-                compute("instance") { _, _ -> serviceHostname }
-                compute("image") { _, _ -> serviceImage }
-            }
-            if (node.path(ParticipatingServicesKey).isMissingOrNull()) (node as ObjectNode).putArray(
-                ParticipatingServicesKey
-            ).add(objectMapper.valueToTree<ObjectNode>(entry))
-            else (node.path(ParticipatingServicesKey) as ArrayNode).add(objectMapper.valueToTree<JsonNode>(entry))
-        }
-
-        private fun parseMessageAsJsonObject(message: String, problems: MessageProblems): ObjectNode {
-            val jsonNode = try {
-                objectMapper.readTree(message)
-            } catch (err: StreamReadException) {
-                problems.severe("Invalid JSON per Jackson library: ${err.message}")
-            }
+        private fun parseMessageAsJsonObject(
+            message: String,
+            problems: MessageProblems,
+        ): ObjectNode {
+            val jsonNode =
+                try {
+                    objectMapper.readTree(message)
+                } catch (err: StreamReadException) {
+                    problems.severe("Invalid JSON per Jackson library: ${err.message}")
+                }
             if (!jsonNode.isObject) problems.severe("Incomplete json. Should be able to cast as ObjectNode.")
             return jsonNode as ObjectNode
         }
@@ -111,17 +132,25 @@ open class JsonMessage(
     internal val keys: Set<String> get() = recognizedKeys.keys.toSet()
     internal val eventName: String get() = json.path(EventNameKey).takeUnless { it.isMissingOrNull() }?.asString() ?: "ukjent"
 
-    internal val participatingServices: List<String>? get() = json.path(ParticipatingServicesKey)
-        .takeIf { it.isArray && it.size() > 0 }
-        ?.mapNotNull { jsonNode -> jsonNode.path("service").takeUnless { it.isMissingOrNull() }?.asString() }
+    internal val participatingServices: List<String>? get() =
+        json
+            .path(ParticipatingServicesKey)
+            .takeIf { it.isArray && it.size() > 0 }
+            ?.mapNotNull { jsonNode -> jsonNode.path("service").takeUnless { it.isMissingOrNull() }?.asString() }
 
-    internal val behov: List<String>? get() = json.path(NeedKey)
-        .takeIf { it.isArray && it.size() > 0 }
-        ?.values()?.map { it.asString() }
+    internal val behov: List<String>? get() =
+        json
+            .path(NeedKey)
+            .takeIf { it.isArray && it.size() > 0 }
+            ?.values()
+            ?.map { it.asString() }
 
-    internal val løsninger: List<String>? get() = json.path("@løsning")
-        .takeIf { it.isObject }
-        ?.propertyNames()?.toList()
+    internal val løsninger: List<String>? get() =
+        json
+            .path("@løsning")
+            .takeIf { it.isObject }
+            ?.propertyNames()
+            ?.toList()
 
     init {
         json = parseMessageAsJsonObject(originalMessage, problems)
@@ -136,11 +165,17 @@ open class JsonMessage(
 
     private val tracing =
         mutableMapOf<String, Any>(
-            "id" to json.path(IdKey).asString()
+            "id" to json.path(IdKey).asString(),
         ).apply {
             compute("opprettet") { _, _ -> json.path(OpprettetKey).asString().takeUnless { it.isBlank() } }
             compute("event_name") { _, _ -> json.path(EventNameKey).asString().takeUnless { it.isBlank() } }
-            compute("behov") { _, _ -> json.path(NeedKey).values().map(JsonNode::asString).takeUnless(List<*>::isEmpty) }
+            compute("behov") { _, _ ->
+                json
+                    .path(NeedKey)
+                    .values()
+                    .map(JsonNode::asString)
+                    .takeUnless(List<*>::isEmpty)
+            }
         }.toMap()
 
     /**
@@ -212,7 +247,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun rejectValue(key: String, value: String) {
+    fun rejectValue(
+        key: String,
+        value: String,
+    ) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isString && node.asString() == value) problems.severe("Rejected key $key with value $value")
         accessor(key)
@@ -248,7 +286,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun rejectValue(key: String, value: Boolean) {
+    fun rejectValue(
+        key: String,
+        value: Boolean,
+    ) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isBoolean && node.asBoolean() == value) problems.severe("Rejected key $key with value $value")
         accessor(key)
@@ -284,7 +325,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun rejectValues(key: String, values: List<String>) {
+    fun rejectValues(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.asString() in values) problems.severe("Rejected key $key with value ${node.asString()}")
         accessor(key)
@@ -357,7 +401,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandValue(key: String, value: String) {
+    fun demandValue(
+        key: String,
+        value: String,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         if (!node.isString || node.asString() != value) problems.severe("Demanded $key is not string $value")
@@ -394,7 +441,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandValue(key: String, value: Number) {
+    fun demandValue(
+        key: String,
+        value: Number,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         if (!node.isNumber || node.numberValue() != value) problems.severe("Demanded $key is not number $value")
@@ -431,7 +481,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandValue(key: String, value: Boolean) {
+    fun demandValue(
+        key: String,
+        value: Boolean,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         if (!node.isBoolean || node.booleanValue() != value) problems.severe("Demanded $key is not boolean $value")
@@ -468,7 +521,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandAll(key: String, values: List<String>) {
+    fun demandAll(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         if (!node.isArray || !node.values().map(JsonNode::asString).containsAll(values)) problems.severe("Demanded $key does not contains $values")
@@ -505,7 +561,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandAny(key: String, values: List<String>) {
+    fun demandAny(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         if (!node.isString || node.asString() !in values) problems.severe("Demanded $key must be one of $values")
@@ -542,7 +601,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandAllOrAny(key: String, values: List<String>) {
+    fun demandAllOrAny(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         if (!node.isArray || node.values().map(JsonNode::asString).none { it in values }) problems.severe("Demanded array $key does not contain one of $values")
@@ -579,7 +641,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demandAll(key: String, vararg values: Enum<*>) {
+    fun demandAll(
+        key: String,
+        vararg values: Enum<*>,
+    ) {
         demandAll(key, values.map(Enum<*>::name))
     }
 
@@ -613,7 +678,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         replaceWith = ReplaceWith(""),
         level = DeprecationLevel.WARNING,
     )
-    fun demand(key: String, parser: (JsonNode) -> Any) {
+    fun demand(
+        key: String,
+        parser: (JsonNode) -> Any,
+    ) {
         val node = node(key)
         if (node.isMissingNode) problems.severe("Missing demanded key $key")
         try {
@@ -628,34 +696,50 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         keys.forEach { requireKey(it) }
     }
 
-    fun requireValue(key: String, value: Boolean) {
+    fun requireValue(
+        key: String,
+        value: Boolean,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isBoolean || node.booleanValue() != value) return problems.error("Required $key is not boolean $value")
         accessor(key)
     }
-    fun requireValue(key: String, value: String) {
+
+    fun requireValue(
+        key: String,
+        value: String,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isString || node.asString() != value) return problems.error("Required $key is not string $value")
         accessor(key)
     }
 
-    fun requireValue(key: String, value: Number) {
+    fun requireValue(
+        key: String,
+        value: Number,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isNumber || node.numberValue() != value) return problems.error("Required $key is not number $value")
         accessor(key)
     }
 
-    fun requireAny(key: String, values: List<String>) {
+    fun requireAny(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isString || node.asString() !in values) return problems.error("Required $key must be one of $values")
         accessor(key)
     }
 
-    fun requireArray(key: String, elementsValidation: (JsonMessage.() -> Unit)? = null) {
+    fun requireArray(
+        key: String,
+        elementsValidation: (JsonMessage.() -> Unit)? = null,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isArray) return problems.error("Required $key is not an array")
@@ -670,11 +754,17 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         if (!problems.hasErrors()) accessor(key)
     }
 
-    fun requireContains(key: String, value: String) {
+    fun requireContains(
+        key: String,
+        value: String,
+    ) {
         requireAll(key, listOf(value))
     }
 
-    fun requireAllOrAny(key: String, values: List<String>) {
+    fun requireAllOrAny(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isArray || node.values().map(JsonNode::asString).none { it in values }) {
@@ -683,7 +773,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         accessor(key)
     }
 
-    fun requireAll(key: String, values: List<String>) {
+    fun requireAll(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         if (!node.isArray || !node.values().map(JsonNode::asString).containsAll(values)) {
@@ -692,11 +785,17 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         accessor(key)
     }
 
-    fun requireAll(key: String, vararg values: Enum<*>) {
+    fun requireAll(
+        key: String,
+        vararg values: Enum<*>,
+    ) {
         requireAll(key, values.map(Enum<*>::name))
     }
 
-    fun require(key: String, parser: (JsonNode) -> Any) {
+    fun require(
+        key: String,
+        parser: (JsonNode) -> Any,
+    ) {
         val node = node(key)
         if (node.isMissingNode) return problems.error("Missing required key $key")
         try {
@@ -711,19 +810,28 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         key.forEach { forbid(it) }
     }
 
-    fun forbidValue(key: String, value: Boolean) {
+    fun forbidValue(
+        key: String,
+        value: Boolean,
+    ) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isBoolean && node.asBoolean() == value) problems.error("Required key $key with value $value")
         accessor(key)
     }
 
-    fun forbidValue(key: String, value: String) {
+    fun forbidValue(
+        key: String,
+        value: String,
+    ) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isString && node.asString() == value) problems.error("Required key $key with value $value")
         accessor(key)
     }
 
-    fun forbidValues(key: String, values: List<String>) {
+    fun forbidValues(
+        key: String,
+        values: List<String>,
+    ) {
         val node = node(key)
         if (!node.isMissingOrNull() && node.isString && node.asString() in values) return problems.error("Required $key is one of $values")
         accessor(key)
@@ -733,7 +841,10 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         key.forEach { accessor(it) }
     }
 
-    fun interestedIn(key: String, parser: (JsonNode) -> Any) {
+    fun interestedIn(
+        key: String,
+        parser: (JsonNode) -> Any,
+    ) {
         val node = node(key)
         try {
             node.takeUnless(JsonNode::isMissingOrNull)?.also { parser(it) }
@@ -766,13 +877,18 @@ Se kodeeksempel https://github.com/navikt/tbd-libs/blob/main/rapids-and-rivers/R
         }
     }
 
-    operator fun get(key: String): JsonNode =
-        requireNotNull(recognizedKeys[key]) { "$key is unknown; keys must be declared as required, forbidden, or interesting" }
+    operator fun get(key: String): JsonNode = requireNotNull(recognizedKeys[key]) { "$key is unknown; keys must be declared as required, forbidden, or interesting" }
 
-    operator fun set(key: String, value: Any) {
-        json.replace(key, objectMapper.valueToTree<JsonNode>(value).also {
-            recognizedKeys[key] = it
-        })
+    operator fun set(
+        key: String,
+        value: Any,
+    ) {
+        json.replace(
+            key,
+            objectMapper.valueToTree<JsonNode>(value).also {
+                recognizedKeys[key] = it
+            },
+        )
     }
 
     fun toJson(): String = objectMapper.writeValueAsString(json)
@@ -782,11 +898,9 @@ fun String.toUUID(): UUID = UUID.fromString(this)
 
 fun JsonNode.isMissingOrNull() = isMissingNode || isNull
 
-fun JsonNode.asLocalDate(): LocalDate =
-    asString().let { LocalDate.parse(it) }
+fun JsonNode.asLocalDate(): LocalDate = asString().let { LocalDate.parse(it) }
 
-fun JsonNode.asYearMonth(): YearMonth =
-    asString().let { YearMonth.parse(it) }
+fun JsonNode.asYearMonth(): YearMonth = asString().let { YearMonth.parse(it) }
 
 fun JsonNode.asOptionalLocalDate() =
     takeIf(JsonNode::isString)
@@ -802,36 +916,34 @@ fun JsonNode.asOptionalLocalDateTime() =
 fun JsonNode.asLocalDateTime(): LocalDateTime = LocalDateTime.parse(asString())
 
 fun JsonNode.asInstant(): Instant = Instant.parse(asString())
-fun JsonNode.asOptionalInstant(): Instant? {
-    return takeIf(JsonNode::isString)
+
+fun JsonNode.asOptionalInstant(): Instant? =
+    takeIf(JsonNode::isString)
         ?.takeUnless { it.asString().isEmpty() }
         ?.asInstant()
-}
 
-/* lenient versions */
+// lenient versions
 
 fun JsonNode.asOptionalLocalDateTimeLenient() =
     takeIf(JsonNode::isString)
         ?.takeUnless { it.asString().isEmpty() }
         ?.asLocalDateTimeLenient()
 
-fun JsonNode.asLocalDateTimeLenient(): LocalDateTime {
-    return try {
+fun JsonNode.asLocalDateTimeLenient(): LocalDateTime =
+    try {
         LocalDateTime.ofInstant(asInstantLenient(), ZoneId.systemDefault())
     } catch (_: Exception) {
         LocalDateTime.parse(asString())
     }
-}
 
-fun JsonNode.asInstantLenient(): Instant {
-    return try {
+fun JsonNode.asInstantLenient(): Instant =
+    try {
         Instant.parse(asString())
     } catch (_: Exception) {
         LocalDateTime.parse(asString()).atZone(ZoneId.systemDefault()).toInstant()
     }
-}
-fun JsonNode.asOptionalInstantLenient(): Instant? {
-    return takeIf(JsonNode::isString)
+
+fun JsonNode.asOptionalInstantLenient(): Instant? =
+    takeIf(JsonNode::isString)
         ?.takeUnless { it.asString().isEmpty() }
         ?.asInstantLenient()
-}

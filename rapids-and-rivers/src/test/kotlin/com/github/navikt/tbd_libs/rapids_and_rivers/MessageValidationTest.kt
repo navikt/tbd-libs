@@ -12,9 +12,10 @@ import tools.jackson.module.kotlin.jacksonMapperBuilder
 class MessageValidationTest {
     @Test
     fun `key can exist`() {
-        val validation = validate {
-            "@event_name" can exist
-        }
+        val validation =
+            validate {
+                "@event_name" can exist
+            }
 
         validation.test("""{ "event_name": "mitt_eventnavn" }""") { result, problems ->
             assertEquals(setOf("@event_name"), result)
@@ -34,9 +35,10 @@ class MessageValidationTest {
 
     @Test
     fun `key should exist`() {
-        val validation = validate {
-            "@event_name" should exist
-        }
+        val validation =
+            validate {
+                "@event_name" should exist
+            }
 
         validation.test("""{ "event_name": "mitt_eventnavn" }""") { result, problems ->
             assertEquals(emptySet<String>(), result)
@@ -56,12 +58,12 @@ class MessageValidationTest {
         }
     }
 
-
     @Test
     fun `key must exist`() {
-        val validation = validate {
-            "@event_name" must exist
-        }
+        val validation =
+            validate {
+                "@event_name" must exist
+            }
 
         validation.test("""{ "event_name": "mitt_eventnavn" }""") { result, problems ->
             assertEquals(emptySet<String>(), result)
@@ -83,9 +85,10 @@ class MessageValidationTest {
 
     @Test
     fun `key should be`() {
-        val validation = validate {
-            "@event_name" should be("mitt_eventnavn")
-        }
+        val validation =
+            validate {
+                "@event_name" should be("mitt_eventnavn")
+            }
 
         validation.test("""{ "event_name": "mitt_eventnavn" }""") { result, problems ->
             assertEquals(emptySet<String>(), result)
@@ -107,9 +110,10 @@ class MessageValidationTest {
 
     @Test
     fun `key must be`() {
-        val validation = validate {
-            "@event_name" must be("mitt_eventnavn")
-        }
+        val validation =
+            validate {
+                "@event_name" must be("mitt_eventnavn")
+            }
 
         validation.test("""{ "event_name": "mitt_eventnavn" }""") { result, problems ->
             assertEquals(emptySet<String>(), result)
@@ -128,14 +132,13 @@ class MessageValidationTest {
             assertFalse(problems.hasErrors())
         }
     }
-
-
 
     @Test
     fun `key can be`() {
-        val validation = validate {
-            "@event_name" can be("mitt_eventnavn")
-        }
+        val validation =
+            validate {
+                "@event_name" can be("mitt_eventnavn")
+            }
 
         validation.test("""{ "event_name": "mitt_eventnavn" }""") { result, problems ->
             assertEquals(setOf("@event_name"), result)
@@ -154,21 +157,29 @@ class MessageValidationTest {
         }
     }
 
-    private fun MessageValidation.test(@Language("JSON") testMessage: String, assertBlock: (Set<String>, MessageProblems) -> Unit) {
+    private fun MessageValidation.test(
+        @Language("JSON") testMessage: String,
+        assertBlock: (Set<String>, MessageProblems) -> Unit,
+    ) {
         val problems = MessageProblems(testMessage)
-        val node = jacksonMapperBuilder()
-            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
-            .build()
-            .readTree(testMessage)
-        val result = try {
-            validatedKeys(node, problems)
-        } catch (err: MessageProblems.MessageException) {
-            emptySet()
-        }
+        val node =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .build()
+                .readTree(testMessage)
+        val result =
+            try {
+                validatedKeys(node, problems)
+            } catch (err: MessageProblems.MessageException) {
+                emptySet()
+            }
         assertBlock(result, problems)
     }
 
-    private fun assertContains(expected: String, actual: String) {
+    private fun assertContains(
+        expected: String,
+        actual: String,
+    ) {
         assertTrue(expected in actual) { "<$actual> does not contain <$expected>" }
     }
 }

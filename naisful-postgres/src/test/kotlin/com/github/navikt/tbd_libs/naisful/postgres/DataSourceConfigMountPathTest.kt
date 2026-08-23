@@ -7,9 +7,10 @@ import java.nio.file.Path
 import kotlin.io.path.writeText
 
 class DataSourceConfigMountPathTest {
-
     @Test
-    fun `default jdbc url - env`(@TempDir tempDir: Path) {
+    fun `default jdbc url - env`(
+        @TempDir tempDir: Path,
+    ) {
         tempDir.resolve("DB_HOST").writeText("localhost")
         tempDir.resolve("DB_PORT").writeText("5432")
         tempDir.resolve("DB_DATABASE").writeText("postgres")
@@ -20,7 +21,9 @@ class DataSourceConfigMountPathTest {
     }
 
     @Test
-    fun `default jdbc url - jdbc_url set`(@TempDir tempDir: Path) {
+    fun `default jdbc url - jdbc_url set`(
+        @TempDir tempDir: Path,
+    ) {
         tempDir.resolve("DB_HOST").writeText("localhost")
         tempDir.resolve("DB_PORT").writeText("5432")
         tempDir.resolve("DB_DATABASE").writeText("postgres")
@@ -32,7 +35,9 @@ class DataSourceConfigMountPathTest {
     }
 
     @Test
-    fun `default jdbc url - google factory`(@TempDir tempDir: Path) {
+    fun `default jdbc url - google factory`(
+        @TempDir tempDir: Path,
+    ) {
         tempDir.resolve("DB_HOST").writeText("localhost")
         tempDir.resolve("DB_PORT").writeText("5432")
         tempDir.resolve("DB_DATABASE").writeText("postgres")
@@ -43,7 +48,9 @@ class DataSourceConfigMountPathTest {
     }
 
     @Test
-    fun `default jdbc url - google factory - with jdbc_url set`(@TempDir tempDir: Path) {
+    fun `default jdbc url - google factory - with jdbc_url set`(
+        @TempDir tempDir: Path,
+    ) {
         tempDir.resolve("DB_HOST").writeText("localhost")
         tempDir.resolve("DB_PORT").writeText("5432")
         tempDir.resolve("DB_DATABASE").writeText("postgres")
