@@ -2,7 +2,7 @@
 awaitility = "4.3.0"
 flyway = "11.20.2"
 hikariCP = "6.3.0"
-jackson2 = "2.22.1"
+jackson3 = "3.2.2"
 java-jwt = "4.6.0"
 kafka = "4.3.1"
 kotlin = "2.4.10"
@@ -26,7 +26,7 @@ wiremock = "3.13.2"
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
 flyway-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 hikariCP = { module = "com.zaxxer:HikariCP", version.ref = "hikariCP" }
-jackson2-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson2" }
+jackson3-bom = { module = "tools.jackson:jackson-bom", version.ref = "jackson3" }
 java-jwt = { module = "com.auth0:java-jwt", version.ref = "java-jwt" }
 kafka-clients = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka" }
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "kotlinx-coroutines" }
@@ -35,7 +35,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock-jvm", version.ref = "ktor" }
-ktor-serialization-jackson = { module = "io.ktor:ktor-serialization-jackson", version.ref = "ktor" }
 ktor-serialization-jackson3 = { module = "io.ktor:ktor-serialization-jackson3", version.ref = "ktor" }
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }

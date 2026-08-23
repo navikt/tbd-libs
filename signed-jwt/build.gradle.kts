@@ -1,4 +1,4 @@
 dependencies {
-    testImplementation(platform(libs.jackson2.bom))
-    testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    testImplementation(platform(libs.jackson3.bom))
+    testImplementation("tools.jackson.module:jackson-module-kotlin")
 }

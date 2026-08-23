@@ -1,21 +1,25 @@
 package com.github.navikt.tbd_libs.soap
 
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.dataformat.xml.XmlMapper
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.github.navikt.tbd_libs.result_object.Result
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import tools.jackson.core.exc.StreamReadException
+import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.dataformat.xml.XmlMapper
+import tools.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty
 
 class SoapResponseHandlerTest {
     private companion object {
         private const val NAME_FOR_TEXT_ELEMENT = "innerText"
         private val xmlMapper = XmlMapper.builder()
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
             // issue: https://github.com/FasterXML/jackson-module-kotlin/issues/138
             // workaround: https://github.com/FasterXML/jackson-module-kotlin/issues/138#issuecomment-576484905
             .nameForTextElement(NAME_FOR_TEXT_ELEMENT)
@@ -217,7 +221,7 @@ class SoapResponseHandlerTest {
         when (result) {
             is Result.Error -> {
                 assertNotNull(result.cause)
-                assertInstanceOf(JsonParseException::class.java, result.cause)
+                assertInstanceOf(StreamReadException::class.java, result.cause)
             }
             else -> error("Forventet InvalidResponse resultat")
         }

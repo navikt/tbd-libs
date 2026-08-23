@@ -1,8 +1,6 @@
 package com.github.navikt.tbd_libs.speed
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
@@ -16,6 +14,8 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.LocalDate
 import java.util.*
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 
 class SpeedClient(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),

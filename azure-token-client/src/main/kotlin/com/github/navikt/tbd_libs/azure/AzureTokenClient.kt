@@ -1,11 +1,5 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.databind.InjectableValues
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.ok
@@ -15,15 +9,20 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.LocalDateTime
+import tools.jackson.databind.InjectableValues
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 class AzureTokenClient(
     private val tokenEndpoint: URI,
     private val clientId: String,
     private val authMethod: AzureAuthMethod,
     private val client: HttpClient = HttpClient.newHttpClient(),
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .registerModule(JavaTimeModule())
+    private val objectMapper: ObjectMapper = jacksonMapperBuilder()
+        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+        .build()
 ) : AzureTokenProvider {
 
     override fun onBehalfOfToken(scope: String, token: String) =

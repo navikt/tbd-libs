@@ -1,33 +1,34 @@
 package com.github.navikt.tbd_libs.spurtedu
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
 import com.github.navikt.tbd_libs.mock.bodyAsString
-import com.github.navikt.tbd_libs.result_object.ok
 import com.github.navikt.tbd_libs.result_object.Result
+import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.net.http.HttpClient
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
+import org.intellij.lang.annotations.Language
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class SpurteDuClientTest {
     private companion object {
-        private val objectMapper = jacksonObjectMapper()
-            .registerModule(JavaTimeModule())
-            .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+        private val objectMapper = jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .disable(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+            .build()
     }
 
     @Test
@@ -100,7 +101,7 @@ class SpurteDuClientTest {
         val (spurteDuClient, _) = mockClient(okVisResponse)
         val secret = UUID.fromString("2d05217c-1c16-4581-b4e8-08e115a2274d")
         val response = spurteDuClient.vis(secret, "et ok token")
-        assertEquals("en jsonmelding", objectMapper.readTree(response.text).path("foo").asText())
+        assertEquals("en jsonmelding", objectMapper.readTree(response.text).path("foo").asString())
     }
 
     private fun utveksle(payload: SkjulRequest, verifisering: (body: JsonNode) -> Boolean) {

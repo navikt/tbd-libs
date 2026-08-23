@@ -1,16 +1,19 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.databind.InjectableValues
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import java.time.LocalDateTime
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import java.time.LocalDateTime
+import tools.jackson.databind.InjectableValues
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 class AzureTokenResponseTest {
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = jacksonMapperBuilder()
+        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+        .build()
 
     @Test
     fun deserializeTokenResponse() {

@@ -1,12 +1,5 @@
 package com.github.navikt.tbd_libs.azure
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertDoesNotThrow
 import java.math.BigInteger
 import java.net.URI
 import java.security.KeyFactory
@@ -14,6 +7,14 @@ import java.security.Signature
 import java.security.interfaces.RSAPublicKey
 import java.security.spec.RSAPublicKeySpec
 import java.util.*
+import org.intellij.lang.annotations.Language
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertDoesNotThrow
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 class JwkTest {
 
@@ -53,7 +54,9 @@ class JwkTest {
 
     private companion object {
 
-        private val om = jacksonObjectMapper()
+        private val om = jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
         private val base64Decoder = Base64.getUrlDecoder()
         private val String.decodeToBigInteger get() = BigInteger(1, base64Decoder.decode(this))
 

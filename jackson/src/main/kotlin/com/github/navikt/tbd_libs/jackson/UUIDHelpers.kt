@@ -1,7 +1,7 @@
 package com.github.navikt.tbd_libs.jackson
 
-import com.fasterxml.jackson.databind.JsonNode
 import java.util.*
+import tools.jackson.databind.JsonNode
 
 /**
  * Utility function for parsing a UUID from a Jackson JsonNode.

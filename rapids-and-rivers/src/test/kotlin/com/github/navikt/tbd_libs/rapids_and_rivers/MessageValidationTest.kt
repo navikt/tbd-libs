@@ -1,10 +1,13 @@
 package com.github.navikt.tbd_libs.rapids_and_rivers
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageProblems
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class MessageValidationTest {
     @Test
@@ -153,7 +156,10 @@ class MessageValidationTest {
 
     private fun MessageValidation.test(@Language("JSON") testMessage: String, assertBlock: (Set<String>, MessageProblems) -> Unit) {
         val problems = MessageProblems(testMessage)
-        val node = jacksonObjectMapper().readTree(testMessage)
+        val node = jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
+            .readTree(testMessage)
         val result = try {
             validatedKeys(node, problems)
         } catch (err: MessageProblems.MessageException) {

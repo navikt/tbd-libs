@@ -1,6 +1,6 @@
 dependencies {
-    api(platform(libs.jackson2.bom))
-    api("com.fasterxml.jackson.module:jackson-module-kotlin")
+    api(platform(libs.jackson3.bom))
+    api("tools.jackson.module:jackson-module-kotlin")
     api(project(":result-object"))
 
     testImplementation(libs.mockk)

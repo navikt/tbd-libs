@@ -1,11 +1,12 @@
 package com.github.navikt.tbd_libs.jackson
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.Assertions.assertFalse
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import org.intellij.lang.annotations.Language
+import org.junit.jupiter.api.Assertions.assertFalse
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class MissingOrNullTest {
 
@@ -31,6 +32,9 @@ class MissingOrNullTest {
     }
 
     private fun jsonNode(@Language("JSON") json: String): JsonNode {
-        return jacksonObjectMapper().readTree(json)
+        return jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
+            .readTree(json)
     }
 }

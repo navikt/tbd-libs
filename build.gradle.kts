@@ -24,6 +24,9 @@ allprojects {
     }
 }
 
+// libs-accessoren er ikke tilgjengelig inne i subprojects-blokka, så den slås opp her
+val jackson3Bom = libs.jackson3.bom
+
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.gradle.maven-publish")
@@ -34,7 +37,7 @@ subprojects {
     val testRuntimeOnly by configurations
     dependencies {
         constraints {
-            api("tools.jackson:jackson-bom:3.2.1") {
+            api(jackson3Bom) {
                 because("Jackson 3 < 3.1.0 har sikkerhetshull")
             }
         }

@@ -2,8 +2,6 @@ package com.github.navikt.tbd_libs.access_token
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.retry.DefaultUtsettelser
 import com.github.navikt.tbd_libs.retry.retryBlocking
 import java.net.URI
@@ -12,6 +10,9 @@ import java.net.http.HttpRequest
 import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse.BodyHandlers
 import java.time.Duration
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 /**
  * Implementasjon av [AccessTokenProvider] som henter tokens via Texas (Token Exchange as a Service)
@@ -34,7 +35,9 @@ class TexasClient(
     private val utsettelser: () -> Iterator<Duration> = ::DefaultUtsettelser
 ) : AccessTokenProvider {
 
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = jacksonMapperBuilder()
+        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+        .build()
 
     /**
      * Henter et maskin-til-maskin bearer token for [scope]

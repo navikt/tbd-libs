@@ -1,8 +1,6 @@
 package com.github.navikt.tbd_libs.spedisjon
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.Result
@@ -17,6 +15,8 @@ import java.net.http.HttpRequest.BodyPublishers
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.*
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 
 class SpedisjonClient(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),

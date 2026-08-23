@@ -1,9 +1,5 @@
 package com.github.navikt.tbd_libs.spenn
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
@@ -15,22 +11,25 @@ import com.github.navikt.tbd_libs.spenn.SimuleringRequest.Oppdrag.Oppdragslinje.
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.net.http.HttpClient
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.util.*
+import kotlin.jvm.optionals.getOrNull
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import java.net.http.HttpClient
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.util.UUID
-import kotlin.jvm.optionals.getOrNull
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class SimuleringClientTest {
     private companion object {
-        private val objectMapper = jacksonObjectMapper()
-            .registerModule(JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        private val objectMapper = jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
     }
 
     @Test
@@ -52,7 +51,7 @@ class SimuleringClientTest {
                 body.hasNonNull("oppdrag") &&
                 body.hasNonNull("maksdato") &&
                 body.hasNonNull("saksbehandler") &&
-                body.path("oppdrag").path("linjer").all { it["klassekode"].textValue() == "SELVSTENDIG_NÆRINGSDRIVENDE" }
+                body.path("oppdrag").path("linjer").all { it["klassekode"].stringValue(null) == "SELVSTENDIG_NÆRINGSDRIVENDE" }
         }
     }
 

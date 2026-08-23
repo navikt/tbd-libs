@@ -1,9 +1,5 @@
 package com.github.navikt.tbd_libs.speed
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureToken
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.mock.MockHttpResponse
@@ -13,25 +9,30 @@ import com.github.navikt.tbd_libs.result_object.ok
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.net.http.HttpClient
+import java.time.LocalDateTime
+import java.util.*
+import kotlin.jvm.optionals.getOrNull
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import java.net.http.HttpClient
-import java.time.LocalDateTime
-import java.util.UUID
-import kotlin.jvm.optionals.getOrNull
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class SpeedClientTest {
     private companion object {
-        private val objectMapper = jacksonObjectMapper()
-            .registerModule(JavaTimeModule())
-            .disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+        private val objectMapper = jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .disable(DateTimeFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+            .build()
     }
 
     @Test
     fun `hent fnr og aktørId`() {
         utveksle("testident") { body ->
-            body.hasNonNull("ident") && body.path("ident").asText() == "testident"
+            body.hasNonNull("ident") && body.path("ident").asString() == "testident"
         }
     }
 
@@ -53,7 +54,7 @@ class SpeedClientTest {
 
         verifiserDELETE(httpClient)
         verifiserRequestBody(httpClient) {
-            it.path("identer").isArray && it.path("identer").map(JsonNode::asText) == identer
+            it.path("identer").isArray && it.path("identer").values().map(JsonNode::asString) == identer
         }
     }
 

@@ -1,7 +1,6 @@
 dependencies {
     api(project(":rapids-and-rivers-api"))
 
-    implementation(platform(libs.jackson2.bom))
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+    implementation(platform(libs.jackson3.bom))
+    implementation("tools.jackson.module:jackson-module-kotlin")
 }

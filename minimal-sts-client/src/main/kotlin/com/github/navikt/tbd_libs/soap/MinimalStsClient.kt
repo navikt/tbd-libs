@@ -1,11 +1,7 @@
 package com.github.navikt.tbd_libs.soap
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
-import com.github.navikt.tbd_libs.result_object.fold
 import com.github.navikt.tbd_libs.result_object.map
 import com.github.navikt.tbd_libs.result_object.ok
 import java.net.URI
@@ -14,12 +10,18 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.LocalDateTime
-import java.util.Base64
+import java.util.*
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 class MinimalStsClient(
     private val baseUrl: URI,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
-    private val objectMapper: ObjectMapper = jacksonObjectMapper(),
+    private val objectMapper: ObjectMapper = jacksonMapperBuilder()
+        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+        .build(),
     private val proxyAuthorization: (() -> Result<String>)? = null,
 ) : SamlTokenProvider {
     override fun samlToken(username: String, password: String): Result<SamlToken> {
@@ -61,8 +63,8 @@ class MinimalStsClient(
     }
 
     private fun extractSamlTokenFromResponse(node: JsonNode): Result<SamlToken>? {
-        val accessToken = node.path("access_token").takeIf(JsonNode::isTextual)?.asText() ?: return null
-        val issuedTokenType = node.path("issued_token_type").takeIf(JsonNode::isTextual)?.asText() ?: return null
+        val accessToken = node.path("access_token").takeIf(JsonNode::isString)?.asString() ?: return null
+        val issuedTokenType = node.path("issued_token_type").takeIf(JsonNode::isString)?.asString() ?: return null
         val expiresIn = node.path("expires_in").takeIf(JsonNode::isNumber)?.asLong() ?: return null
         if (issuedTokenType != "urn:ietf:params:oauth:token-type:saml2") return "Ukjent token type: $issuedTokenType".error()
         return try {
@@ -76,8 +78,8 @@ class MinimalStsClient(
     }
 
     private fun handleErrorResponse(node: JsonNode): Result<SamlToken> {
-        val title = node.path("title").asText()
-        val errorDetail = node.path("detail").takeIf(JsonNode::isTextual) ?: return "Ukjent respons fra STS: $node".error()
+        val title = node.path("title").asString()
+        val errorDetail = node.path("detail").takeIf(JsonNode::isString) ?: return "Ukjent respons fra STS: $node".error()
         return "Feil fra STS: $title - $errorDetail".error()
     }
 }

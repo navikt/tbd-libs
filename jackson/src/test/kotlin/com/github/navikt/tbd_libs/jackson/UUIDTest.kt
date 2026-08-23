@@ -1,12 +1,13 @@
 package com.github.navikt.tbd_libs.jackson
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.assertThrows
-import java.util.UUID
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.intellij.lang.annotations.Language
+import org.junit.jupiter.api.assertThrows
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 internal class UUIDTest {
 
@@ -79,6 +80,9 @@ internal class UUIDTest {
     }
 
     private fun jsonNode(@Language("JSON") json: String): JsonNode {
-        return jacksonObjectMapper().readTree(json)
+        return jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
+            .readTree(json)
     }
 }

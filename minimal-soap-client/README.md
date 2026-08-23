@@ -97,8 +97,9 @@ data class SoapBody(
         // er det nok overkill å skulle tilby én felles-funker-for-alle-objectMapper
         fun bodyHandler(): ObjectMapper {
             return XmlMapper.builder()
-                .addModules(JavaTimeModule())
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                // uten dette dropper Jackson stille felter som starter med æ, ø eller å
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
                 // issue: https://github.com/FasterXML/jackson-module-kotlin/issues/138
                 // workaround: https://github.com/FasterXML/jackson-module-kotlin/issues/138#issuecomment-576484905
                 .nameForTextElement("innerText")

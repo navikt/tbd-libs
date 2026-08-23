@@ -1,8 +1,5 @@
 package com.github.navikt.tbd_libs.spurtedu
 
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.Result
 import java.net.URI
@@ -12,6 +9,9 @@ import java.net.http.HttpResponse
 import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.*
+import tools.jackson.core.exc.StreamReadException
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
 
 class SpurteDuClient(
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
@@ -71,7 +71,7 @@ class SpurteDuClient(
     private inline fun <reified T> convertResponseBody(response: HttpResponse<String>): T {
         return try {
             objectMapper.readValue<T>(response.body())
-        } catch (err: JsonParseException) {
+        } catch (err: StreamReadException) {
             throw SpurteDuException(err.message ?: "JSON parsing error", err)
         }
     }

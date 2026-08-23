@@ -1,15 +1,16 @@
 package com.github.navikt.tbd_libs.test_support
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.apache.kafka.common.serialization.Deserializer
 import org.apache.kafka.common.serialization.Serde
 import org.apache.kafka.common.serialization.Serdes.StringSerde
 import org.apache.kafka.common.serialization.Serializer
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 
 val kafkaContainer = KafkaContainers.container("tbd-libs-kafka-test")
 
@@ -39,7 +40,9 @@ class KafkaContainersTest {
 
     @Test
     fun `custom serde`() {
-        val objectMapper = jacksonObjectMapper()
+        val objectMapper = jacksonMapperBuilder()
+            .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+            .build()
         kafkaTest(kafkaContainer) {
             @Language("JSON")
             val message = objectMapper.readTree("""{ "name":  "Bar" }""")
@@ -53,7 +56,12 @@ class KafkaContainersTest {
         }
     }
 
-    private class JacksonSerde(private val objectMapper: ObjectMapper = jacksonObjectMapper()) : Serde<JsonNode> {
+    private class JacksonSerde(
+        private val objectMapper: ObjectMapper =
+            jacksonMapperBuilder()
+                .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
+                .build()
+    ) : Serde<JsonNode> {
         override fun serializer() = object : Serializer<JsonNode> {
             override fun serialize(topic: String, data: JsonNode) =
                 objectMapper.writeValueAsBytes(data)

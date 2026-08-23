@@ -1,8 +1,5 @@
 package com.github.navikt.tbd_libs.populasjonstilgang.client
 
-import com.fasterxml.jackson.databind.DeserializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.github.navikt.tbd_libs.access_token.AccessTokenProvider
 import com.github.navikt.tbd_libs.access_token.TexasClient
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
@@ -14,6 +11,10 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.*
+import tools.jackson.databind.DeserializationFeature
+import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
+import tools.jackson.module.kotlin.jacksonMapperBuilder
+import tools.jackson.module.kotlin.readValue
 
 private data class MinimalTilgangsmaskinenResponse(
     val title: String
@@ -25,8 +26,10 @@ class TilgangsmaskinenClient(
     private val tokenProvider: AccessTokenProvider,
     private val httpClient: HttpClient = HttpClient.newHttpClient(),
 ): PopulasjonstilgangskontrollProvider {
-    private val objectMapper = jacksonObjectMapper()
+    private val objectMapper = jacksonMapperBuilder()
+        .accessorNaming(DefaultAccessorNamingStrategy.Provider().withFirstCharAcceptance(true, true))
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        .build()
 
     override fun kontrollerKomplettTilgang(accessToken: String, fødselsnummer: String): TilgangskontrollResultat {
         val oboToken = tokenProvider.oboToken(accessToken = accessToken, scope = scope)

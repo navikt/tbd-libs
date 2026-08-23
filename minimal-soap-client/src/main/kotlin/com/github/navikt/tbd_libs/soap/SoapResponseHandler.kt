@@ -1,13 +1,13 @@
 package com.github.navikt.tbd_libs.soap
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
-import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.annotation.JsonRootName
 import com.github.navikt.tbd_libs.result_object.Result
 import com.github.navikt.tbd_libs.result_object.error
 import com.github.navikt.tbd_libs.result_object.ok
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.dataformat.xml.annotation.JacksonXmlProperty
+import tools.jackson.module.kotlin.readValue
 
 inline fun <reified T> deserializeSoapBody(mapper: ObjectMapper, body: String): Result<SoapResult<T>> {
     val fault = try {
@@ -31,7 +31,7 @@ sealed interface SoapResult<out T> {
     data class Fault( val message: String, val detalje: String?) : SoapResult<Nothing>
 }
 
-@JacksonXmlRootElement(localName = "Envelope", namespace = "http://schemas.xmlsoap.org/soap/envelope/")
+@JsonRootName(value = "Envelope", namespace = "http://schemas.xmlsoap.org/soap/envelope/")
 data class SoapResponse<T>(
     @param:JacksonXmlProperty(localName = "Header")
     val header: SoapHeader?,
