@@ -1,3 +1,7 @@
+plugins {
+    id("no.nav.helse.sas.sas-kotlin")
+}
+
 dependencies {
     api(project(":minimal-sts-client"))
     api(project(":result-object"))

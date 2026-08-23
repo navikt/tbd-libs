@@ -1,3 +1,7 @@
+plugins {
+    id("no.nav.helse.sas.sas-kotlin")
+}
+
 dependencies {
     api(project(":naisful-app"))
     api(libs.ktor.client.content.negotiation)

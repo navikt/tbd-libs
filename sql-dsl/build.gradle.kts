@@ -1,3 +1,7 @@
+plugins {
+    id("no.nav.helse.sas.sas-kotlin")
+}
+
 dependencies {
     // konsumenter av biblioteket må selv vurdere hvilken hikari de vil ha
     // (implementation 'lekker' ikke ut på compile-classpath til konsumentene

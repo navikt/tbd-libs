@@ -6,6 +6,7 @@ jackson3 = "3.2.2"
 java-jwt = "4.6.0"
 kafka = "4.3.1"
 kotlin = "2.4.10"
+sasGradlePlugins = "20260807.0944"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization-json = "1.11.0"
 rapidsAndRivers = "2026071513121784113927"
@@ -20,7 +21,6 @@ slf4j = "2.0.18"
 smiley4-ktor-openapi-tools = "5.7.0"
 smiley4-schema-kenerator = "2.7.2"
 testcontainers = "2.0.5"
-wiremock = "3.13.2"
 
 [libraries]
 awaitility = { module = "org.awaitility:awaitility", version.ref = "awaitility" }
@@ -66,7 +66,7 @@ smiley4-schema-kenerator-swagger = { module = "io.github.smiley4:schema-kenerato
 testcontainers-core = { module = "org.testcontainers:testcontainers", version.ref = "testcontainers" }
 testcontainers-kafka = { module = "org.testcontainers:testcontainers-kafka", version.ref = "testcontainers" }
 testcontainers-postgresql = { module = "org.testcontainers:testcontainers-postgresql", version.ref = "testcontainers" }
-wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
+wiremock = "org.wiremock:wiremock-jetty12:3.13.2"
 valkey-java = "io.valkey:valkey-java:5.5.0"
 
 [bundles]
@@ -80,5 +80,6 @@ smiley4-ktor-openapi-tools = [
 ]
 
 [plugins]
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+sas-kotlin = { id = "no.nav.helse.sas.sas-kotlin", version.ref = "sasGradlePlugins" }
+sas-root = { id = "no.nav.helse.sas.sas-root", version.ref = "sasGradlePlugins" }

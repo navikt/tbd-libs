@@ -1,3 +1,7 @@
+plugins {
+    id("no.nav.helse.sas.sas-kotlin")
+}
+
 dependencies {
     api(libs.testcontainers.kafka)
     // konsumenter av biblioteket må selv vurdere hvilken kafkaversjon de vil ha

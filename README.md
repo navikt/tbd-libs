@@ -26,7 +26,17 @@ De [publiseres til GitHub](https://github.com/orgs/navikt/packages?repo_name=tbd
 
 1. opprett en ny mappe, f.eks. `minmodul`
 2. rediger `settings.gradle.kts` og inkluder modulen `minmodul` der
-3. putt evt. avhengigheter i `minmodul/build.gradle.kts`
+3. opprett `minmodul/build.gradle.kts` som tar i bruk sas-oppsettet, og putt evt. avhengigheter der:
+
+```kotlin
+plugins {
+    id("no.nav.helse.sas.sas-kotlin")
+}
+
+dependencies {
+    // ...
+}
+```
 4. sørg for at pakkenavnet ditt følger modulnavnet, `com.navikt.tbd_libs.minmodul`
 5. pakken blir publisert som `minmodul` som artifactId
 
