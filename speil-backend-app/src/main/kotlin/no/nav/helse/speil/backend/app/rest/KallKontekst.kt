@@ -34,7 +34,7 @@ class KallKontekst<TRANSAKSJON, ROLLE : Brukerrolle>(
                 ?: return RestResponse.feil(personIkkeFunnet())
 
         val tilgangsresultat =
-            populasjonstilgangskontrollProvider.kontrollerKomplettTilgang(accessToken.value, identitetsnummer.value)
+            populasjonstilgangskontrollProvider.kontrollerKjerneTilgang(accessToken.value, identitetsnummer.value)
 
         return when (tilgangsresultat) {
             is TilgangskontrollResultat.Ok -> {

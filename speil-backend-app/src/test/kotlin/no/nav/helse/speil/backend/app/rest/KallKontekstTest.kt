@@ -44,15 +44,15 @@ class KallKontekstTest {
         override fun kontrollerKomplettTilgang(
             accessToken: String,
             fødselsnummer: String,
-        ): TilgangskontrollResultat {
-            antallKall++
-            return resultat
-        }
+        ): TilgangskontrollResultat = resultat
 
         override fun kontrollerKjerneTilgang(
             accessToken: String,
             fødselsnummer: String,
-        ): TilgangskontrollResultat = resultat
+        ): TilgangskontrollResultat {
+            antallKall++
+            return resultat
+        }
 
         override fun kontrollerKjerneTilgangForAnsatt(
             ansattId: String,

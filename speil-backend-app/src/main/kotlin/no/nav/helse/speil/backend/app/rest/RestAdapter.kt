@@ -58,7 +58,7 @@ class RestAdapter<ROLLE : Brukerrolle, TRANSAKSJON>(
 
             when (
                 val tilgangsresultat =
-                    populasjonstilgangskontrollProvider.kontrollerKomplettTilgang(
+                    populasjonstilgangskontrollProvider.kontrollerKjerneTilgang(
                         principal.accessToken.value,
                         identitetsnummer.value,
                     )

@@ -64,15 +64,15 @@ private class FakeTilgangskontroll(
     override fun kontrollerKomplettTilgang(
         accessToken: String,
         fødselsnummer: String,
-    ): TilgangskontrollResultat {
-        antallKall++
-        return resultat
-    }
+    ): TilgangskontrollResultat = resultat
 
     override fun kontrollerKjerneTilgang(
         accessToken: String,
         fødselsnummer: String,
-    ): TilgangskontrollResultat = resultat
+    ): TilgangskontrollResultat {
+        antallKall++
+        return resultat
+    }
 
     override fun kontrollerKjerneTilgangForAnsatt(
         ansattId: String,
@@ -265,8 +265,16 @@ class RestAdapterTest {
             val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
             val teamLogsLogger = loggerContext.getLogger("tjenestekall") as Logger
             val adapterLogger = loggerContext.getLogger(RestAdapter::class.java) as Logger
-            val teamLogsAppender = ListAppender<ILoggingEvent>().apply { context = loggerContext; start() }
-            val adapterAppender = ListAppender<ILoggingEvent>().apply { context = loggerContext; start() }
+            val teamLogsAppender =
+                ListAppender<ILoggingEvent>().apply {
+                    context = loggerContext
+                    start()
+                }
+            val adapterAppender =
+                ListAppender<ILoggingEvent>().apply {
+                    context = loggerContext
+                    start()
+                }
             val opprinneligTeamLogsNivå = teamLogsLogger.level
             val opprinneligAdapterNivå = adapterLogger.level
             teamLogsLogger.addAppender(teamLogsAppender)
