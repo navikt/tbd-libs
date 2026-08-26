@@ -51,7 +51,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
-mock-oauth2-server = "no.nav.security:mock-oauth2-server:6.0.1"
+mock-oauth2-server = "no.nav.security:mock-oauth2-server:6.0.2"
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 opentelemetry-instrumentation-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "opentelemetry-instrumentation" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
