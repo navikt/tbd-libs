@@ -11,8 +11,13 @@ class TilgangsgrupperTilTilgangerTest {
     private val sut = TilgangsgrupperTilTilganger(tilgangLesGruppeId = "les-uuid", tilgangSkrivGruppeId = "skriv-uuid")
 
     @Test
-    fun `gruppe-uuid som matcher TILGANG_SKRIV gir Tilgang Skriv`() {
-        assertEquals(setOf(Tilgang.Skriv), sut.tilganger(setOf("skriv-uuid")))
+    fun `gruppe-uuid som matcher TILGANG_SKRIV gir baade Skriv og Les`() {
+        assertEquals(setOf(Tilgang.Skriv, Tilgang.Les), sut.tilganger(setOf("skriv-uuid")))
+    }
+
+    @Test
+    fun `gruppe-uuid som matcher TILGANG_LES gir kun Les`() {
+        assertEquals(setOf(Tilgang.Les), sut.tilganger(setOf("les-uuid")))
     }
 
     @Test

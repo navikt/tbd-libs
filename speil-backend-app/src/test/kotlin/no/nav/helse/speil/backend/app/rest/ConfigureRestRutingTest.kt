@@ -138,4 +138,32 @@ class ConfigureRestRutingTest {
 
             assertEquals(HttpStatusCode.Unauthorized, response.status)
         }
+
+    @Test
+    fun `saksbehandler kun i skrivegruppa naar Les-endepunkt - skriv impliserer les`() =
+        testApplication {
+            application { settOppApp() }
+
+            val token =
+                TokenUtsteder(mockOAuth2Server, issuerId = "azuread", audience = "test-client-id")
+                    .utstedSaksbehandlerToken(navIdent = "Z999999", entraGrupper = setOf("skriv-uuid"))
+
+            val response = client.get("/enkel") { header("Authorization", "Bearer $token") }
+
+            assertEquals(HttpStatusCode.OK, response.status)
+        }
+
+    @Test
+    fun `saksbehandler uten tilgangsgrupper gir 403`() =
+        testApplication {
+            application { settOppApp() }
+
+            val token =
+                TokenUtsteder(mockOAuth2Server, issuerId = "azuread", audience = "test-client-id")
+                    .utstedSaksbehandlerToken(navIdent = "Z999999", entraGrupper = emptySet())
+
+            val response = client.get("/enkel") { header("Authorization", "Bearer $token") }
+
+            assertEquals(HttpStatusCode.Forbidden, response.status)
+        }
 }
