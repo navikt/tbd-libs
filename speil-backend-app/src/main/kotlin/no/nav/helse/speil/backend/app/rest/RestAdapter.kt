@@ -11,6 +11,7 @@ import no.nav.helse.speil.backend.app.auditlogg.AuditloggUtfall
 import no.nav.helse.speil.backend.app.auditlogg.Auditlogger
 import no.nav.helse.speil.backend.app.auth.Brukerrolle
 import no.nav.helse.speil.backend.app.auth.SaksbehandlerPrincipal
+import no.nav.helse.speil.backend.app.logging.loggDebug
 import no.nav.helse.speil.backend.app.person.PersonPseudoId
 import no.nav.helse.speil.backend.app.person.PersonPseudoIdProvider
 import no.nav.helse.speil.backend.app.person.PersonResource
@@ -32,9 +33,21 @@ class RestAdapter<ROLLE : Brukerrolle, TRANSAKSJON>(
                 ?: return call.respondProblem(RammeverkFeilkode.Uautentisert)
 
         if (behandler.påkrevdTilgang !in principal.tilganger) {
+            loggDebug(
+                "403: saksbehandler mangler påkrevd tilgang",
+                "navIdent" to principal.saksbehandler.navIdent.value,
+                "påkrevdTilgang" to behandler.påkrevdTilgang,
+                "harTilganger" to principal.tilganger,
+            )
             return call.respondProblem(RammeverkFeilkode.ManglerTilgang)
         }
         if (!principal.brukerroller.containsAll(behandler.påkrevdeBrukerroller)) {
+            loggDebug(
+                "403: saksbehandler mangler påkrevd brukerrolle",
+                "navIdent" to principal.saksbehandler.navIdent.value,
+                "påkrevdeBrukerroller" to behandler.påkrevdeBrukerroller,
+                "harBrukerroller" to principal.brukerroller,
+            )
             return call.respondProblem(RammeverkFeilkode.ManglerTilgang)
         }
 
@@ -59,6 +72,11 @@ class RestAdapter<ROLLE : Brukerrolle, TRANSAKSJON>(
                         AuditloggUtfall.Deny,
                         begrunnelse = "manglerTilgang=${tilgangsresultat.tilgangSomMangler}",
                     )
+                    loggDebug(
+                        "403: populasjonstilgangskontrollen ga avslag",
+                        "navIdent" to principal.saksbehandler.navIdent.value,
+                        "tilgangSomMangler" to tilgangsresultat.tilgangSomMangler,
+                    )
                     return call.respondProblem(RammeverkFeilkode.ManglerTilgang)
                 }
                 is TilgangskontrollResultat.IdentIkkeFunnet -> {
@@ -67,6 +85,13 @@ class RestAdapter<ROLLE : Brukerrolle, TRANSAKSJON>(
                 }
                 is TilgangskontrollResultat.UventetFeil -> {
                     auditlogger.loggPersonoppslag(principal.saksbehandler.navIdent, AuditloggUtfall.Deny, begrunnelse = "uventetFeil")
+                    // Samme 403 som et ekte avslag, men helt annen årsak: her klarte ikke
+                    // tilgangsmaskinen å ta en beslutning. Forklaringen kastes ellers bort.
+                    loggDebug(
+                        "403: tilgangskontrollen feilet uventet (ikke et avslag)",
+                        "navIdent" to principal.saksbehandler.navIdent.value,
+                        "forklaring" to tilgangsresultat.menneskeligLesbarForklaring,
+                    )
                     return call.respondProblem(RammeverkFeilkode.ManglerTilgang)
                 }
             }

@@ -260,6 +260,53 @@ class RestAdapterTest {
         }
 
     @Test
+    fun `403 fra populasjonstilgangskontroll debug-logges, men tilgangSomMangler kun til teamLogs`() =
+        testApplication {
+            val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext
+            val teamLogsLogger = loggerContext.getLogger("tjenestekall") as Logger
+            val adapterLogger = loggerContext.getLogger(RestAdapter::class.java) as Logger
+            val teamLogsAppender = ListAppender<ILoggingEvent>().apply { context = loggerContext; start() }
+            val adapterAppender = ListAppender<ILoggingEvent>().apply { context = loggerContext; start() }
+            val opprinneligTeamLogsNivå = teamLogsLogger.level
+            val opprinneligAdapterNivå = adapterLogger.level
+            teamLogsLogger.addAppender(teamLogsAppender)
+            adapterLogger.addAppender(adapterAppender)
+            teamLogsLogger.level = ch.qos.logback.classic.Level.DEBUG
+            adapterLogger.level = ch.qos.logback.classic.Level.DEBUG
+
+            try {
+                val fake = FakeTilgangskontroll(TilgangskontrollResultat.ManglerTilgang(TilgangSomMangler.Habilitet))
+                val pseudoIdProvider = InMemoryPersonPseudoIdProvider()
+                val pseudoId = pseudoIdProvider.nyPersonPseudoId(identitetsnummer)
+
+                application {
+                    settOppTestapp(principal(), tilgangskontroll = fake, personPseudoIdProvider = pseudoIdProvider)
+                }
+
+                val response = client.get("/person/$pseudoId")
+
+                assertEquals(HttpStatusCode.Forbidden, response.status)
+                assertTrue(
+                    teamLogsAppender.list.any { it.formattedMessage.contains("Habilitet") },
+                    "teamLogs skal inneholde tilgangSomMangler: ${teamLogsAppender.list.map { it.formattedMessage }}",
+                )
+                assertTrue(
+                    adapterAppender.list.any { it.formattedMessage.contains("403") },
+                    "vanlig logg skal inneholde debug-linja: ${adapterAppender.list.map { it.formattedMessage }}",
+                )
+                assertFalse(
+                    adapterAppender.list.any { it.formattedMessage.contains("Habilitet") },
+                    "tilgangSomMangler er persondata og skal ikke i vanlig logg: ${adapterAppender.list.map { it.formattedMessage }}",
+                )
+            } finally {
+                teamLogsLogger.detachAppender(teamLogsAppender)
+                adapterLogger.detachAppender(adapterAppender)
+                teamLogsLogger.level = opprinneligTeamLogsNivå
+                adapterLogger.level = opprinneligAdapterNivå
+            }
+        }
+
+    @Test
     fun `uventet exception gir 500 uten aa lekke stacktrace til klienten, og logges kun til teamLogs`() =
         testApplication {
             val loggerContext = LoggerFactory.getILoggerFactory() as LoggerContext

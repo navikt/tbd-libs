@@ -8,6 +8,7 @@ import no.nav.helse.speil.backend.app.auth.AccessToken
 import no.nav.helse.speil.backend.app.auth.Brukerrolle
 import no.nav.helse.speil.backend.app.auth.Saksbehandler
 import no.nav.helse.speil.backend.app.auth.Tilgang
+import no.nav.helse.speil.backend.app.logging.loggDebug
 import no.nav.helse.speil.backend.app.person.Identitetsnummer
 import no.nav.helse.speil.backend.app.person.PersonPseudoId
 import no.nav.helse.speil.backend.app.person.PersonPseudoIdProvider
@@ -46,6 +47,11 @@ class KallKontekst<TRANSAKSJON, ROLLE : Brukerrolle>(
                     AuditloggUtfall.Deny,
                     begrunnelse = "manglerTilgang=${tilgangsresultat.tilgangSomMangler}",
                 )
+                loggDebug(
+                    "403: populasjonstilgangskontrollen ga avslag",
+                    "navIdent" to saksbehandler.navIdent.value,
+                    "tilgangSomMangler" to tilgangsresultat.tilgangSomMangler,
+                )
                 RestResponse.feil(manglerTilgang())
             }
             is TilgangskontrollResultat.IdentIkkeFunnet -> {
@@ -54,6 +60,13 @@ class KallKontekst<TRANSAKSJON, ROLLE : Brukerrolle>(
             }
             is TilgangskontrollResultat.UventetFeil -> {
                 auditlogger.loggPersonoppslag(saksbehandler.navIdent, AuditloggUtfall.Deny, begrunnelse = "uventetFeil")
+                // Samme 403 som et ekte avslag, men helt annen årsak: her klarte ikke
+                // tilgangsmaskinen å ta en beslutning. Forklaringen kastes ellers bort.
+                loggDebug(
+                    "403: tilgangskontrollen feilet uventet (ikke et avslag)",
+                    "navIdent" to saksbehandler.navIdent.value,
+                    "forklaring" to tilgangsresultat.menneskeligLesbarForklaring,
+                )
                 RestResponse.feil(manglerTilgang())
             }
         }
