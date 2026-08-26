@@ -1,7 +1,27 @@
 package no.nav.helse.speil.backend.app.rest
 
+import io.ktor.server.application.Application
+import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.routing
+import no.nav.helse.speil.backend.app.auth.AZURE_AD_AUTHENTICATION_NAME
 import no.nav.helse.speil.backend.app.auth.Brukerrolle
+
+/**
+ * Registrerer appens endepunkter bak Azure AD-autentisering. Alle ruter som settes opp via
+ * [RestRuting] MÅ ligge inni `authenticate`-blokken — uten den blir ingen principal satt på kallet,
+ * og [RestAdapter] svarer 401 «Uautentisert» selv for kall med gyldig token.
+ */
+fun <ROLLE : Brukerrolle, TRANSAKSJON> Application.configureRestRuting(
+    restAdapter: RestAdapter<ROLLE, TRANSAKSJON>,
+    endepunkter: RestRuting<ROLLE, TRANSAKSJON>.() -> Unit,
+) {
+    routing {
+        authenticate(AZURE_AD_AUTHENTICATION_NAME) {
+            RestRuting(this, restAdapter).endepunkter()
+        }
+    }
+}
 
 class RestRuting<ROLLE : Brukerrolle, TRANSAKSJON> internal constructor(
     @PublishedApi internal val route: Route,

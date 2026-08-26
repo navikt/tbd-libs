@@ -3,7 +3,6 @@ package no.nav.helse.speil.backend.app.bootstrap
 import com.github.navikt.tbd_libs.access_token.TexasClient
 import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.ktor.server.application.ApplicationStarted
-import io.ktor.server.routing.routing
 import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.speil.backend.app.auditlogg.Auditlogger
 import no.nav.helse.speil.backend.app.auth.Brukerrolle
@@ -24,6 +23,7 @@ import no.nav.helse.speil.backend.app.plugins.configureStatusPages
 import no.nav.helse.speil.backend.app.rest.RestAdapter
 import no.nav.helse.speil.backend.app.rest.RestRuting
 import no.nav.helse.speil.backend.app.rest.TransaksjonProvider
+import no.nav.helse.speil.backend.app.rest.configureRestRuting
 import javax.sql.DataSource
 
 fun <ROLLE : Brukerrolle, TRANSAKSJON> startApp(
@@ -65,9 +65,7 @@ fun <ROLLE : Brukerrolle, TRANSAKSJON> startApp(
                     tilgangsgrupperTilBrukerroller = brukerroller,
                 )
                 configureOpenApiPlugin(konfigurasjon.openApi)
-                routing {
-                    RestRuting(this, restAdapter).endepunkter()
-                }
+                configureRestRuting(restAdapter, endepunkter)
                 monitor.subscribe(ApplicationStarted) {
                     loggInfo("Ktor-applikasjon startet for ${konfigurasjon.appNavn}")
                 }
