@@ -4,7 +4,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respondText
@@ -41,7 +40,7 @@ class ConfigureJwtAuthenticationTest {
             jwkProviderUri = mockOAuth2Server.jwksUrl("azuread").toString(),
         )
 
-    private fun tilgangsgrupper() = TilgangsgrupperTilTilganger(tilgangLesGruppeId = "les-uuid", tilgangSkrivGruppeId = "skriv-uuid")
+    private fun tilgangsgrupper() = TilgangsgrupperTilTilganger(tilgangLesGruppeIder = setOf("les-uuid"), tilgangSkrivGruppeIder = setOf("skriv-uuid"))
 
     private fun brukerroller() = TilgangsgrupperTilBrukerroller(mapOf("beslutter-uuid" to TestRolle.Beslutter))
 

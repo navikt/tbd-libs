@@ -1,8 +1,8 @@
 package no.nav.helse.speil.backend.app.auth
 
 class TilgangsgrupperTilTilganger(
-    private val tilgangLesGruppeId: String,
-    private val tilgangSkrivGruppeId: String,
+    private val tilgangLesGruppeIder: Set<String>,
+    private val tilgangSkrivGruppeIder: Set<String>,
 ) {
     /**
      * Skrivetilgang impliserer lesetilgang: en saksbehandler i skrivegruppa er ikke nødvendigvis
@@ -11,18 +11,23 @@ class TilgangsgrupperTilTilganger(
      */
     fun tilganger(entraGrupper: Set<String>): Set<Tilgang> =
         buildSet {
-            if (tilgangSkrivGruppeId in entraGrupper) {
+            if (tilgangSkrivGruppeIder.any { it in entraGrupper }) {
                 add(Tilgang.Skriv)
                 add(Tilgang.Les)
             }
-            if (tilgangLesGruppeId in entraGrupper) add(Tilgang.Les)
+            if (tilgangLesGruppeIder.any { it in entraGrupper }) add(Tilgang.Les)
         }
 
     companion object {
+        // TILGANG_LES/TILGANG_SKRIV kan inneholde én eller flere Entra-gruppe-UUID-er,
+        // kommaseparert (f.eks. når flere grupper skal gi samme tilgangsnivå).
         fun fraEnv(env: Map<String, String> = System.getenv()) =
             TilgangsgrupperTilTilganger(
-                tilgangLesGruppeId = env.getValue("TILGANG_LES"),
-                tilgangSkrivGruppeId = env.getValue("TILGANG_SKRIV"),
+                tilgangLesGruppeIder = grupperFra(env.getValue("TILGANG_LES")),
+                tilgangSkrivGruppeIder = grupperFra(env.getValue("TILGANG_SKRIV")),
             )
+
+        private fun grupperFra(verdi: String): Set<String> =
+            verdi.split(",").map(String::trim).filter(String::isNotEmpty).toSet()
     }
 }

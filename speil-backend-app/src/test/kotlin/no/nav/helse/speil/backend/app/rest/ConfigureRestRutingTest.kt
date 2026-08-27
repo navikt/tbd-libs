@@ -7,7 +7,6 @@ import io.ktor.client.request.header
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
-import io.ktor.server.application.call
 import io.ktor.server.routing.get
 import io.ktor.server.testing.testApplication
 import no.nav.helse.speil.backend.app.auditlogg.Auditlogger
@@ -91,7 +90,7 @@ class ConfigureRestRutingTest {
                     issuerUrl = mockOAuth2Server.issuerUrl("azuread").toString(),
                     jwkProviderUri = mockOAuth2Server.jwksUrl("azuread").toString(),
                 ),
-            tilgangsgrupperTilTilganger = TilgangsgrupperTilTilganger(tilgangLesGruppeId = "les-uuid", tilgangSkrivGruppeId = "skriv-uuid"),
+            tilgangsgrupperTilTilganger = TilgangsgrupperTilTilganger(tilgangLesGruppeIder = setOf("les-uuid"), tilgangSkrivGruppeIder = setOf("skriv-uuid")),
             tilgangsgrupperTilBrukerroller = TilgangsgrupperTilBrukerroller(mapOf("beslutter-uuid" to RutingTestRolle.Beslutter)),
         )
         val restAdapter =
