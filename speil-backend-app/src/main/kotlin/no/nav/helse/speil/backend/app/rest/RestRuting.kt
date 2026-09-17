@@ -3,6 +3,7 @@ package no.nav.helse.speil.backend.app.rest
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.Route
+import io.ktor.server.routing.Routing
 import io.ktor.server.routing.routing
 import no.nav.helse.speil.backend.app.auth.AZURE_AD_AUTHENTICATION_NAME
 import no.nav.helse.speil.backend.app.auth.Brukerrolle
@@ -15,11 +16,13 @@ import no.nav.helse.speil.backend.app.auth.Brukerrolle
 fun <ROLLE : Brukerrolle, TRANSAKSJON> Application.configureRestRuting(
     restAdapter: RestAdapter<ROLLE, TRANSAKSJON>,
     endepunkter: RestRuting<ROLLE, TRANSAKSJON>.() -> Unit,
+    additionalRouting: Routing.() -> Unit = {}
 ) {
     routing {
         authenticate(AZURE_AD_AUTHENTICATION_NAME) {
             RestRuting(this, restAdapter).endepunkter()
         }
+        additionalRouting()
     }
 }
 

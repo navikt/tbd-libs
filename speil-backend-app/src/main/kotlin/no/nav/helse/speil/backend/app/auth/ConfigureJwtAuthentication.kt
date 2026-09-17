@@ -6,6 +6,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.AuthenticationConfig
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.response.respond
 import java.net.URI
@@ -17,6 +18,7 @@ fun <ROLLE : Brukerrolle> Application.configureJwtAuthentication(
     azureAdConfig: AzureAdConfig,
     tilgangsgrupperTilTilganger: TilgangsgrupperTilTilganger,
     tilgangsgrupperTilBrukerroller: TilgangsgrupperTilBrukerroller<ROLLE>,
+    ekstraAuthenticationConfig: AuthenticationConfig.() -> Unit = {}
 ) {
     val jwkProvider =
         JwkProviderBuilder(URI(azureAdConfig.jwkProviderUri).toURL())
@@ -25,6 +27,7 @@ fun <ROLLE : Brukerrolle> Application.configureJwtAuthentication(
             .build()
 
     install(Authentication) {
+        ekstraAuthenticationConfig()
         jwt(AZURE_AD_AUTHENTICATION_NAME) {
             verifier(jwkProvider, azureAdConfig.issuerUrl) {
                 withAudience(azureAdConfig.clientId)

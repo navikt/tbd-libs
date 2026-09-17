@@ -106,11 +106,11 @@ class ConfigureRestRutingTest {
         // Bruker en vanlig ktor-rute framfor `Resources`-DSL-en i `Ruting.kt` (som forutsetter
         // kotlinx.serialization-kompilatorpluginet). Poenget her er at ruta registreres via samme
         // `Route`-mottaker som `RestRuting` bruker, altså inni `authenticate`-blokken.
-        configureRestRuting(restAdapter) {
+        configureRestRuting(restAdapter, endepunkter = {
             route.get("/enkel") {
                 restAdapter.håndter(call, RutingResource, RutingBehandler) { r, kk -> RutingBehandler.behandle(r, kk) }
             }
-        }
+        })
     }
 
     @Test
