@@ -60,7 +60,7 @@ fun <ROLLE : Brukerrolle, TRANSAKSJON> startApp(
 // TODO: Trekke dette ut i et eget lib, slik at vi kan bruke denne uten å dra inn rapids and rivers
 fun <ROLLE : Brukerrolle, TRANSAKSJON> Application.speilBackendApp(
     konfigurasjon: AppKonfigurasjon,
-    brukerroller: TilgangsgrupperTilBrukerroller<*>,
+    brukerroller: TilgangsgrupperTilBrukerroller<ROLLE>,
     transaksjonProvider: TransaksjonProvider<TRANSAKSJON>,
     endepunkter: RestRuting<ROLLE, TRANSAKSJON>.() -> Unit,
     env: Map<String, String> = System.getenv(),
