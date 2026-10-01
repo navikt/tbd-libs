@@ -27,7 +27,6 @@ include(
     "access-token-provider-texas",
     "populasjonstilgangskontroll-provider-api",
     "populasjonstilgangskontroll-provider-tilgangsmaskinen",
-    "speil-backend-app",
 )
 
 // Sett opp repositories basert på om vi kjører i CI eller ikke
