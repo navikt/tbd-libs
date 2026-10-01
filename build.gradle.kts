@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.sas.root)
-    alias(libs.plugins.sas.kotlin) apply false
+    alias(libs.plugins.sykepenger.root)
+    alias(libs.plugins.sykepenger.kotlin) apply false
     alias(libs.plugins.kotlin.plugin.serialization) apply false
 }
 
@@ -9,7 +9,7 @@ val jackson3Bom = libs.jackson3.bom
 
 subprojects {
     // Alle modulene i dette prosjektet er biblioteker som publiseres til GitHub Package Registry.
-    plugins.withId("no.nav.helse.sas.sas-kotlin") {
+    plugins.withId("no.nav.sykepenger.kotlin") {
         apply(plugin = "maven-publish")
 
         dependencies {

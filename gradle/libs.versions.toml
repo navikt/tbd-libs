@@ -6,7 +6,7 @@ jackson3 = "3.2.2"
 java-jwt = "4.6.1"
 kafka = "4.3.1"
 kotlin = "2.4.20"
-sasGradlePlugins = "20260925.1602"
+sykepengerGradlePlugins = "20261001.1830"
 kotlinx-coroutines = "1.11.0"
 kotlinx-serialization-json = "1.11.0"
 rapidsAndRivers = "2026091610031789545782"
@@ -81,5 +81,5 @@ smiley4-ktor-openapi-tools = [
 
 [plugins]
 kotlin-plugin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-sas-kotlin = { id = "no.nav.helse.sas.sas-kotlin", version.ref = "sasGradlePlugins" }
-sas-root = { id = "no.nav.helse.sas.sas-root", version.ref = "sasGradlePlugins" }
+sykepenger-kotlin = { id = "no.nav.sykepenger.kotlin", version.ref = "sykepengerGradlePlugins" }
+sykepenger-root = { id = "no.nav.sykepenger.root", version.ref = "sykepengerGradlePlugins" }

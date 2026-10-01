@@ -26,11 +26,11 @@ De [publiseres til GitHub](https://github.com/orgs/navikt/packages?repo_name=tbd
 
 1. opprett en ny mappe, f.eks. `minmodul`
 2. rediger `settings.gradle.kts` og inkluder modulen `minmodul` der
-3. opprett `minmodul/build.gradle.kts` som tar i bruk sas-oppsettet, og putt evt. avhengigheter der:
+3. opprett `minmodul/build.gradle.kts` som tar i bruk sykepenger-gradle-plugins, og putt evt. avhengigheter der:
 
 ```kotlin
 plugins {
-    id("no.nav.helse.sas.sas-kotlin")
+    id("no.nav.sykepenger.kotlin")
 }
 
 dependencies {
