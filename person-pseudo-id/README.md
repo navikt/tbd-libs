@@ -8,3 +8,13 @@ en person på.
 
 Biblioteket belager seg på at det finnes en Valkey-instans ment for personpseudoider, som er felles for alle
 tjenestene som trenger en personpseudoid eller å identifisere en person vha. en personpseudoid.
+
+## Bruk
+
+`PersonPseudoIdProvider` er grensesnittet tjenestene bør avhenge av, med de typede verdiene `Identitetsnummer` og
+`PersonPseudoId`. `ValkeyPersonPseudoIdProvider` er implementasjonen mot Valkey, og kan lages fra Nais-miljøet:
+
+```kotlin
+val provider = ValkeyPersonPseudoIdProvider.fraEnv() // leser VALKEY_*_PERSONPSEUDOID
+val pseudoId = provider.nyPersonPseudoId(Identitetsnummer("12345678901"))
+```
