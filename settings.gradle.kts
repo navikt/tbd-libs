@@ -16,7 +16,6 @@ include(
     "result-object",
     "signed-jwt",
     "signed-jwt-issuer-test",
-    "spurtedu-client",
     "speed-client",
     "spedisjon-client",
     "jackson",
