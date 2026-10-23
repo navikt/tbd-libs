@@ -1,6 +1,6 @@
 [versions]
 awaitility = "4.3.0"
-flyway = "13.10.0"
+flyway = "13.10.3"
 hikariCP = "7.1.0"
 jackson3 = "3.2.3"
 java-jwt = "4.6.2"
