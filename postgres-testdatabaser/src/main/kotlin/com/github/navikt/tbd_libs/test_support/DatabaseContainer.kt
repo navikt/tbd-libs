@@ -70,14 +70,20 @@ class DatabaseContainer(
         maxHikariPoolSize: Int,
     ): TestDataSource {
         opprettDatabase(dbnavn)
-        instance.withDatabaseName(dbnavn)
+        // instance er delt mellom korutinene som oppretter databasene parallelt, så navnet må settes og
+        // url-en leses atomisk; ellers kan flere TestDataSource-er ende opp med å peke på samme database
+        val hikariConfig =
+            synchronized(instance) {
+                instance.withDatabaseName(dbnavn)
+                HikariConfig().apply {
+                    username = instance.username
+                    password = instance.password
+                    jdbcUrl = instance.jdbcUrl
+                }
+            }
         return TestDataSource(
             dbnavn,
-            HikariConfig().apply {
-                username = instance.username
-                password = instance.password
-                jdbcUrl = instance.jdbcUrl
-            },
+            hikariConfig,
             cleanupStrategy,
             initStrategy,
             maxHikariPoolSize,
