@@ -11,11 +11,11 @@ kotlinx-coroutines = "1.11.0"
 kotlinx-serialization-json = "1.12.0"
 rapidsAndRivers = "2026091610031789545782"
 ktor = "3.6.0"
-logback = "1.6.5"
+logback = "1.6.6"
 logstash-logback-encoder = "9.0"
 micrometer = "1.17.2"
 mockk = "1.14.11"
-opentelemetry-instrumentation = "2.32.0"
+opentelemetry-instrumentation = "2.33.0"
 postgresql = "42.7.14"
 slf4j = "2.0.20"
 smiley4-ktor-openapi-tools = "5.7.0"
@@ -51,7 +51,7 @@ logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "lo
 logstash-logback-encoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
 micrometer-core = { module = "io.micrometer:micrometer-core", version.ref = "micrometer" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
-mock-oauth2-server = "no.nav.security:mock-oauth2-server:6.1.2"
+mock-oauth2-server = "no.nav.security:mock-oauth2-server:6.1.3"
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 opentelemetry-instrumentation-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "opentelemetry-instrumentation" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
