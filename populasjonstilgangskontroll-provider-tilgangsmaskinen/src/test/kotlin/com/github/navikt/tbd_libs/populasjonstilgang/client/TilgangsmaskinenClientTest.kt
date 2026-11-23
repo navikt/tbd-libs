@@ -11,11 +11,66 @@ import io.mockk.verify
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestFactory
+import org.junit.jupiter.api.assertThrows
+import java.net.ConnectException
 import java.net.http.HttpClient
 import kotlin.jvm.optionals.getOrNull
 
 class TilgangsmaskinenClientTest {
+    @TestFactory
+    fun `prøver alle tilgangssjekker på nytt ved tilkoblingsfeil`() =
+        listOf(
+            "komplett" to TilgangsmaskinenClient::kontrollerKomplettTilgang,
+            "kjerne" to TilgangsmaskinenClient::kontrollerKjerneTilgang,
+            "kjerne for ansatt" to TilgangsmaskinenClient::kontrollerKjerneTilgangForAnsatt,
+        ).map { (navn, kontrollerTilgang) ->
+            dynamicTest(navn) {
+                val (client, httpClient) = mockClient("", 204)
+                every { httpClient.send<String>(any(), any()) } throws ConnectException() andThen MockHttpResponse("", 204)
+
+                assertEquals(TilgangskontrollResultat.Ok, kontrollerTilgang(client, "ident", "12345678901"))
+                verify(exactly = 2) { httpClient.send<String>(any(), any()) }
+            }
+        }
+
+    @Test
+    fun `gir opp etter tre ekstra forsøk ved vedvarende tilkoblingsfeil`() {
+        val (client, httpClient) = mockClient("", 204)
+        val feil = ConnectException()
+        every { httpClient.send<String>(any(), any()) } throws feil
+
+        assertSame(
+            feil,
+            assertThrows<ConnectException> { client.kontrollerKjerneTilgang("access_token", "12345678901") },
+        )
+        verify(exactly = 4) { httpClient.send<String>(any(), any()) }
+    }
+
+    @Test
+    fun `prøver ikke på nytt når tråden blir avbrutt`() {
+        val (client, httpClient) = mockClient("", 204)
+        every { httpClient.send<String>(any(), any()) } throws InterruptedException()
+
+        assertThrows<InterruptedException> { client.kontrollerKjerneTilgang("access_token", "12345678901") }
+        verify(exactly = 1) { httpClient.send<String>(any(), any()) }
+    }
+
+    @TestFactory
+    fun `prøver ikke på nytt ved HTTP-feilsvar`() =
+        listOf(403, 404, 500).map { statusCode ->
+            dynamicTest("$statusCode") {
+                val (client, httpClient) = mockClient(avvistResponse("AVVIST_SKJERMING"), statusCode)
+
+                client.kontrollerKjerneTilgang("access_token", "12345678901")
+
+                verify(exactly = 1) { httpClient.send<String>(any(), any()) }
+            }
+        }
+
     @Test
     fun `tilgang ok - 204`() {
         val (client, httpClient) = mockClient("", 204)

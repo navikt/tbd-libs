@@ -5,10 +5,12 @@ import com.github.navikt.tbd_libs.access_token.TexasClient
 import com.github.navikt.tbd_libs.populasjonstilgang.api.PopulasjonstilgangskontrollProvider
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangSomMangler
 import com.github.navikt.tbd_libs.populasjonstilgang.api.TilgangskontrollResultat
+import com.github.navikt.tbd_libs.retry.retryBlocking
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
 import tools.jackson.module.kotlin.readValue
+import java.net.ConnectException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -50,7 +52,7 @@ class TilgangsmaskinenClient(
                 .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
                 .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = sendMedRetry(request)
 
         return håndterResponse(response)
     }
@@ -73,7 +75,7 @@ class TilgangsmaskinenClient(
                 .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
                 .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = sendMedRetry(request)
 
         return håndterResponse(response)
     }
@@ -96,10 +98,17 @@ class TilgangsmaskinenClient(
                 .method("POST", HttpRequest.BodyPublishers.ofString(fødselsnummer))
                 .build()
 
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        val response = sendMedRetry(request)
 
         return håndterResponse(response)
     }
+
+    private fun sendMedRetry(request: HttpRequest): HttpResponse<String> =
+        retryBlocking(
+            avbryt = { it !is ConnectException },
+        ) {
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+        }
 
     private fun håndterResponse(response: HttpResponse<String>): TilgangskontrollResultat {
         val statusCode = response.statusCode()
