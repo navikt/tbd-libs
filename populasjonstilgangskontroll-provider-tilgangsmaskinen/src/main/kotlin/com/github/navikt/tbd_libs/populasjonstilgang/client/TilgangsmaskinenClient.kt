@@ -10,11 +10,12 @@ import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.introspect.DefaultAccessorNamingStrategy
 import tools.jackson.module.kotlin.jacksonMapperBuilder
 import tools.jackson.module.kotlin.readValue
-import java.net.ConnectException
+import java.io.IOException
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.time.Duration
 import java.util.*
 
@@ -105,7 +106,7 @@ class TilgangsmaskinenClient(
 
     private fun sendMedRetry(request: HttpRequest): HttpResponse<String> =
         retryBlocking(
-            avbryt = { it !is ConnectException },
+            avbryt = { it !is IOException || it is HttpTimeoutException },
         ) {
             httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         }

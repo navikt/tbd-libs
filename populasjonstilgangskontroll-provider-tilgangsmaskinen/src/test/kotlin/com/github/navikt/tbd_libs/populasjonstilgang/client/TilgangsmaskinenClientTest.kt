@@ -16,8 +16,10 @@ import org.junit.jupiter.api.DynamicTest.dynamicTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.junit.jupiter.api.assertThrows
+import java.io.IOException
 import java.net.ConnectException
 import java.net.http.HttpClient
+import java.net.http.HttpTimeoutException
 import kotlin.jvm.optionals.getOrNull
 
 class TilgangsmaskinenClientTest {
@@ -48,6 +50,25 @@ class TilgangsmaskinenClientTest {
             assertThrows<ConnectException> { client.kontrollerKjerneTilgang("access_token", "12345678901") },
         )
         verify(exactly = 4) { httpClient.send<String>(any(), any()) }
+    }
+
+    @Test
+    fun `prøver på nytt når serveren lukker en gjenbrukt tilkobling`() {
+        val (client, httpClient) = mockClient("", 204)
+        every { httpClient.send<String>(any(), any()) } throws
+            IOException("HTTP/1.1 header parser received no bytes") andThen MockHttpResponse("", 204)
+
+        assertEquals(TilgangskontrollResultat.Ok, client.kontrollerKjerneTilgang("access_token", "12345678901"))
+        verify(exactly = 2) { httpClient.send<String>(any(), any()) }
+    }
+
+    @Test
+    fun `prøver ikke på nytt ved tidsavbrudd`() {
+        val (client, httpClient) = mockClient("", 204)
+        every { httpClient.send<String>(any(), any()) } throws HttpTimeoutException("request timed out")
+
+        assertThrows<HttpTimeoutException> { client.kontrollerKjerneTilgang("access_token", "12345678901") }
+        verify(exactly = 1) { httpClient.send<String>(any(), any()) }
     }
 
     @Test
